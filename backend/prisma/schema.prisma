@@ -1,0 +1,97 @@
+// Douban to Feishu (D2F) Sync Assistant - Prisma Schema
+// Based on CLAUDE.md database design with enterprise-grade security
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 用户表 - 基础用户信息
+model User {
+  id         String   @id @default(uuid()) @db.Uuid
+  email      String   @unique @db.VarChar(255)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamp(3)
+  lastSyncAt DateTime? @map("last_sync_at") @db.Timestamp(3)
+
+  // 关联关系
+  credentials UserCredentials?
+  syncConfigs SyncConfig?
+  syncHistory SyncHistory[]
+
+  @@map("users")
+}
+
+// 用户凭证表 - 加密存储敏感信息
+model UserCredentials {
+  userId                   String  @id @map("user_id") @db.Uuid
+  doubanCookieEncrypted    String? @map("douban_cookie_encrypted") @db.Text
+  feishuAppId             String? @map("feishu_app_id") @db.VarChar(100)
+  feishuAppSecretEncrypted String? @map("feishu_app_secret_encrypted") @db.Text
+  encryptionIv            String  @map("encryption_iv") @db.VarChar(32)
+  updatedAt               DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamp(3)
+
+  // 外键关系
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_credentials")
+}
+
+// 同步配置表 - 用户同步偏好设置
+model SyncConfig {
+  userId           String           @id @map("user_id") @db.Uuid
+  mappingType      MappingType      @default(THREE_TABLES) @map("mapping_type")
+  autoSyncEnabled  Boolean          @default(false) @map("auto_sync_enabled")
+  syncSchedule     Json?            @map("sync_schedule")
+  tableMappings    Json?            @map("table_mappings")
+  createdAt        DateTime         @default(now()) @map("created_at") @db.Timestamp(3)
+  updatedAt        DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamp(3)
+
+  // 外键关系
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sync_configs")
+}
+
+// 同步历史表 - 记录每次同步操作
+model SyncHistory {
+  id           String      @id @default(uuid()) @db.Uuid
+  userId       String      @map("user_id") @db.Uuid
+  triggerType  TriggerType @map("trigger_type")
+  status       SyncStatus  @default(PENDING)
+  startedAt    DateTime    @default(now()) @map("started_at") @db.Timestamp(3)
+  completedAt  DateTime?   @map("completed_at") @db.Timestamp(3)
+  itemsSynced  Int?        @default(0) @map("items_synced")
+  errorMessage String?     @map("error_message") @db.Text
+  metadata     Json?       // 额外的同步元数据
+
+  // 外键关系
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sync_history")
+  @@index([userId, startedAt])
+  @@index([status])
+}
+
+// 枚举类型定义
+enum MappingType {
+  THREE_TABLES @map("3tables")
+  FOUR_TABLES  @map("4tables")
+}
+
+enum TriggerType {
+  MANUAL @map("manual")
+  AUTO   @map("auto")
+}
+
+enum SyncStatus {
+  PENDING @map("pending")
+  RUNNING @map("running")
+  SUCCESS @map("success")
+  FAILED  @map("failed")
+  CANCELLED @map("cancelled")
+}

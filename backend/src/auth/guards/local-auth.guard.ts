@@ -1,0 +1,36 @@
+import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
+
+/**
+ * 本地认证守卫 - 用于登录接口
+ * 
+ * 功能:
+ * - 验证用户名(邮箱)和密码
+ * - 调用LocalStrategy进行身份验证
+ * - 处理登录失败的错误情况
+ * - 为登录成功后生成JWT token做准备
+ */
+@Injectable()
+export class LocalAuthGuard extends AuthGuard('local') {
+  /**
+   * 处理认证失败情况
+   */
+  override handleRequest<TUser = any>(err: any, user: any, info: any): TUser {
+    if (err || !user) {
+      let message = 'Authentication failed';
+      
+      // 根据不同的认证失败原因提供具体错误信息
+      if (info?.message === 'Missing credentials') {
+        message = 'Email and password are required';
+      } else if (info?.message === 'Invalid email or password') {
+        message = 'Invalid email or password';
+      } else if (err?.message) {
+        message = err.message;
+      }
+      
+      throw new UnauthorizedException(message);
+    }
+    
+    return user;
+  }
+}
