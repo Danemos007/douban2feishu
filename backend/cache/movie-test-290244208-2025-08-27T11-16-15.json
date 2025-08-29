@@ -1,0 +1,30 @@
+{
+  "totalMovies": 0,
+  "collectCount": 0,
+  "wishCount": 0,
+  "detailedMovies": [],
+  "testResults": {
+    "completeCount": 0,
+    "totalMissingFields": 0,
+    "requiredFields": [
+      "Subject ID",
+      "我的标签",
+      "我的状态",
+      "类型",
+      "电影名",
+      "封面图",
+      "豆瓣评分",
+      "我的备注",
+      "片长",
+      "上映日期",
+      "剧情简介",
+      "主演",
+      "导演",
+      "编剧",
+      "制片地区",
+      "语言",
+      "我的评分",
+      "标记日期"
+    ]
+  }
+}

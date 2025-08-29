@@ -1,0 +1,17 @@
+{
+  "scripts": {
+    "db:generate": "npx prisma generate",
+    "db:push": "npx prisma db push",
+    "db:migrate": "npx prisma migrate dev",
+    "db:studio": "npx prisma studio",
+    "db:reset": "npx prisma migrate reset --force",
+    "db:seed": "npx tsx prisma/seed.ts",
+    "build:check": "tsc --noEmit",
+    "dev:debug": "nest start --debug --watch",
+    "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
+    "lint:fix": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
+    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
+    "docker:build": "docker build -t d2f-backend .",
+    "docker:run": "docker run -p 3001:3001 --env-file .env d2f-backend"
+  }
+}
