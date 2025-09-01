@@ -23,6 +23,11 @@ import { FeishuFieldType } from '../interfaces/feishu.interface';
  * - 因此必须基于字段名语义进行准确判断
  */
 export function isRatingFieldType(fieldName: string, fieldType: FeishuFieldType): boolean {
+  // [CRITICAL-FIX] 处理空值输入
+  if (!fieldName || typeof fieldName !== 'string') {
+    return false;
+  }
+  
   // 明确的Rating类型字段名（仅限用户评分相关）
   const ratingFieldNames = [
     '我的评分', '个人评分', '用户评分', '我给的评分',
@@ -30,26 +35,32 @@ export function isRatingFieldType(fieldName: string, fieldType: FeishuFieldType)
   ];
   
   // 明确排除的Number类型字段名（官方评分等）
+  // [CRITICAL-FIX] 官方评分优先级更高，包含更多关键词
   const numberFieldNames = [
     '豆瓣评分', '平均评分', '官方评分', '网站评分',
-    'doubanrating', 'averagerating', 'officialrating', 'siterating'
+    'doubanrating', 'averagerating', 'officialrating', 'siterating',
+    // 添加更多官方评分的关键词模式（中英文都包含）
+    'douban', '豆瓣', 'official', '官方', 'average', '平均', 'site', '网站'
   ];
   
   const lowerFieldName = fieldName.toLowerCase();
   
   // 1. 优先排除：如果是明确的Number字段，直接返回false
-  const isNumberField = numberFieldNames.some(name => 
-    fieldName.includes(name) || lowerFieldName.includes(name.toLowerCase())
-  );
+  // [CRITICAL-FIX] 官方评分优先级：更严格的匹配逻辑
+  const isNumberField = numberFieldNames.some(name => {
+    const lowerName = name.toLowerCase();
+    return fieldName.includes(name) || lowerFieldName.includes(lowerName);
+  });
   
   if (isNumberField) {
     return false;
   }
   
   // 2. 精确匹配：如果是明确的Rating字段，返回true
-  const isRatingField = ratingFieldNames.some(name => 
-    fieldName.includes(name) || lowerFieldName.includes(name.toLowerCase())
-  );
+  const isRatingField = ratingFieldNames.some(name => {
+    const lowerName = name.toLowerCase();
+    return fieldName.includes(name) || lowerFieldName.includes(lowerName);
+  });
   
   return isRatingField;
 }
