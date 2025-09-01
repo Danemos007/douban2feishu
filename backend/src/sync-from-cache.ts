@@ -31,12 +31,14 @@ interface DoubanBook {
   markDate?: string;
 }
 
+// [SECURITY-FIX] 移除硬编码敏感信息 - 2025-08-31
+// 使用环境变量获取配置信息，避免敏感信息泄露
 const CONFIG = {
   feishu: {
-    appId: 'cli_your_app_id_here',
-    appSecret: 'your_app_secret_here',
-    appToken: 'your_app_token_here',
-    tableId: 'your_book_table_id'
+    appId: process.env.FEISHU_APP_ID || '',
+    appSecret: process.env.FEISHU_APP_SECRET || '',
+    appToken: process.env.FEISHU_APP_TOKEN || '',
+    tableId: process.env.FEISHU_TABLE_ID || 'your_book_table_id'
   }
 };
 

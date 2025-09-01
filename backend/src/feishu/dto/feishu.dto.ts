@@ -43,12 +43,11 @@ export class BatchCreateRecordsDto {
 
   @ApiProperty({
     description: '字段映射表 (字段名 -> Field ID)',
-    type: 'object',
-    required: false,
     example: {
       title: 'fldXXXXXXXXXXXXXX',
       rating: 'fldYYYYYYYYYYYYYY',
     },
+    required: false,
   })
   @IsObject({ message: '表格映射必须是对象' })
   @IsOptional()

@@ -7,16 +7,18 @@ import { DoubanService } from './douban/douban.service';
 import { AppModule } from './app.module';
 import axios from 'axios';
 
+// [SECURITY-FIX] 移除硬编码敏感信息 - 2025-08-31
+// 使用环境变量获取配置信息，避免敏感信息泄露
 const CONFIG = {
   feishu: {
-    appId: 'cli_your_app_id_here',
-    appSecret: 'your_app_secret_here',
-    appToken: 'your_app_token_here',
+    appId: process.env.FEISHU_APP_ID || '',
+    appSecret: process.env.FEISHU_APP_SECRET || '',
+    appToken: process.env.FEISHU_APP_TOKEN || '',
     tables: {
-      books: 'your_book_table_id',
-      movies: 'your_movie_table_id',
-      documentary: 'your_doc_table_id',
-      tv: 'your_tv_table_id'
+      books: process.env.FEISHU_BOOKS_TABLE_ID || 'your_book_table_id',
+      movies: process.env.FEISHU_MOVIES_TABLE_ID || 'your_movie_table_id',
+      documentary: process.env.FEISHU_DOCUMENTARY_TABLE_ID || 'your_doc_table_id',
+      tv: process.env.FEISHU_TV_TABLE_ID || 'your_tv_table_id'
     }
   }
 };

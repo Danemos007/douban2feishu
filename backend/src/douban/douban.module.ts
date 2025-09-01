@@ -3,7 +3,6 @@ import { ConfigModule } from '@nestjs/config';
 
 import { DoubanService } from './douban.service';
 import { DoubanController } from './douban.controller';
-import { TestDoubanController } from './test-douban.controller';
 import { CryptoModule } from '../common/crypto/crypto.module';
 import { CookieManagerService } from './services/cookie-manager.service';
 import { AntiSpiderService } from './services/anti-spider.service';
@@ -30,7 +29,7 @@ import { MovieScraperService } from './services/movie-scraper.service';
     BookScraperService,
     MovieScraperService,
   ],
-  controllers: [DoubanController, TestDoubanController],
+  controllers: [DoubanController],
   exports: [
     DoubanService,
     CookieManagerService,

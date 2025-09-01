@@ -80,7 +80,7 @@ export enum FeishuFieldType {
   URL = 15,           // 超链接
   Attachment = 17,    // 附件
   Formula = 20,       // 公式
-  Rating = 2,         // 评分（使用type=2, ui_type="Rating"）
+  Rating = 2,         // 评分（与Number共享type=2，通过ui_type区分）
   CreatedTime = 1001, // 创建时间
   ModifiedTime = 1002, // 修改时间
   CreatedUser = 1003,  // 创建人
