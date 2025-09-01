@@ -59,6 +59,39 @@ export interface FeishuCreateFieldPayload {
 }
 
 /**
+ * 飞书查询记录的过滤条件
+ */
+export interface FeishuRecordFilter {
+  conditions: Array<{
+    field_id: string;
+    operator: 'is' | 'isNot' | 'contains' | 'doesNotContain' | 'isEmpty' | 'isNotEmpty';
+    value?: string | number | boolean;
+  }>;
+  conjunction?: 'and' | 'or';
+}
+
+/**
+ * 飞书查询记录的请求负载
+ */
+export interface FeishuSearchRecordPayload {
+  page_size?: number;
+  page_token?: string;
+  filter?: FeishuRecordFilter;
+  sort?: Array<{
+    field_id: string;
+    desc?: boolean;
+  }>;
+}
+
+/**
+ * 通用的记录数据类型（用于批量操作）
+ * 支持两种格式：直接字段映射 或 包含fields属性的对象
+ */
+export type FeishuRecordData = 
+  | { [key: string]: string | number | boolean | null | Array<string | number> }
+  | { fields: { [key: string]: string | number | boolean | null | Array<string | number> } };
+
+/**
  * 飞书API通用响应
  */
 export interface FeishuApiResponse<T = any> {
@@ -137,4 +170,12 @@ export interface TableMappingConfig {
     tableId: string;
     fieldMappings: Record<string, string>;
   };
+}
+
+/**
+ * 飞书错误响应数据
+ */
+export interface FeishuErrorResponse {
+  code: number;
+  msg: string;
 }
