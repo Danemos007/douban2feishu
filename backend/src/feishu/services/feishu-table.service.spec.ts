@@ -30,7 +30,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { FeishuTableService } from './feishu-table.service';
 import { FeishuAuthService } from './feishu-auth.service';
-import { FeishuFieldType, FeishuApiResponse, FeishuField, FeishuCreateFieldPayload } from '../interfaces/feishu.interface';
+import { FeishuFieldType, FeishuApiResponse, FeishuField, FeishuCreateFieldPayload, FeishuRecordData } from '../interfaces/feishu.interface';
 
 // ==================== Mock实现区域 ====================
 
@@ -821,9 +821,9 @@ describe('FeishuTableService - 完全重建版本', () => {
             }
           });
 
-        const invalidRecords = [
+        const invalidRecords: FeishuRecordData[] = [
           { fields: { '书名': '测试书1', 'Subject ID': 'book_001' } },
-          { fields: { '书名': '测试书2' } } // 缺少Subject ID
+          { fields: { '书名': '测试书2', 'Subject ID': null } } // 使用null而不是undefined
         ];
 
         // 执行测试 - batchCreateRecords返回错误统计而非抛出异常

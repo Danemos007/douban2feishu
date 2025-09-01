@@ -2,7 +2,12 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRedis } from '@liaoliaots/nestjs-redis';
 import Redis from 'ioredis';
-import axios from 'axios';
+import axios, { AxiosRequestConfig, AxiosError, InternalAxiosRequestConfig } from 'axios';
+
+// 扩展axios配置接口以支持重试计数
+interface ExtendedAxiosRequestConfig extends InternalAxiosRequestConfig {
+  __retryCount?: number;
+}
 
 import { FeishuAuthService } from './feishu-auth.service';
 import { 
@@ -11,7 +16,12 @@ import {
   FeishuRecordItem, 
   FeishuApiResponse, 
   FeishuRecordsResponse,
-  FeishuFieldType 
+  FeishuFieldType,
+  FeishuCreateFieldPayload,
+  FeishuRecordFilter,
+  FeishuSearchRecordPayload,
+  FeishuRecordData,
+  FeishuErrorResponse
 } from '../interfaces/feishu.interface';
 import { isRatingFieldType } from '../utils/field-type.util';
 
@@ -71,7 +81,7 @@ export class FeishuTableService {
     });
 
     // 请求拦截器 - 自动添加认证头
-    client.interceptors.request.use(async (config: any) => {
+    client.interceptors.request.use(async (config: ExtendedAxiosRequestConfig) => {
       // 认证头将在具体方法中添加，这里做统一日志记录
       const context = {
         method: config.method?.toUpperCase(),
@@ -93,7 +103,7 @@ export class FeishuTableService {
         });
         return response;
       },
-      async (error: any) => {
+      async (error: AxiosError) => {
         return this.handleApiError(error);
       }
     );
@@ -144,7 +154,7 @@ export class FeishuTableService {
 
     } catch (error) {
       this.logger.error(`Failed to get table fields for ${tableId}:`, error);
-      throw this.transformError(error);
+      throw this.transformError(error as AxiosError);
     }
   }
 
@@ -156,7 +166,7 @@ export class FeishuTableService {
     appSecret: string, 
     appToken: string,
     tableId: string,
-    records: any[],
+    records: FeishuRecordData[],
     fieldMappings?: Record<string, string>,
     options: {
       skipDuplicates?: boolean;
@@ -198,7 +208,7 @@ export class FeishuTableService {
       let batchIndex = 0;
 
       while (batchIndex < batches.length) {
-        const currentBatches: Array<{ index: number; records: any[] }> = [];
+        const currentBatches: Array<{ index: number; records: FeishuRecord[] }> = [];
         
         for (let i = 0; i < this.apiConfig.concurrentBatches && batchIndex < batches.length; i++) {
           currentBatches.push({
@@ -243,7 +253,7 @@ export class FeishuTableService {
 
     } catch (error) {
       this.logger.error('Batch create records failed:', error);
-      throw this.transformError(error);
+      throw this.transformError(error as AxiosError);
     }
   }
 
@@ -256,7 +266,7 @@ export class FeishuTableService {
     appToken: string,
     tableId: string,
     options: {
-      filter?: any;
+      filter?: FeishuRecordFilter;
       sort?: Array<{ field_id: string; desc?: boolean }>;
       pageSize?: number;
       pageToken?: string;
@@ -270,7 +280,7 @@ export class FeishuTableService {
     try {
       const accessToken = await this.authService.getAccessToken(appId, appSecret);
 
-      const payload: any = {
+      const payload: FeishuSearchRecordPayload = {
         page_size: Math.min(options.pageSize || 100, 500),
       };
 
@@ -308,7 +318,7 @@ export class FeishuTableService {
 
     } catch (error) {
       this.logger.error('Search records failed:', error);
-      throw this.transformError(error);
+      throw this.transformError(error as AxiosError);
     }
   }
 
@@ -339,7 +349,7 @@ export class FeishuTableService {
 
     } catch (error) {
       this.logger.error(`Failed to find record by subject ID ${subjectId}:`, error);
-      throw this.transformError(error);
+      throw this.transformError(error as AxiosError);
     }
   }
 
@@ -373,7 +383,7 @@ export class FeishuTableService {
 
     } catch (error) {
       this.logger.error(`Failed to update record ${recordId}:`, error);
-      throw this.transformError(error);
+      throw this.transformError(error as AxiosError);
     }
   }
 
@@ -437,7 +447,7 @@ export class FeishuTableService {
 
     } catch (error) {
       this.logger.error('Batch update records failed:', error);
-      throw this.transformError(error);
+      throw this.transformError(error as AxiosError);
     }
   }
 
@@ -469,7 +479,7 @@ export class FeishuTableService {
 
     } catch (error) {
       this.logger.error(`Failed to delete record ${recordId}:`, error);
-      throw this.transformError(error);
+      throw this.transformError(error as AxiosError);
     }
   }
 
@@ -533,12 +543,18 @@ export class FeishuTableService {
   /**
    * 转换记录格式
    */
-  private transformRecord(record: any, fieldMappings?: Record<string, string>): FeishuRecord {
+  private transformRecord(record: FeishuRecordData, fieldMappings?: Record<string, string>): FeishuRecord {
     const fields: Record<string, any> = {};
 
-    for (const [key, value] of Object.entries(record)) {
-      const fieldId = fieldMappings?.[key] || key;
-      fields[fieldId] = this.formatFieldValue(value);
+    // 处理包含fields属性的格式
+    const recordData = 'fields' in record ? record.fields : record;
+
+    // 确保recordData不为null再进行Object.entries操作
+    if (recordData && typeof recordData === 'object') {
+      for (const [key, value] of Object.entries(recordData)) {
+        const fieldId = fieldMappings?.[key] || key;
+        fields[fieldId] = this.formatFieldValue(value);
+      }
     }
 
     return { fields };
@@ -547,7 +563,7 @@ export class FeishuTableService {
   /**
    * 格式化字段值
    */
-  private formatFieldValue(value: any): any {
+  private formatFieldValue(value: unknown): string | number | boolean | null | Array<string | number> {
     if (value === null || value === undefined) {
       return null;
     }
@@ -612,7 +628,7 @@ export class FeishuTableService {
 
     } catch (error) {
       this.logger.error('Field mapping validation failed:', error);
-      throw this.transformError(error);
+      throw this.transformError(error as AxiosError);
     }
   }
 
@@ -665,19 +681,20 @@ export class FeishuTableService {
   /**
    * API错误处理
    */
-  private async handleApiError(error: any): Promise<any> {
+  private async handleApiError(error: AxiosError): Promise<never> {
     const context = {
       url: error.config?.url,
       status: error.response?.status,
-      code: error.response?.data?.code,
-      message: error.response?.data?.msg || error.message,
+      code: (error.response?.data as any)?.code,
+      message: (error.response?.data as any)?.msg || error.message,
     };
 
     this.logger.error('Feishu table API error:', context);
 
     // 特定错误码的处理
-    if (error.response?.data?.code) {
-      const errorCode = error.response.data.code;
+    const errorData = error.response?.data as FeishuErrorResponse;
+    if (errorData?.code) {
+      const errorCode = errorData.code;
       
       // Token相关错误
       if ([99991663, 99991664, 99991665].includes(errorCode)) {
@@ -703,11 +720,12 @@ export class FeishuTableService {
   /**
    * 判断表格操作是否需要重试
    */
-  private shouldRetryTableOperation(error: any): boolean {
+  private shouldRetryTableOperation(error: AxiosError): boolean {
     if (!error.response) return true; // 网络错误重试
 
     const status = error.response.status;
-    const errorCode = error.response?.data?.code;
+    const errorData = error.response?.data as FeishuErrorResponse;
+    const errorCode = errorData?.code;
 
     // 服务器错误或特定的可重试错误码
     return status >= 500 || errorCode === 1254; // 1254是限流错误
@@ -716,8 +734,8 @@ export class FeishuTableService {
   /**
    * 重试表格请求
    */
-  private async retryTableRequest(error: any): Promise<any> {
-    const config = error.config;
+  private async retryTableRequest(error: AxiosError): Promise<never> {
+    const config = error.config as ExtendedAxiosRequestConfig;
     if (!config) throw error;
 
     config.__retryCount = config.__retryCount || 0;
@@ -738,9 +756,10 @@ export class FeishuTableService {
   /**
    * 转换错误格式
    */
-  private transformError(error: any): Error {
-    if (error.response?.data?.code) {
-      const { code, msg } = error.response.data;
+  private transformError(error: AxiosError): Error {
+    const errorData = error.response?.data as FeishuErrorResponse;
+    if (errorData?.code) {
+      const { code, msg } = errorData;
       return new Error(`Feishu Table API Error: [${code}] ${msg}`);
     }
     
@@ -767,7 +786,7 @@ export class FeishuTableService {
       const accessToken = await this.authService.getAccessToken(appId, appSecret);
 
       // 基础字段配置
-      const fieldConfig: any = {
+      const fieldConfig: FeishuCreateFieldPayload = {
         field_name: fieldName,
         type: fieldType,
       };
@@ -844,7 +863,7 @@ export class FeishuTableService {
 
     } catch (error) {
       this.logger.error(`Failed to create field "${fieldName}":`, error);
-      throw this.transformError(error);
+      throw this.transformError(error as AxiosError);
     }
   }
 
@@ -896,7 +915,7 @@ export class FeishuTableService {
       
     } catch (error) {
       this.logger.error('Batch create fields failed:', error);
-      throw this.transformError(error);
+      throw this.transformError(error as AxiosError);
     }
   }
 
