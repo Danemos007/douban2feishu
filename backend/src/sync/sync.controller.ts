@@ -20,8 +20,8 @@ import {
 } from '@nestjs/swagger';
 
 import { SyncService } from './sync.service';
-import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
-import { CurrentUser } from '@/auth/decorators/current-user.decorator';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { TriggerSyncDto } from './dto/sync.dto';
 
 /**

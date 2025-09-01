@@ -66,11 +66,13 @@ export class CookieManagerService {
    */
   async encryptCookie(userId: string, rawCookie: string): Promise<string> {
     try {
-      const encrypted = await this.cryptoService.encrypt(rawCookie);
+      const iv = this.cryptoService.generateIV();
+      const encrypted = this.cryptoService.encrypt(rawCookie, userId, iv);
       this.logger.debug(`Cookie encrypted for user ${userId}`);
       return encrypted;
     } catch (error) {
-      this.logger.error(`Failed to encrypt cookie for user ${userId}:`, error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Failed to encrypt cookie for user ${userId}:`, errorMessage);
       throw new Error('Cookie encryption failed');
     }
   }
@@ -80,11 +82,12 @@ export class CookieManagerService {
    */
   async decryptCookie(userId: string, encryptedCookie: string): Promise<string> {
     try {
-      const decrypted = await this.cryptoService.decrypt(encryptedCookie, userId);
+      const decrypted = this.cryptoService.decrypt(encryptedCookie, userId);
       this.logger.debug(`Cookie decrypted for user ${userId}`);
       return decrypted;
     } catch (error) {
-      this.logger.error(`Failed to decrypt cookie for user ${userId}:`, error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Failed to decrypt cookie for user ${userId}:`, errorMessage);
       throw new Error('Cookie decryption failed');
     }
   }

@@ -8,19 +8,19 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
 // 功能模块
-import { AuthModule } from '@/auth/auth.module';
-import { ConfigModule } from '@/config/config.module';
-import { SyncModule } from '@/sync/sync.module';
-import { DoubanModule } from '@/douban/douban.module';
-import { FeishuModule } from '@/feishu/feishu.module';
+import { AuthModule } from './auth/auth.module';
+import { ConfigModule } from './config/config.module';
+import { SyncModule } from './sync/sync.module';
+import { DoubanModule } from './douban/douban.module';
+import { FeishuModule } from './feishu/feishu.module';
 
 // 公共模块
-import { PrismaModule } from '@/common/prisma/prisma.module';
-import { CryptoModule } from '@/common/crypto/crypto.module';
+import { PrismaModule } from './common/prisma/prisma.module';
+import { CryptoModule } from './common/crypto/crypto.module';
 
 // 守卫和拦截器
-import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
-import { LoggingInterceptor } from '@/common/interceptors/logging.interceptor';
+import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
+import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 
 /**
  * 主应用模块 - 豆瓣飞书同步助手(D2F)

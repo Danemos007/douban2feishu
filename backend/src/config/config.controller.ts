@@ -18,8 +18,8 @@ import {
 } from '@nestjs/swagger';
 
 import { ConfigService } from './config.service';
-import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
-import { CurrentUser } from '@/auth/decorators/current-user.decorator';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import {
   UpdateDoubanConfigDto,
   UpdateFeishuConfigDto,

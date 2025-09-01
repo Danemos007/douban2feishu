@@ -5,7 +5,7 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { FeishuTableService } from './feishu/services/feishu-table.service';
-import { FieldMappingV2Service } from './feishu/services/field-mapping-v2.service';
+import { FieldMappingService } from './feishu/services/field-mapping.service';
 
 const CONFIG = {
   douban: { userId: 'your_user_id' },
@@ -23,7 +23,7 @@ async function correctRealDataSync() {
 
   const app = await NestFactory.create(AppModule);
   const tableService = app.get(FeishuTableService);
-  const fieldMappingService = app.get(FieldMappingV2Service);
+  const fieldMappingService = app.get(FieldMappingService);
 
   try {
     // Step 1: 获取当前字段映射

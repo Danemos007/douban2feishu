@@ -7,10 +7,9 @@ import { FeishuController } from './feishu.controller';
 import { FeishuAuthService } from './services/feishu-auth.service';
 import { FeishuTableService } from './services/feishu-table.service';
 import { FieldMappingService } from './services/field-mapping.service';
-import { FieldMappingV2Service } from './services/field-mapping-v2.service';
 import { SyncEngineService } from './services/sync-engine.service';
-import { CryptoModule } from '@/common/crypto/crypto.module';
-import { PrismaModule } from '@/common/prisma/prisma.module';
+import { CryptoModule } from '../common/crypto/crypto.module';
+import { PrismaModule } from '../common/prisma/prisma.module';
 
 /**
  * 飞书模块 - 企业级飞书API集成
@@ -51,7 +50,6 @@ import { PrismaModule } from '@/common/prisma/prisma.module';
     FeishuAuthService,
     FeishuTableService,
     FieldMappingService,
-    FieldMappingV2Service,
     SyncEngineService,
   ],
   controllers: [FeishuController],
@@ -60,7 +58,6 @@ import { PrismaModule } from '@/common/prisma/prisma.module';
     FeishuAuthService,
     FeishuTableService,
     FieldMappingService,
-    FieldMappingV2Service,
     SyncEngineService,
   ],
 })

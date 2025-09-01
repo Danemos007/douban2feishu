@@ -3,13 +3,13 @@ import { Logger } from '@nestjs/common';
 import type { Job } from 'bull';
 
 import { SyncService } from './sync.service';
-import { DoubanService } from '@/douban/douban.service';
-import { FeishuService } from '@/feishu/feishu.service';
-import { SyncEngineService } from '@/feishu/services/sync-engine.service';
-import { FieldMappingService } from '@/feishu/services/field-mapping.service';
+import { DoubanService } from '../douban/douban.service';
+import { FeishuService } from '../feishu/feishu.service';
+import { SyncEngineService } from '../feishu/services/sync-engine.service';
+import { FieldMappingService } from '../feishu/services/field-mapping.service';
 import { SyncJobData } from './interfaces/sync.interface';
-import { PrismaService } from '@/common/prisma/prisma.service';
-import { CryptoService } from '@/common/crypto/crypto.service';
+import { PrismaService } from '../common/prisma/prisma.service';
+import { CryptoService } from '../common/crypto/crypto.service';
 
 /**
  * 同步任务处理器 - BullMQ任务执行
@@ -59,7 +59,7 @@ export class SyncProcessor {
       const userCredentials = await this.getUserCredentials(userId);
       
       await this.updateProgress(job, 10, 'Connecting to Douban...');
-      const doubanData = await this.fetchDoubanData(userCredentials, options, job);
+      const doubanData = await this.fetchDoubanData(userId, userCredentials, options, job);
 
       // 第二阶段：同步到飞书
       await this.updateProgress(job, 60, 'Starting Feishu sync...');
@@ -95,8 +95,8 @@ export class SyncProcessor {
         jobId: job.id?.toString(),
         status: 'FAILED',
         progress: 0,
-        message: `Sync failed: ${error.message}`,
-        error: error.message,
+        message: `Sync failed: ${error instanceof Error ? error.message : String(error)}`,
+        error: error instanceof Error ? error.message : String(error),
       });
 
       throw error;
@@ -139,9 +139,9 @@ export class SyncProcessor {
   /**
    * 从豆瓣抓取数据
    */
-  private async fetchDoubanData(credentials: any, options: any, job: Job) {
-    const categories = ['books', 'movies', 'music'];
-    const allData = [];
+  private async fetchDoubanData(userId: string, credentials: any, options: any, job: Job) {
+    const categories: ('books' | 'movies' | 'tv')[] = ['books', 'movies', 'tv'];
+    const allData: any[] = [];
     let totalProgress = 10;
 
     for (const category of categories) {
@@ -149,6 +149,7 @@ export class SyncProcessor {
       
       try {
         const categoryData = await this.doubanService.fetchUserData({
+          userId,
           cookie: credentials.doubanCookie,
           category,
           limit: options.limit || 100,
@@ -167,7 +168,8 @@ export class SyncProcessor {
         await this.delay(2000 + Math.random() * 3000);
 
       } catch (error) {
-        this.logger.warn(`Failed to fetch ${category}: ${error.message}`);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        this.logger.warn(`Failed to fetch ${category}: ${errorMessage}`);
       }
     }
 
@@ -216,7 +218,6 @@ export class SyncProcessor {
         data,
         {
           fullSync: options.fullSync || false,
-          deleteOrphans: options.deleteOrphans || false,
           onProgress: (progress) => {
             const totalProgress = 65 + (progress.processed / progress.total) * 30;
             this.updateProgress(
@@ -267,7 +268,7 @@ export class SyncProcessor {
    * 创建数据批次
    */
   private createBatches<T>(array: T[], batchSize: number): T[][] {
-    const batches = [];
+    const batches: T[][] = [];
     for (let i = 0; i < array.length; i += batchSize) {
       batches.push(array.slice(i, i + batchSize));
     }

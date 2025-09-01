@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
-import { PrismaService } from '@/common/prisma/prisma.service';
+import { PrismaService } from './common/prisma/prisma.service';
 
 /**
  * 应用主服务 - 系统级业务逻辑

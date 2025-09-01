@@ -3,8 +3,8 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
 
-import { PrismaService } from '@/common/prisma/prisma.service';
-import { CryptoService } from '@/common/crypto/crypto.service';
+import { PrismaService } from '../common/prisma/prisma.service';
+import { CryptoService } from '../common/crypto/crypto.service';
 import { LoginDto, RegisterDto } from './dto/auth.dto';
 import { JwtPayload, TokenResponse, AuthenticatedUser } from './interfaces/auth.interface';
 

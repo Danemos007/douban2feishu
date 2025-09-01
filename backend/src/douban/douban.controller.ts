@@ -14,7 +14,7 @@ import {
 } from '@nestjs/swagger';
 
 import { DoubanService } from './douban.service';
-import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { FetchUserDataDto, ValidateCookieDto } from './dto/douban.dto';
 
 /**
@@ -47,7 +47,8 @@ export class DoubanController {
     },
   })
   async validateCookie(@Body() dto: ValidateCookieDto) {
-    const isValid = await this.doubanService.validateCookie(dto.cookie);
+    const validation = await this.doubanService.validateCookie(dto.userId || 'anonymous', dto.cookie);
+    const isValid = validation.isValid;
     
     return {
       valid: isValid,
@@ -69,7 +70,7 @@ export class DoubanController {
     description: '统计信息',
   })
   getRequestStats() {
-    return this.doubanService.getRequestStats();
+    return this.doubanService.getScrapingStats();
   }
 
   /**

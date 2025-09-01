@@ -57,7 +57,8 @@ export class HtmlParserService {
       return structuredData;
 
     } catch (error) {
-      this.logger.warn('Failed to parse structured data:', error.message);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.warn('Failed to parse structured data:', errorMessage);
       return null;
     }
   }
@@ -157,7 +158,8 @@ export class HtmlParserService {
       userState.comment = this.parseUserComment($);
 
     } catch (error) {
-      this.logger.warn('Failed to parse user state:', error.message);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.warn('Failed to parse user state:', errorMessage);
     }
 
     return userState;
@@ -250,7 +252,8 @@ export class HtmlParserService {
       return isNaN(date.getTime()) ? undefined : date;
 
     } catch (error) {
-      this.logger.warn(`Failed to parse date: ${dateText}`, error.message);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.warn(`Failed to parse date: ${dateText}`, errorMessage);
       return undefined;
     }
   }
@@ -352,7 +355,7 @@ export class HtmlParserService {
       let desc = $('.intro p').text().trim();
       if (!desc) {
         const metaTags = this.parseMetaTags($);
-        desc = metaTags.description;
+        desc = metaTags.description || '';
       }
       if (desc) {
         result['desc'] = desc;
@@ -365,7 +368,8 @@ export class HtmlParserService {
       }
 
     } catch (error) {
-      this.logger.warn('Failed to parse basic info:', error.message);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.warn('Failed to parse basic info:', errorMessage);
     }
 
     return result;
@@ -443,7 +447,8 @@ export class HtmlParserService {
       });
 
     } catch (error) {
-      this.logger.warn('Failed to parse info section:', error.message);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.warn('Failed to parse info section:', errorMessage);
     }
 
     return Object.fromEntries(infoMap);

@@ -9,8 +9,8 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { LocalAuthGuard } from './guards/local-auth.guard';
-import { PrismaModule } from '@/common/prisma/prisma.module';
-import { CryptoModule } from '@/common/crypto/crypto.module';
+import { PrismaModule } from '../common/prisma/prisma.module';
+import { CryptoModule } from '../common/crypto/crypto.module';
 
 /**
  * 认证模块 - 企业级JWT + Passport.js认证系统

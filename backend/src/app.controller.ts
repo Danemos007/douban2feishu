@@ -2,7 +2,7 @@ import { Controller, Get, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 
 import { AppService } from './app.service';
-import { Public } from '@/auth/decorators/public.decorator';
+import { Public } from './auth/decorators/public.decorator';
 
 /**
  * 应用主控制器 - 系统级接口

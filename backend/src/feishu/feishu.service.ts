@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import axios, { AxiosInstance } from 'axios';
+import axios from 'axios';
 
 import { BatchCreateRecordsDto } from './dto/feishu.dto';
 import { FeishuRecord, FeishuTokenResponse } from './interfaces/feishu.interface';
@@ -18,7 +18,7 @@ import { FeishuRecord, FeishuTokenResponse } from './interfaces/feishu.interface
 @Injectable()
 export class FeishuService {
   private readonly logger = new Logger(FeishuService.name);
-  private readonly httpClient: AxiosInstance;
+  private readonly httpClient: any;
   private tokenCache = new Map<string, { token: string; expiresAt: number }>();
 
   constructor(private readonly configService: ConfigService) {
@@ -28,7 +28,7 @@ export class FeishuService {
   /**
    * 创建HTTP客户端
    */
-  private createHttpClient(): AxiosInstance {
+  private createHttpClient(): any {
     return axios.create({
       baseURL: this.configService.get<string>('FEISHU_BASE_URL', 'https://open.feishu.cn'),
       timeout: 30000,
@@ -51,10 +51,10 @@ export class FeishuService {
     }
 
     try {
-      const response = await this.httpClient.post<FeishuTokenResponse>('/open-apis/auth/v3/tenant_access_token/internal', {
+      const response = await this.httpClient.post('/open-apis/auth/v3/tenant_access_token/internal', {
         app_id: appId,
         app_secret: appSecret,
-      });
+      }) as any;
 
       if (response.data.code !== 0) {
         throw new Error(`Failed to get access token: ${response.data.msg}`);
@@ -306,7 +306,7 @@ export class FeishuService {
    * 创建批次数组
    */
   private createBatches<T>(array: T[], batchSize: number): T[][] {
-    const batches = [];
+    const batches: T[][] = [];
     for (let i = 0; i < array.length; i += batchSize) {
       batches.push(array.slice(i, i + batchSize));
     }

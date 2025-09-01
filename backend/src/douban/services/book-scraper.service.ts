@@ -78,7 +78,8 @@ export class BookScraperService {
             this.logger.debug(`Fetched book detail: ${bookDetail.title}`);
           }
         } catch (error) {
-          this.logger.warn(`Failed to fetch detail for book ${item.id}:`, error.message);
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          this.logger.warn(`Failed to fetch detail for book ${item.id}:`, errorMessage);
           // 继续处理其他书籍
         }
       }
@@ -112,14 +113,14 @@ export class BookScraperService {
         const html = await this.antiSpider.makeRequest(url, cookie);
         const $ = cheerio.load(html);
         
-        const listPage = this.htmlParser.parseListPage($);
+        const listPage = this.htmlParser.parseListPage($ as any);
         
         if (listPage.items.length === 0) {
           this.logger.debug(`No more items found at start=${start}`);
           break;
         }
 
-        items.push(...listPage.items);
+        (items as any[]).push(...listPage.items);
         
         // 检查是否还有更多页面
         if (!listPage.hasMore || listPage.items.length < pageSize) {
@@ -161,19 +162,19 @@ export class BookScraperService {
   private parseBookDetail($: cheerio.Root, bookId: string, url: string): BookData {
     try {
       // 1. 解析JSON-LD结构化数据
-      const structuredData = this.htmlParser.parseStructuredData($);
+      const structuredData = this.htmlParser.parseStructuredData($ as any);
       
       // 2. 解析Meta标签
-      const metaTags = this.htmlParser.parseMetaTags($);
+      const metaTags = this.htmlParser.parseMetaTags($ as any);
       
       // 3. 解析基础信息
-      const basicInfo = this.htmlParser.parseBasicInfo($);
+      const basicInfo = this.htmlParser.parseBasicInfo($ as any);
       
       // 4. 解析用户状态
-      const userState = this.htmlParser.parseUserState($);
+      const userState = this.htmlParser.parseUserState($ as any);
       
       // 5. 解析#info区域的详细信息
-      const infoData = this.htmlParser.parseInfoSection($);
+      const infoData = this.htmlParser.parseInfoSection($ as any);
 
       // 6. 组合数据
       const bookData: BookData = {
@@ -344,7 +345,8 @@ export class BookScraperService {
       }
 
     } catch (error) {
-      this.logger.warn(`Failed to parse book menu for ${bookId}:`, error.message);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.warn(`Failed to parse book menu for ${bookId}:`, errorMessage);
     }
 
     return menu;

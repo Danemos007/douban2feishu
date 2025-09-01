@@ -77,8 +77,9 @@ export class DoubanService {
       return results;
 
     } catch (error) {
-      this.logger.error(`Failed to fetch ${fetchDto.category} data:`, error);
-      throw error;
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Failed to fetch ${fetchDto.category} data:`, errorMessage);
+      throw error instanceof Error ? error : new Error(String(error));
     }
   }
 
@@ -97,32 +98,16 @@ export class DoubanService {
    */
   private mapBookToDoubanItem(book: BookData): DoubanItem {
     return {
-      id: book.subjectId,
+      subjectId: book.subjectId,
       title: book.title,
-      category: 'book',
-      rating: book.score,
+      category: 'books',
+      rating: book.score ? { average: book.score, numRaters: 0 } : undefined,
       userRating: book.myRating,
-      tags: book.myTags || [],
-      status: book.myState || 'collect',
-      comment: book.myComment,
-      dateMarked: book.markDate,
-      metadata: {
-        subTitle: book.subTitle,
-        originalTitle: book.originalTitle,
-        author: book.author,
-        translator: book.translator,
-        publisher: book.publisher,
-        datePublished: book.datePublished,
-        isbn: book.isbn,
-        pages: book.totalPage,
-        price: book.price,
-        binding: book.binding,
-        series: book.series,
-        producer: book.producer,
-        description: book.desc,
-        image: book.image,
-        url: book.url
-      }
+      userTags: book.myTags || [],
+      userComment: book.myComment,
+      readDate: book.markDate,
+      doubanUrl: `https://book.douban.com/subject/${book.subjectId}/`,
+      genres: [],
     };
   }
 
