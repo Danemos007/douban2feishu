@@ -504,7 +504,13 @@ export class SyncEngineService {
   ): Promise<BatchOperationResult> {
     let success = 0;
     let failed = 0;
-    const details = [];
+    const details: Array<{
+      subjectId: string;
+      recordId: string | undefined;
+      action: string;
+      success: boolean;
+      error?: string;
+    }> = [];
 
     for (const item of deleteItems) {
       try {
@@ -530,7 +536,7 @@ export class SyncEngineService {
           recordId: item.recordId,
           action: 'delete',
           success: false,
-          error: error.message,
+          error: error instanceof Error ? error.message : String(error),
         });
       }
 
@@ -699,7 +705,7 @@ interface ChangeItem {
   action: 'create' | 'update' | 'delete' | 'unchanged';
 }
 
-interface SyncResult {
+export interface SyncResult {
   summary: {
     total: number;
     created: number;
