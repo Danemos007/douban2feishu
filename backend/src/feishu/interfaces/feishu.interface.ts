@@ -29,6 +29,36 @@ export interface FeishuField {
 }
 
 /**
+ * 飞书创建字段的请求负载类型
+ */
+export interface FeishuCreateFieldPayload {
+  field_name: string;
+  type: number;
+  ui_type?: string;
+  property?: {
+    formatter?: string;
+    min?: number;
+    max?: number;
+    rating?: {
+      symbol: string;
+    };
+    range?: {
+      min: number;
+      max: number;
+    };
+    precision?: number;
+    options?: Array<{
+      name: string;
+      color: number;
+    }>;
+    auto_wrap?: boolean;
+  };
+  description?: {
+    text: string;
+  };
+}
+
+/**
  * 飞书API通用响应
  */
 export interface FeishuApiResponse<T = any> {

@@ -30,7 +30,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { FeishuTableService } from './feishu-table.service';
 import { FeishuAuthService } from './feishu-auth.service';
-import { FeishuFieldType, FeishuApiResponse, FeishuField } from '../interfaces/feishu.interface';
+import { FeishuFieldType, FeishuApiResponse, FeishuField, FeishuCreateFieldPayload } from '../interfaces/feishu.interface';
 
 // ==================== Mock实现区域 ====================
 
@@ -343,9 +343,9 @@ describe('FeishuTableService - 完全重建版本', () => {
         
         // 验证HTTP请求的配置参数
         const httpCall = jest.spyOn(service['httpClient'], 'post').mock.calls[0];
-        const fieldConfig = httpCall[1];
+        const fieldConfig = httpCall[1] as FeishuCreateFieldPayload;
         expect(fieldConfig.ui_type).toBe('Rating'); // 关键：验证isRatingFieldType修复效果
-        expect(fieldConfig.property.rating).toEqual({ symbol: 'star' });
+        expect(fieldConfig.property?.rating).toEqual({ symbol: 'star' });
       });
 
       it('should create number field with correct configuration', async () => {
@@ -386,9 +386,9 @@ describe('FeishuTableService - 完全重建版本', () => {
         
         // 验证HTTP请求的配置参数
         const httpCall = jest.spyOn(service['httpClient'], 'post').mock.calls[0];
-        const fieldConfig = httpCall[1];
+        const fieldConfig = httpCall[1] as FeishuCreateFieldPayload;
         expect(fieldConfig.ui_type).toBe('Number'); // Number字段确实有ui_type
-        expect(fieldConfig.property.range).toBeDefined(); // Number字段有range属性
+        expect(fieldConfig.property?.range).toBeDefined(); // Number字段有range属性
       });
     });
   });
@@ -1108,7 +1108,7 @@ describe('FeishuTableService - 完全重建版本', () => {
         
         // 验证关键的字段类型识别逻辑
         const createFieldCall = jest.spyOn(service['httpClient'], 'post').mock.calls[0];
-        const fieldConfig = createFieldCall[1];
+        const fieldConfig = createFieldCall[1] as FeishuCreateFieldPayload;
         expect(fieldConfig.ui_type).toBe('Rating'); // 关键验证点
       });
     });
