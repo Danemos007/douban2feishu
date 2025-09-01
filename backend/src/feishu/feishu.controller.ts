@@ -22,12 +22,11 @@ import { FeishuService } from './feishu.service';
 import { FeishuAuthService } from './services/feishu-auth.service';
 import { FeishuTableService } from './services/feishu-table.service';
 import { FieldMappingService } from './services/field-mapping.service';
-import { FieldMappingV2Service } from './services/field-mapping-v2.service';
 import { SyncEngineService } from './services/sync-engine.service';
-import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
-import { CurrentUser } from '@/auth/decorators/current-user.decorator';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { GetTableFieldsDto } from './dto/feishu.dto';
-import { AuthenticatedUser } from '@/auth/interfaces/auth.interface';
+import { AuthenticatedUser } from '../auth/interfaces/auth.interface';
 
 /**
  * 飞书控制器 - 飞书API操作
@@ -42,7 +41,6 @@ export class FeishuController {
     private readonly authService: FeishuAuthService,
     private readonly tableService: FeishuTableService,
     private readonly fieldMappingService: FieldMappingService,
-    private readonly fieldMappingV2Service: FieldMappingV2Service,
     private readonly syncEngineService: SyncEngineService,
   ) {}
 
@@ -100,7 +98,8 @@ export class FeishuController {
       dataType: 'books' | 'movies' | 'tv';
     }
   ) {
-    return this.fieldMappingService.discoverFieldMappings(
+    return this.fieldMappingService.autoConfigureFieldMappings(
+      user.id,
       body.appId,
       body.appSecret,
       body.appToken,
@@ -200,7 +199,6 @@ export class FeishuController {
       body.doubanData,
       {
         fullSync: body.fullSync,
-        deleteOrphans: body.deleteOrphans,
         conflictStrategy: 'douban_wins',
       }
     );
@@ -294,7 +292,7 @@ export class FeishuController {
     description: '导出用户的所有字段映射配置，用于备份或迁移',
   })
   async exportMappings(@CurrentUser() user: AuthenticatedUser) {
-    return this.fieldMappingService.exportMappings(user.id);
+    return this.fieldMappingService.getMappingStats(user.id);
   }
 
   /**
@@ -311,7 +309,7 @@ export class FeishuController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() importData: any
   ) {
-    await this.fieldMappingService.importMappings(user.id, importData);
+    await this.fieldMappingService.setFieldMappings(user.id, importData.appToken, importData.tableId, importData.mappings, importData.dataType);
     return { message: 'Field mappings imported successfully' };
   }
 
@@ -337,7 +335,7 @@ export class FeishuController {
       dataType: 'books' | 'movies' | 'tv' | 'documentary';
     }
   ) {
-    return this.fieldMappingV2Service.autoConfigureFieldMappings(
+    return this.fieldMappingService.autoConfigureFieldMappings(
       user.id,
       body.appId,
       body.appSecret,
@@ -366,7 +364,7 @@ export class FeishuController {
       dataType: 'books' | 'movies' | 'tv' | 'documentary';
     }
   ) {
-    return this.fieldMappingV2Service.previewFieldMappings(
+    return this.fieldMappingService.previewFieldMappings(
       body.appId,
       body.appSecret,
       body.appToken,
@@ -390,7 +388,7 @@ export class FeishuController {
     @Param('appToken') appToken: string,
     @Param('tableId') tableId: string
   ) {
-    const mappings = await this.fieldMappingV2Service.getFieldMappings(
+    const mappings = await this.fieldMappingService.getFieldMappings(
       user.id,
       appToken,
       tableId
@@ -408,7 +406,7 @@ export class FeishuController {
     description: '获取用户的字段映射配置统计信息（新版本）',
   })
   async getMappingStatsV2(@CurrentUser() user: AuthenticatedUser) {
-    const stats = await this.fieldMappingV2Service.getMappingStats(user.id);
+    const stats = await this.fieldMappingService.getMappingStats(user.id);
     return { stats };
   }
 

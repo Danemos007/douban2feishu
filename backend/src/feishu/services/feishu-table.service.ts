@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRedis } from '@liaoliaots/nestjs-redis';
 import Redis from 'ioredis';
-import axios, { AxiosInstance, AxiosError } from 'axios';
+import axios from 'axios';
 
 import { FeishuAuthService } from './feishu-auth.service';
 import { 
@@ -13,6 +13,7 @@ import {
   FeishuRecordsResponse,
   FeishuFieldType 
 } from '../interfaces/feishu.interface';
+import { isRatingFieldType } from '../utils/field-type.util';
 
 /**
  * 飞书表格操作服务 - 多维表格CRUD操作
@@ -28,7 +29,7 @@ import {
 @Injectable()
 export class FeishuTableService {
   private readonly logger = new Logger(FeishuTableService.name);
-  private readonly httpClient: AxiosInstance;
+  private readonly httpClient: ReturnType<typeof axios.create>;
   
   // 缓存配置
   private readonly cacheConfig = {
@@ -59,7 +60,7 @@ export class FeishuTableService {
   /**
    * 创建HTTP客户端 - 专用于表格API
    */
-  private createHttpClient(): AxiosInstance {
+  private createHttpClient(): ReturnType<typeof axios.create> {
     const client = axios.create({
       baseURL: this.apiConfig.baseUrl,
       timeout: this.apiConfig.timeout,
@@ -70,7 +71,7 @@ export class FeishuTableService {
     });
 
     // 请求拦截器 - 自动添加认证头
-    client.interceptors.request.use(async (config) => {
+    client.interceptors.request.use(async (config: any) => {
       // 认证头将在具体方法中添加，这里做统一日志记录
       const context = {
         method: config.method?.toUpperCase(),
@@ -88,11 +89,11 @@ export class FeishuTableService {
         this.logger.debug('Feishu table API response:', {
           status: response.status,
           url: response.config.url,
-          responseCode: response.data?.code,
+          responseCode: (response.data as any)?.code,
         });
         return response;
       },
-      async (error: AxiosError) => {
+      async (error: any) => {
         return this.handleApiError(error);
       }
     );
@@ -122,12 +123,12 @@ export class FeishuTableService {
       const accessToken = await this.authService.getAccessToken(appId, appSecret);
 
       // 调用飞书API
-      const response = await this.httpClient.get<FeishuApiResponse<{ items: FeishuField[] }>>(
+      const response = await this.httpClient.get(
         `/open-apis/bitable/v1/apps/${appToken}/tables/${tableId}/fields`,
         {
           headers: { Authorization: `Bearer ${accessToken}` },
         }
-      );
+      ) as any;
 
       if (response.data.code !== 0) {
         throw new Error(`Failed to get table fields: [${response.data.code}] ${response.data.msg}`);
@@ -197,7 +198,7 @@ export class FeishuTableService {
       let batchIndex = 0;
 
       while (batchIndex < batches.length) {
-        const currentBatches = [];
+        const currentBatches: Array<{ index: number; records: any[] }> = [];
         
         for (let i = 0; i < this.apiConfig.concurrentBatches && batchIndex < batches.length; i++) {
           currentBatches.push({
@@ -221,9 +222,10 @@ export class FeishuTableService {
             return { success: true, batch: index };
           } catch (error) {
             results.failed += batchRecords.length;
-            results.errors.push({ batch: index + 1, error: error.message });
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            results.errors.push({ batch: index + 1, error: errorMessage });
             
-            this.logger.warn(`Batch ${index + 1} failed: ${error.message}`);
+            this.logger.warn(`Batch ${index + 1} failed: ${errorMessage}`);
             return { success: false, batch: index };
           }
         });
@@ -284,13 +286,13 @@ export class FeishuTableService {
         payload.page_token = options.pageToken;
       }
 
-      const response = await this.httpClient.post<FeishuApiResponse<FeishuRecordsResponse>>(
+      const response = await this.httpClient.post<FeishuApiResponse>(
         `/open-apis/bitable/v1/apps/${appToken}/tables/${tableId}/records/search`,
         payload,
         {
           headers: { Authorization: `Bearer ${accessToken}` },
         }
-      );
+      ) as any;
 
       if (response.data.code !== 0) {
         throw new Error(`Search records failed: [${response.data.code}] ${response.data.msg}`);
@@ -355,13 +357,13 @@ export class FeishuTableService {
     try {
       const accessToken = await this.authService.getAccessToken(appId, appSecret);
 
-      const response = await this.httpClient.put<FeishuApiResponse>(
+      const response = await this.httpClient.put(
         `/open-apis/bitable/v1/apps/${appToken}/tables/${tableId}/records/${recordId}`,
         { fields },
         {
           headers: { Authorization: `Bearer ${accessToken}` },
         }
-      );
+      ) as any;
 
       if (response.data.code !== 0) {
         throw new Error(`Update record failed: [${response.data.code}] ${response.data.msg}`);
@@ -416,9 +418,10 @@ export class FeishuTableService {
               results.success++;
             } catch (updateError) {
               results.failed++;
+              const errorMessage = updateError instanceof Error ? updateError.message : String(updateError);
               results.errors.push({
                 recordId: update.recordId,
-                error: updateError.message,
+                error: errorMessage,
               });
             }
           }
@@ -596,7 +599,7 @@ export class FeishuTableService {
       const fields = await this.getTableFields(appId, appSecret, appToken, tableId);
       const validFieldIds = new Set(fields.map(f => f.field_id));
 
-      const invalidMappings = [];
+      const invalidMappings: string[] = [];
       for (const [fieldName, fieldId] of Object.entries(fieldMappings)) {
         if (!validFieldIds.has(fieldId)) {
           invalidMappings.push(`${fieldName} -> ${fieldId}`);
@@ -609,7 +612,7 @@ export class FeishuTableService {
 
     } catch (error) {
       this.logger.error('Field mapping validation failed:', error);
-      throw error;
+      throw this.transformError(error);
     }
   }
 
@@ -623,7 +626,8 @@ export class FeishuTableService {
         return JSON.parse(cached);
       }
     } catch (error) {
-      this.logger.warn('Failed to get cached fields:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.warn('Failed to get cached fields:', errorMessage);
     }
     return null;
   }
@@ -635,7 +639,8 @@ export class FeishuTableService {
     try {
       await this.redis.setex(cacheKey, this.cacheConfig.fieldsTtl, JSON.stringify(fields));
     } catch (error) {
-      this.logger.warn('Failed to cache fields:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.warn('Failed to cache fields:', errorMessage);
     }
   }
 
@@ -643,7 +648,7 @@ export class FeishuTableService {
    * 创建数据批次
    */
   private createBatches<T>(array: T[], batchSize: number): T[][] {
-    const batches = [];
+    const batches: T[][] = [];
     for (let i = 0; i < array.length; i += batchSize) {
       batches.push(array.slice(i, i + batchSize));
     }
@@ -660,7 +665,7 @@ export class FeishuTableService {
   /**
    * API错误处理
    */
-  private async handleApiError(error: AxiosError): Promise<any> {
+  private async handleApiError(error: any): Promise<any> {
     const context = {
       url: error.config?.url,
       status: error.response?.status,
@@ -698,7 +703,7 @@ export class FeishuTableService {
   /**
    * 判断表格操作是否需要重试
    */
-  private shouldRetryTableOperation(error: AxiosError): boolean {
+  private shouldRetryTableOperation(error: any): boolean {
     if (!error.response) return true; // 网络错误重试
 
     const status = error.response.status;
@@ -711,7 +716,7 @@ export class FeishuTableService {
   /**
    * 重试表格请求
    */
-  private async retryTableRequest(error: AxiosError): Promise<any> {
+  private async retryTableRequest(error: any): Promise<any> {
     const config = error.config;
     if (!config) throw error;
 
@@ -761,13 +766,14 @@ export class FeishuTableService {
     try {
       const accessToken = await this.authService.getAccessToken(appId, appSecret);
 
+      // 基础字段配置
       const fieldConfig: any = {
         field_name: fieldName,
         type: fieldType,
       };
 
-      // 添加特定类型的配置
-      if (fieldType === FeishuFieldType.Rating) {
+      // 语义化的字段类型配置 - 避免枚举值直接比较
+      if (isRatingFieldType(fieldName, fieldType)) {
         fieldConfig.ui_type = 'Rating';
         fieldConfig.property = {
           formatter: '0',
@@ -777,6 +783,35 @@ export class FeishuTableService {
             symbol: 'star'
           }
         };
+      } else if (fieldType === FeishuFieldType.Number) {
+        fieldConfig.ui_type = 'Number';
+        fieldConfig.property = {
+          range: { min: 0, max: 10 },
+          precision: 1
+        };
+      } else if (fieldType === FeishuFieldType.SingleSelect) {
+        fieldConfig.ui_type = 'SingleSelect';
+        // 单选字段需要预定义选项，这里需要从配置中获取
+        if (fieldName === '我的状态') {
+          fieldConfig.property = {
+            options: [
+              { name: '想看', color: 5 },
+              { name: '看过', color: 0 }
+            ]
+          };
+        }
+      } else if (fieldType === FeishuFieldType.URL) {
+        fieldConfig.ui_type = 'Url';
+      } else if (fieldType === FeishuFieldType.DateTime) {
+        fieldConfig.ui_type = 'DateTime';
+      } else if (fieldType === FeishuFieldType.Text) {
+        fieldConfig.ui_type = 'Text';
+        // 特殊文本字段配置
+        if (fieldName === '剧情简介') {
+          fieldConfig.property = {
+            auto_wrap: true
+          };
+        }
       }
 
       // 添加描述（如果提供）
@@ -850,7 +885,8 @@ export class FeishuTableService {
           await this.delay(1000);
           
         } catch (error) {
-          this.logger.error(`Failed to create field "${fieldConfig.fieldName}":`, error);
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          this.logger.error(`Failed to create field "${fieldConfig.fieldName}":`, errorMessage);
           // 继续创建其他字段，不中断整个流程
         }
       }
@@ -878,8 +914,10 @@ export class FeishuTableService {
         cacheExpiry: exists > 0 ? await this.redis.ttl(pattern) : null,
       };
     } catch (error) {
-      this.logger.error('Failed to get table stats:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.error('Failed to get table stats:', errorMessage);
       return null;
     }
   }
+
 }

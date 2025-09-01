@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 
-import { PrismaService } from '@/common/prisma/prisma.service';
-import { CryptoService } from '@/common/crypto/crypto.service';
+import { PrismaService } from '../common/prisma/prisma.service';
+import { CryptoService } from '../common/crypto/crypto.service';
 import { 
   UpdateDoubanConfigDto, 
   UpdateFeishuConfigDto, 

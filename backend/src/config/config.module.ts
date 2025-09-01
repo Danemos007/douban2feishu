@@ -3,7 +3,7 @@ import { ConfigModule as NestConfigModule } from '@nestjs/config';
 
 import { ConfigService } from './config.service';
 import { ConfigController } from './config.controller';
-import { CryptoModule } from '@/common/crypto/crypto.module';
+import { CryptoModule } from '../common/crypto/crypto.module';
 
 /**
  * 配置模块 - 用户配置管理

@@ -74,4 +74,13 @@ export class ValidateCookieDto {
   })
   @IsString({ message: 'Cookie必须是字符串' })
   cookie!: string;
+
+  @ApiProperty({
+    description: '用户ID（可选，用于Cookie验证）',
+    example: 'user123',
+    required: false,
+  })
+  @IsOptional()
+  @IsString({ message: '用户ID必须是字符串' })
+  userId?: string;
 }

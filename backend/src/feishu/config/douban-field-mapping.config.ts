@@ -123,7 +123,8 @@ export const DOUBAN_BOOKS_FIELD_MAPPING = {
   },
 };
 
-// 豆瓣电影字段映射 (18个字段)
+// 豆瓣电影字段映射 (18个字段) - 修复版本
+// 基于 sync-movie-from-cache.ts 验证过的正确配置
 export const DOUBAN_MOVIES_FIELD_MAPPING = {
   subjectId: {
     chineseName: 'Subject ID',
@@ -143,7 +144,7 @@ export const DOUBAN_MOVIES_FIELD_MAPPING = {
     required: false,
     description: '电影类型：剧情/动作/喜剧等',
   },
-  directors: {
+  director: {
     chineseName: '导演',
     fieldType: 'text',
     required: false,
@@ -191,13 +192,13 @@ export const DOUBAN_MOVIES_FIELD_MAPPING = {
     required: false,
     description: '豆瓣平均评分',
   },
-  image: {
+  coverImage: {
     chineseName: '封面图',
     fieldType: 'url',
     required: false,
     description: '电影海报URL',
   },
-  description: {
+  summary: {
     chineseName: '剧情简介',
     fieldType: 'text',
     required: false,
@@ -217,9 +218,13 @@ export const DOUBAN_MOVIES_FIELD_MAPPING = {
   },
   myStatus: {
     chineseName: '我的状态',
-    fieldType: 'text',
+    fieldType: 'singleSelect',
     required: false,
-    description: '观看状态：想看/在看/看过',
+    description: '观看状态：想看/看过',
+    options: [
+      { name: '想看', color: 5 },
+      { name: '看过', color: 0 }
+    ],
   },
   myComment: {
     chineseName: '我的备注',

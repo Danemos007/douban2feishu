@@ -68,7 +68,8 @@ export class MovieScraperService {
       const html = await this.antiSpiderService.makeRequest(url, cookie);
       return this.parseMovieListPage(html);
     } catch (error) {
-      this.logger.error(`获取电影列表失败: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.error(`获取电影列表失败: ${errorMessage}`);
       throw error;
     }
   }
@@ -119,7 +120,8 @@ export class MovieScraperService {
           break;
         }
       } catch (error) {
-        this.logger.error(`第${Math.floor(start/30) + 1}页抓取失败: ${error.message}`);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        this.logger.error(`第${Math.floor(start/30) + 1}页抓取失败: ${errorMessage}`);
         break;
       }
     }
@@ -140,7 +142,8 @@ export class MovieScraperService {
       const html = await this.antiSpiderService.makeRequest(url, cookie);
       return this.parseMovieDetail(html, movieId);
     } catch (error) {
-      this.logger.error(`获取电影详情失败: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.error(`获取电影详情失败: ${errorMessage}`);
       throw error;
     }
   }
@@ -208,13 +211,13 @@ export class MovieScraperService {
     const $ = cheerio.load(html);
     
     // 1. 解析结构化数据
-    const structuredData = this.htmlParserService.parseStructuredData($);
+    const structuredData = this.htmlParserService.parseStructuredData($ as any);
     
     // 2. 解析基本信息
     const basicInfo = this.parseMovieBasicInfo($);
     
     // 3. 解析用户状态
-    const userState = this.htmlParserService.parseUserState($);
+    const userState = this.htmlParserService.parseUserState($ as any);
     
     // 4. 解析详细信息
     const detailInfo = this.parseMovieDetailInfo($);

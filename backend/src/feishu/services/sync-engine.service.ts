@@ -5,9 +5,8 @@ import { createHash } from 'crypto';
 
 import { FeishuTableService } from './feishu-table.service';
 import { FieldMappingService } from './field-mapping.service';
-import { FieldMappingV2Service } from './field-mapping-v2.service';
 import { FeishuRecordItem } from '../interfaces/feishu.interface';
-import { PrismaService } from '@/common/prisma/prisma.service';
+import { PrismaService } from '../../common/prisma/prisma.service';
 
 /**
  * 数据同步引擎 - Subject ID增量同步核心服务
@@ -43,7 +42,6 @@ export class SyncEngineService {
   constructor(
     private readonly tableService: FeishuTableService,
     private readonly fieldMappingService: FieldMappingService,
-    private readonly fieldMappingV2Service: FieldMappingV2Service,
     private readonly prisma: PrismaService,
     @InjectRedis() private readonly redis: Redis,
   ) {}
@@ -72,7 +70,7 @@ export class SyncEngineService {
       this.logger.log(`Starting ${options.fullSync ? 'full' : 'incremental'} sync for ${doubanData.length} records`);
 
       // 获取或自动配置字段映射
-      let fieldMappings = await this.fieldMappingV2Service.getFieldMappings(
+      let fieldMappings = await this.fieldMappingService.getFieldMappings(
         userId,
         syncConfig.appToken,
         syncConfig.tableId
@@ -89,7 +87,7 @@ export class SyncEngineService {
           message: 'Auto-configuring field mappings...'
         });
 
-        const autoConfigResult = await this.fieldMappingV2Service.autoConfigureFieldMappings(
+        const autoConfigResult = await this.fieldMappingService.autoConfigureFieldMappings(
           userId,
           syncConfig.appId,
           syncConfig.appSecret,
@@ -143,8 +141,9 @@ export class SyncEngineService {
       return syncResult;
 
     } catch (error) {
-      this.logger.error('Incremental sync failed:', error);
-      throw error;
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.error('Incremental sync failed:', errorMessage);
+      throw error instanceof Error ? error : new Error(String(error));
     }
   }
 
@@ -246,7 +245,8 @@ export class SyncEngineService {
       return doubanHash !== feishuHash;
 
     } catch (error) {
-      this.logger.warn(`Failed to check record changes for ${doubanRecord.subjectId}:`, error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.warn(`Failed to check record changes for ${doubanRecord.subjectId}:`, errorMessage);
       // 出现错误时默认认为记录已变更，进行更新
       return true;
     }
@@ -417,8 +417,9 @@ export class SyncEngineService {
       return result;
 
     } catch (error) {
-      this.logger.error('Sync operations failed:', error);
-      throw error;
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.error('Sync operations failed:', errorMessage);
+      throw error instanceof Error ? error : new Error(String(error));
     }
   }
 
@@ -523,6 +524,7 @@ export class SyncEngineService {
         });
       } catch (error) {
         failed++;
+        const errorMessage = error instanceof Error ? error.message : String(error);
         details.push({
           subjectId: item.subjectId,
           recordId: item.recordId,
@@ -582,7 +584,8 @@ export class SyncEngineService {
         }
 
       } catch (error) {
-        this.logger.error('Failed to fetch existing records:', error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        this.logger.error('Failed to fetch existing records:', errorMessage);
         break;
       }
     } while (pageToken);
@@ -665,7 +668,8 @@ export class SyncEngineService {
       const state = await this.redis.get(stateKey);
       return state ? JSON.parse(state) : null;
     } catch (error) {
-      this.logger.error('Failed to get sync state:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.error('Failed to get sync state:', errorMessage);
       return null;
     }
   }
@@ -733,4 +737,5 @@ interface SyncProgress {
   phase: 'create' | 'update' | 'delete';
   processed: number;
   total: number;
+  message?: string;
 }

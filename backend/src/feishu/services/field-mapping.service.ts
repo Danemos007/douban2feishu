@@ -4,19 +4,23 @@ import Redis from 'ioredis';
 
 import { FeishuTableService } from './feishu-table.service';
 import { FeishuField, FeishuFieldType } from '../interfaces/feishu.interface';
-import { PrismaService } from '@/common/prisma/prisma.service';
+import { PrismaService } from '../../common/prisma/prisma.service';
+import { 
+  DOUBAN_FIELD_MAPPINGS, 
+  FIELD_TYPE_MAPPING,
+  getDoubanFieldMapping,
+  doubanFieldToChineseName
+} from '../config/douban-field-mapping.config';
 
 /**
- * ⚠️ 注意: 此服务包含智能匹配功能但未被生产环境调用，不会生效
- * 生产环境使用的是 FieldMappingV2Service (精确匹配策略)
+ * 字段映射管理服务 V2 - 精确匹配 + 自动创建策略
  * 
- * 
- * 核心功能:
- * - ~~自动字段ID映射发现~~ **自动字段名映射发现**（使用字段名匹配，非Field ID）
- * - 映射配置持久化存储
- * - 字段类型验证和转换
- * - 映射冲突检测和解决
- * - 批量映射操作优化
+ * 新策略:
+ * 1. 豆瓣字段先映射为标准中文名（如: title → "书名"）
+ * 2. 精确匹配飞书表格中的字段名
+ * 3. 匹配不到的字段自动创建
+ * 4. ~~建立Field ID绑定关系~~ **建立字段名绑定关系**
+ * 5. ~~后续使用"认ID不认名"策略~~ **后续使用字段名匹配策略进行数据操作**
  */
 @Injectable()
 export class FieldMappingService {
@@ -25,71 +29,7 @@ export class FieldMappingService {
   // 缓存配置
   private readonly cacheConfig = {
     mappingsTtl: 1800, // 映射缓存30分钟
-    mappingsKeyPrefix: 'feishu:mappings:',
-  };
-
-  // 豆瓣数据字段标准定义
-  private readonly doubanFieldDefinitions = {
-    books: {
-      subjectId: { type: 'text', required: true, description: '豆瓣书籍ID（唯一标识）' },
-      title: { type: 'text', required: true, description: '书名' },
-      subtitle: { type: 'text', required: false, description: '副标题' },
-      author: { type: 'text', required: false, description: '作者' },
-      translator: { type: 'text', required: false, description: '译者' },
-      isbn: { type: 'text', required: false, description: 'ISBN' },
-      publisher: { type: 'text', required: false, description: '出版社' },
-      publishDate: { type: 'text', required: false, description: '出版日期' },
-      pages: { type: 'number', required: false, description: '页数' },
-      price: { type: 'text', required: false, description: '价格' },
-      binding: { type: 'text', required: false, description: '装帧' },
-      rating: { type: 'number', required: false, description: '评分' },
-      ratingCount: { type: 'number', required: false, description: '评分人数' },
-      tags: { type: 'multiSelect', required: false, description: '标签' },
-      summary: { type: 'text', required: false, description: '内容简介' },
-      coverUrl: { type: 'url', required: false, description: '封面图片URL' },
-    },
-    movies: {
-      subjectId: { type: 'text', required: true, description: '豆瓣电影ID' },
-      title: { type: 'text', required: true, description: '电影名' },
-      originalTitle: { type: 'text', required: false, description: '原名' },
-      directors: { type: 'text', required: false, description: '导演' },
-      screenwriters: { type: 'text', required: false, description: '编剧' },
-      actors: { type: 'text', required: false, description: '主演' },
-      genres: { type: 'multiSelect', required: false, description: '类型' },
-      countries: { type: 'text', required: false, description: '制片国家/地区' },
-      languages: { type: 'text', required: false, description: '语言' },
-      releaseDate: { type: 'text', required: false, description: '上映日期' },
-      runtime: { type: 'text', required: false, description: '片长' },
-      rating: { type: 'number', required: false, description: '评分' },
-      ratingCount: { type: 'number', required: false, description: '评分人数' },
-      imdbId: { type: 'text', required: false, description: 'IMDb ID' },
-      tags: { type: 'multiSelect', required: false, description: '标签' },
-      summary: { type: 'text', required: false, description: '剧情简介' },
-      coverUrl: { type: 'url', required: false, description: '海报URL' },
-      year: { type: 'number', required: false, description: '年份' },
-    },
-    tv: {
-      subjectId: { type: 'text', required: true, description: '豆瓣剧集ID' },
-      title: { type: 'text', required: true, description: '剧集名' },
-      originalTitle: { type: 'text', required: false, description: '原名' },
-      directors: { type: 'text', required: false, description: '导演' },
-      screenwriters: { type: 'text', required: false, description: '编剧' },
-      actors: { type: 'text', required: false, description: '主演' },
-      genres: { type: 'multiSelect', required: false, description: '类型' },
-      countries: { type: 'text', required: false, description: '制片国家/地区' },
-      languages: { type: 'text', required: false, description: '语言' },
-      firstAirDate: { type: 'text', required: false, description: '首播日期' },
-      lastAirDate: { type: 'text', required: false, description: '结束日期' },
-      episodeCount: { type: 'number', required: false, description: '集数' },
-      runtime: { type: 'text', required: false, description: '单集长度' },
-      rating: { type: 'number', required: false, description: '评分' },
-      ratingCount: { type: 'number', required: false, description: '评分人数' },
-      imdbId: { type: 'text', required: false, description: 'IMDb ID' },
-      tags: { type: 'multiSelect', required: false, description: '标签' },
-      summary: { type: 'text', required: false, description: '剧情简介' },
-      coverUrl: { type: 'url', required: false, description: '海报URL' },
-      year: { type: 'number', required: false, description: '年份' },
-    },
+    mappingsKeyPrefix: 'feishu:mappings_v2:',
   };
 
   constructor(
@@ -99,311 +39,149 @@ export class FieldMappingService {
   ) {}
 
   /**
-   * 自动发现并创建字段映射
+   * 一键式字段映射配置 - 精确匹配 + 自动创建
    */
-  async discoverFieldMappings(
+  async autoConfigureFieldMappings(
+    userId: string,
     appId: string,
     appSecret: string,
     appToken: string,
     tableId: string,
-    dataType: 'books' | 'movies' | 'tv'
+    dataType: 'books' | 'movies' | 'tv' | 'documentary'
   ): Promise<{
-    mappings: Record<string, string>;
-    unmapped: string[];
-    conflicts: Array<{ field: string; candidates: string[] }>;
-    recommendations: Array<{ doubanField: string; feishuField: string; confidence: number }>;
+    mappings: Record<string, string>; // doubanField -> feishuFieldId
+    matched: Array<{ doubanField: string; chineseName: string; fieldId: string }>;
+    created: Array<{ doubanField: string; chineseName: string; fieldId: string }>;
+    errors: Array<{ doubanField: string; chineseName: string; error: string }>;
   }> {
     try {
-      // 获取飞书表格字段
-      const feishuFields = await this.tableService.getTableFields(appId, appSecret, appToken, tableId);
-      
-      // 获取豆瓣字段定义
-      const doubanFields = this.doubanFieldDefinitions[dataType];
-      
-      this.logger.log(`Discovering field mappings for ${dataType} with ${feishuFields.length} Feishu fields`);
+      this.logger.log(`Auto-configuring field mappings for ${dataType} in table ${tableId}`);
 
-      // 智能匹配算法
-      const mappingResult = await this.intelligentFieldMatching(doubanFields, feishuFields);
+      // 1. 获取豆瓣字段标准配置
+      const doubanFieldConfig = getDoubanFieldMapping(dataType);
       
-      // 缓存映射结果
-      await this.cacheMappings(appToken, tableId, mappingResult.mappings);
-      
-      this.logger.log(`Field discovery completed: ${Object.keys(mappingResult.mappings).length} mappings found`);
-      
-      return mappingResult;
-
-    } catch (error) {
-      this.logger.error('Field mapping discovery failed:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * 智能字段匹配算法
-   */
-  private async intelligentFieldMatching(
-    doubanFields: Record<string, any>,
-    feishuFields: FeishuField[]
-  ): Promise<{
-    mappings: Record<string, string>;
-    unmapped: string[];
-    conflicts: Array<{ field: string; candidates: string[] }>;
-    recommendations: Array<{ doubanField: string; feishuField: string; confidence: number }>;
-  }> {
-    const mappings: Record<string, string> = {};
-    const unmapped: string[] = [];
-    const conflicts: Array<{ field: string; candidates: string[] }> = [];
-    const recommendations: Array<{ doubanField: string; feishuField: string; confidence: number }> = [];
-
-    // 创建飞书字段名称索引
-    const feishuFieldIndex = new Map<string, FeishuField[]>();
-    feishuFields.forEach(field => {
-      const normalizedName = this.normalizeFieldName(field.field_name);
-      if (!feishuFieldIndex.has(normalizedName)) {
-        feishuFieldIndex.set(normalizedName, []);
-      }
-      feishuFieldIndex.get(normalizedName)!.push(field);
-    });
-
-    // 为每个豆瓣字段寻找最佳匹配
-    for (const [doubanFieldName, doubanFieldDef] of Object.entries(doubanFields)) {
-      const candidates = this.findFieldCandidates(doubanFieldName, doubanFieldDef, feishuFields);
-      
-      if (candidates.length === 0) {
-        unmapped.push(doubanFieldName);
-        continue;
-      }
-      
-      if (candidates.length === 1) {
-        const candidate = candidates[0];
-        mappings[doubanFieldName] = candidate.field.field_id;
-        recommendations.push({
-          doubanField: doubanFieldName,
-          feishuField: candidate.field.field_name,
-          confidence: candidate.confidence,
-        });
-        continue;
-      }
-      
-      // 多个候选者，选择置信度最高的
-      candidates.sort((a, b) => b.confidence - a.confidence);
-      const bestCandidate = candidates[0];
-      
-      if (bestCandidate.confidence >= 0.8) {
-        mappings[doubanFieldName] = bestCandidate.field.field_id;
-        recommendations.push({
-          doubanField: doubanFieldName,
-          feishuField: bestCandidate.field.field_name,
-          confidence: bestCandidate.confidence,
-        });
-      } else {
-        conflicts.push({
-          field: doubanFieldName,
-          candidates: candidates.map(c => `${c.field.field_name} (${(c.confidence * 100).toFixed(1)}%)`),
-        });
-        unmapped.push(doubanFieldName);
-      }
-    }
-
-    return { mappings, unmapped, conflicts, recommendations };
-  }
-
-  /**
-   * 寻找字段候选者
-   */
-  private findFieldCandidates(
-    doubanFieldName: string,
-    doubanFieldDef: any,
-    feishuFields: FeishuField[]
-  ): Array<{ field: FeishuField; confidence: number }> {
-    const candidates: Array<{ field: FeishuField; confidence: number }> = [];
-
-    for (const feishuField of feishuFields) {
-      const confidence = this.calculateFieldSimilarity(
-        doubanFieldName,
-        doubanFieldDef,
-        feishuField
+      // 2. 获取飞书表格现有字段
+      const existingFields = await this.tableService.getTableFields(
+        appId, appSecret, appToken, tableId
       );
       
-      if (confidence >= 0.3) { // 最低置信度阈值
-        candidates.push({ field: feishuField, confidence });
-      }
-    }
-
-    return candidates;
-  }
-
-  /**
-   * 计算字段相似度
-   */
-  private calculateFieldSimilarity(
-    doubanFieldName: string,
-    doubanFieldDef: any,
-    feishuField: FeishuField
-  ): number {
-    let confidence = 0;
-
-    // 1. 字段名精确匹配 (权重: 0.4)
-    const normalizedDoubanName = this.normalizeFieldName(doubanFieldName);
-    const normalizedFeishuName = this.normalizeFieldName(feishuField.field_name);
-    
-    if (normalizedDoubanName === normalizedFeishuName) {
-      confidence += 0.4;
-    } else {
-      // 名称相似度匹配
-      const similarity = this.calculateStringSimilarity(normalizedDoubanName, normalizedFeishuName);
-      confidence += similarity * 0.4;
-    }
-
-    // 2. 字段名包含关系 (权重: 0.25)
-    const doubanKeywords = this.extractKeywords(doubanFieldName);
-    const feishuKeywords = this.extractKeywords(feishuField.field_name);
-    
-    const keywordOverlap = this.calculateKeywordOverlap(doubanKeywords, feishuKeywords);
-    confidence += keywordOverlap * 0.25;
-
-    // 3. 字段类型匹配 (权重: 0.2)
-    const typeMatch = this.isFieldTypeCompatible(doubanFieldDef.type, feishuField.type);
-    if (typeMatch) {
-      confidence += 0.2;
-    }
-
-    // 4. 描述匹配 (权重: 0.15)
-    if (feishuField.description?.text) {
-      const descSimilarity = this.calculateStringSimilarity(
-        doubanFieldDef.description || '',
-        feishuField.description.text
-      );
-      confidence += descSimilarity * 0.15;
-    }
-
-    return Math.min(confidence, 1.0);
-  }
-
-  /**
-   * 字段名标准化
-   */
-  private normalizeFieldName(name: string): string {
-    return name
-      .toLowerCase()
-      .replace(/[_\-\s]+/g, '')
-      .replace(/id$/i, 'id')
-      .replace(/url$/i, 'url')
-      .replace(/count$/i, 'count')
-      .replace(/date$/i, 'date')
-      .replace(/time$/i, 'time')
-      .trim();
-  }
-
-  /**
-   * 提取关键词
-   */
-  private extractKeywords(text: string): string[] {
-    const keywords = text
-      .toLowerCase()
-      .split(/[_\-\s]+/)
-      .filter(word => word.length > 2)
-      .filter(word => !['the', 'and', 'or', 'of', 'in', 'at', 'to', 'for'].includes(word));
-    
-    return [...new Set(keywords)]; // 去重
-  }
-
-  /**
-   * 计算关键词重叠度
-   */
-  private calculateKeywordOverlap(keywords1: string[], keywords2: string[]): number {
-    if (keywords1.length === 0 || keywords2.length === 0) return 0;
-    
-    const set1 = new Set(keywords1);
-    const set2 = new Set(keywords2);
-    const intersection = new Set([...set1].filter(x => set2.has(x)));
-    
-    return intersection.size / Math.min(set1.size, set2.size);
-  }
-
-  /**
-   * 计算字符串相似度 (Levenshtein Distance)
-   */
-  private calculateStringSimilarity(str1: string, str2: string): number {
-    const matrix = [];
-    const len1 = str1.length;
-    const len2 = str2.length;
-
-    if (len1 === 0) return len2 === 0 ? 1 : 0;
-    if (len2 === 0) return 0;
-
-    // 初始化矩阵
-    for (let i = 0; i <= len1; i++) {
-      matrix[i] = [i];
-    }
-    for (let j = 0; j <= len2; j++) {
-      matrix[0][j] = j;
-    }
-
-    // 填充矩阵
-    for (let i = 1; i <= len1; i++) {
-      for (let j = 1; j <= len2; j++) {
-        const cost = str1[i - 1] === str2[j - 1] ? 0 : 1;
-        matrix[i][j] = Math.min(
-          matrix[i - 1][j] + 1,      // deletion
-          matrix[i][j - 1] + 1,      // insertion
-          matrix[i - 1][j - 1] + cost // substitution
-        );
-      }
-    }
-
-    const maxLen = Math.max(len1, len2);
-    const distance = matrix[len1][len2];
-    return (maxLen - distance) / maxLen;
-  }
-
-  /**
-   * 检查字段类型兼容性
-   */
-  private isFieldTypeCompatible(doubanType: string, feishuType: number): boolean {
-    const compatibilityMap: Record<string, number[]> = {
-      text: [FeishuFieldType.Text, FeishuFieldType.URL],
-      number: [FeishuFieldType.Number],
-      url: [FeishuFieldType.URL, FeishuFieldType.Text],
-      multiSelect: [FeishuFieldType.MultiSelect, FeishuFieldType.Text],
-      singleSelect: [FeishuFieldType.SingleSelect, FeishuFieldType.Text],
-      datetime: [FeishuFieldType.DateTime, FeishuFieldType.Text],
-      checkbox: [FeishuFieldType.Checkbox],
-    };
-
-    return compatibilityMap[doubanType]?.includes(feishuType) || false;
-  }
-
-  /**
-   * 手动设置字段映射
-   */
-  async setFieldMappings(
-    userId: string,
-    appToken: string,
-    tableId: string,
-    mappings: Record<string, string>,
-    dataType: 'books' | 'movies' | 'tv'
-  ): Promise<void> {
-    try {
-      // 验证映射的有效性
-      await this.validateMappings(mappings, dataType);
-
-      // 保存到数据库
-      await this.saveMappingsToDatabase(userId, appToken, tableId, mappings, dataType);
+      // 3. 建立中文名 -> Field ID 映射
+      const chineseNameToFieldId = new Map<string, string>();
+      existingFields.forEach(field => {
+        chineseNameToFieldId.set(field.field_name, field.field_id);
+      });
       
-      // 更新缓存
-      await this.cacheMappings(appToken, tableId, mappings);
+      // 4. 处理每个豆瓣字段
+      const mappings: Record<string, string> = {};
+      const matched: Array<{ doubanField: string; chineseName: string; fieldId: string }> = [];
+      const fieldsToCreate: Array<{ doubanField: string; chineseName: string; fieldType: FeishuFieldType; description: string }> = [];
+      const errors: Array<{ doubanField: string; chineseName: string; error: string }> = [];
       
-      this.logger.log(`Field mappings saved for user ${userId}, table ${tableId}`);
+      for (const [doubanField, fieldConfig] of Object.entries(doubanFieldConfig)) {
+        const chineseName = fieldConfig.chineseName;
+        
+        if (chineseNameToFieldId.has(chineseName)) {
+          // 字段已存在，精确匹配成功
+          const fieldId = chineseNameToFieldId.get(chineseName)!;
+          mappings[doubanField] = fieldId;
+          matched.push({ doubanField, chineseName, fieldId });
+          
+          this.logger.debug(`Matched field: ${doubanField} -> "${chineseName}" (${fieldId})`);
+        } else {
+          // 字段不存在，需要创建
+          const feishuFieldType = FIELD_TYPE_MAPPING[fieldConfig.fieldType] || FeishuFieldType.Text;
+          fieldsToCreate.push({
+            doubanField,
+            chineseName,
+            fieldType: feishuFieldType,
+            description: fieldConfig.description
+          });
+        }
+      }
+      
+      // 5. 批量创建缺失的字段
+      const created: Array<{ doubanField: string; chineseName: string; fieldId: string }> = [];
+      
+      if (fieldsToCreate.length > 0) {
+        this.logger.log(`Creating ${fieldsToCreate.length} missing fields...`);
+        
+        try {
+          const createdFields = await this.tableService.batchCreateFields(
+            appId,
+            appSecret,
+            appToken,
+            tableId,
+            fieldsToCreate.map(config => ({
+              fieldName: config.chineseName,
+              fieldType: config.fieldType,
+              description: config.description
+            }))
+          );
+          
+          // 映射创建成功的字段
+          createdFields.forEach((field, index) => {
+            const fieldConfig = fieldsToCreate[index];
+            mappings[fieldConfig.doubanField] = field.field_id;
+            created.push({
+              doubanField: fieldConfig.doubanField,
+              chineseName: fieldConfig.chineseName,
+              fieldId: field.field_id
+            });
+            
+            this.logger.debug(`Created field: ${fieldConfig.doubanField} -> "${fieldConfig.chineseName}" (${field.field_id})`);
+          });
+          
+          // 处理创建失败的字段
+          if (createdFields.length < fieldsToCreate.length) {
+            const failedFields = fieldsToCreate.slice(createdFields.length);
+            failedFields.forEach(config => {
+              errors.push({
+                doubanField: config.doubanField,
+                chineseName: config.chineseName,
+                error: 'Field creation failed'
+              });
+            });
+          }
+          
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          this.logger.error('Failed to create some fields:', errorMessage);
+          fieldsToCreate.forEach(config => {
+            errors.push({
+              doubanField: config.doubanField,
+              chineseName: config.chineseName,
+              error: error instanceof Error ? error.message : 'Unknown error'
+            });
+          });
+        }
+      }
+      
+      // 6. 保存映射配置到数据库
+      await this.saveFieldMappingsToDatabase(userId, appToken, tableId, mappings, dataType);
+      
+      // 7. 缓存映射结果
+      await this.cacheFieldMappings(appToken, tableId, mappings);
+      
+      const result = { mappings, matched, created, errors };
+      
+      this.logger.log(`Field mapping configuration completed:`, {
+        total: Object.keys(doubanFieldConfig).length,
+        matched: matched.length,
+        created: created.length,
+        errors: errors.length
+      });
+      
+      return result;
 
     } catch (error) {
-      this.logger.error('Failed to set field mappings:', error);
-      throw error;
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.error('Auto-configure field mappings failed:', errorMessage);
+      throw error instanceof Error ? error : new Error(String(error));
     }
   }
 
   /**
-   * 获取字段映射
+   * 获取字段映射配置
    */
   async getFieldMappings(
     userId: string,
@@ -411,13 +189,13 @@ export class FieldMappingService {
     tableId: string
   ): Promise<Record<string, string> | null> {
     try {
-      // 先从缓存获取
-      const cached = await this.getCachedMappings(appToken, tableId);
+      // 1. 先从缓存获取
+      const cached = await this.getCachedFieldMappings(appToken, tableId);
       if (cached) {
         return cached;
       }
 
-      // 从数据库获取
+      // 2. 从数据库获取
       const syncConfig = await this.prisma.syncConfig.findUnique({
         where: { userId },
       });
@@ -430,56 +208,130 @@ export class FieldMappingService {
       const tableKey = `${appToken}:${tableId}`;
       
       if (tableMappings[tableKey]) {
+        const mappings = tableMappings[tableKey];
+        // 提取字段映射（排除元数据）
+        const fieldMappings: Record<string, string> = {};
+        Object.entries(mappings).forEach(([key, value]) => {
+          if (!key.startsWith('_') && typeof value === 'string') {
+            fieldMappings[key] = value;
+          }
+        });
+        
         // 缓存结果
-        await this.cacheMappings(appToken, tableId, tableMappings[tableKey]);
-        return tableMappings[tableKey];
+        await this.cacheFieldMappings(appToken, tableId, fieldMappings);
+        return fieldMappings;
       }
 
       return null;
 
     } catch (error) {
-      this.logger.error('Failed to get field mappings:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.error('Failed to get field mappings:', errorMessage);
       return null;
     }
   }
 
   /**
-   * 验证映射有效性
+   * 手动设置字段映射（向后兼容）
    */
-  private async validateMappings(
+  async setFieldMappings(
+    userId: string,
+    appToken: string,
+    tableId: string,
     mappings: Record<string, string>,
-    dataType: 'books' | 'movies' | 'tv'
+    dataType: 'books' | 'movies' | 'tv' | 'documentary'
   ): Promise<void> {
-    const doubanFields = this.doubanFieldDefinitions[dataType];
-    const requiredFields = Object.entries(doubanFields)
-      .filter(([_, def]) => def.required)
-      .map(([field, _]) => field);
+    try {
+      // 验证映射的有效性
+      await this.validateFieldMappings(mappings, dataType);
 
-    // 检查必需字段
-    const missingRequired = requiredFields.filter(field => !mappings[field]);
-    if (missingRequired.length > 0) {
-      throw new Error(`Missing required field mappings: ${missingRequired.join(', ')}`);
-    }
+      // 保存到数据库
+      await this.saveFieldMappingsToDatabase(userId, appToken, tableId, mappings, dataType);
+      
+      // 更新缓存
+      await this.cacheFieldMappings(appToken, tableId, mappings);
+      
+      this.logger.log(`Manual field mappings saved for user ${userId}, table ${tableId}`);
 
-    // 检查字段名有效性
-    const invalidFields = Object.keys(mappings).filter(field => !doubanFields[field]);
-    if (invalidFields.length > 0) {
-      throw new Error(`Invalid douban field names: ${invalidFields.join(', ')}`);
-    }
-
-    // 检查Field ID格式
-    const invalidFieldIds = Object.values(mappings).filter(fieldId => 
-      !fieldId.match(/^fld[a-zA-Z0-9]{14,}$/)
-    );
-    if (invalidFieldIds.length > 0) {
-      throw new Error(`Invalid Feishu field IDs: ${invalidFieldIds.join(', ')}`);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.error('Failed to set field mappings:', errorMessage);
+      throw error instanceof Error ? error : new Error(String(error));
     }
   }
 
   /**
-   * 保存映射到数据库
+   * 获取标准字段映射预览（不执行实际操作）
    */
-  private async saveMappingsToDatabase(
+  async previewFieldMappings(
+    appId: string,
+    appSecret: string,
+    appToken: string,
+    tableId: string,
+    dataType: 'books' | 'movies' | 'tv' | 'documentary'
+  ): Promise<{
+    willMatch: Array<{ doubanField: string; chineseName: string; fieldId: string }>;
+    willCreate: Array<{ doubanField: string; chineseName: string; fieldType: string; description: string }>;
+    totalFields: number;
+  }> {
+    try {
+      // 1. 获取豆瓣字段标准配置
+      const doubanFieldConfig = getDoubanFieldMapping(dataType);
+      
+      // 2. 获取飞书表格现有字段
+      const existingFields = await this.tableService.getTableFields(
+        appId, appSecret, appToken, tableId
+      );
+      
+      // 3. 分析匹配结果
+      const chineseNameToFieldId = new Map<string, string>();
+      existingFields.forEach(field => {
+        chineseNameToFieldId.set(field.field_name, field.field_id);
+      });
+      
+      const willMatch: Array<{ doubanField: string; chineseName: string; fieldId: string }> = [];
+      const willCreate: Array<{ doubanField: string; chineseName: string; fieldType: string; description: string }> = [];
+      
+      for (const [doubanField, fieldConfig] of Object.entries(doubanFieldConfig)) {
+        const chineseName = fieldConfig.chineseName;
+        
+        if (chineseNameToFieldId.has(chineseName)) {
+          // 会匹配
+          willMatch.push({
+            doubanField,
+            chineseName,
+            fieldId: chineseNameToFieldId.get(chineseName)!
+          });
+        } else {
+          // 会创建
+          willCreate.push({
+            doubanField,
+            chineseName,
+            fieldType: fieldConfig.fieldType,
+            description: fieldConfig.description
+          });
+        }
+      }
+      
+      return {
+        willMatch,
+        willCreate,
+        totalFields: Object.keys(doubanFieldConfig).length
+      };
+
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.error('Failed to preview field mappings:', errorMessage);
+      throw error instanceof Error ? error : new Error(String(error));
+    }
+  }
+
+  // =============== 私有方法 ===============
+
+  /**
+   * 保存映射配置到数据库
+   */
+  private async saveFieldMappingsToDatabase(
     userId: string,
     appToken: string,
     tableId: string,
@@ -497,8 +349,9 @@ export class FieldMappingService {
             ...mappings,
             _metadata: {
               dataType,
+              strategy: 'exact_match_auto_create',
               updatedAt: new Date().toISOString(),
-              version: '1.0',
+              version: '2.0',
             },
           },
         },
@@ -510,8 +363,9 @@ export class FieldMappingService {
             ...mappings,
             _metadata: {
               dataType,
+              strategy: 'exact_match_auto_create',
               createdAt: new Date().toISOString(),
-              version: '1.0',
+              version: '2.0',
             },
           },
         },
@@ -532,9 +386,9 @@ export class FieldMappingService {
   }
 
   /**
-   * 缓存映射
+   * 缓存字段映射
    */
-  private async cacheMappings(
+  private async cacheFieldMappings(
     appToken: string,
     tableId: string,
     mappings: Record<string, string>
@@ -543,14 +397,15 @@ export class FieldMappingService {
       const cacheKey = `${this.cacheConfig.mappingsKeyPrefix}${appToken}:${tableId}`;
       await this.redis.setex(cacheKey, this.cacheConfig.mappingsTtl, JSON.stringify(mappings));
     } catch (error) {
-      this.logger.warn('Failed to cache field mappings:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.warn('Failed to cache field mappings:', errorMessage);
     }
   }
 
   /**
-   * 从缓存获取映射
+   * 从缓存获取字段映射
    */
-  private async getCachedMappings(
+  private async getCachedFieldMappings(
     appToken: string,
     tableId: string
   ): Promise<Record<string, string> | null> {
@@ -559,8 +414,42 @@ export class FieldMappingService {
       const cached = await this.redis.get(cacheKey);
       return cached ? JSON.parse(cached) : null;
     } catch (error) {
-      this.logger.warn('Failed to get cached field mappings:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.warn('Failed to get cached field mappings:', errorMessage);
       return null;
+    }
+  }
+
+  /**
+   * 验证字段映射有效性
+   */
+  private async validateFieldMappings(
+    mappings: Record<string, string>,
+    dataType: 'books' | 'movies' | 'tv' | 'documentary'
+  ): Promise<void> {
+    const doubanFieldConfig = getDoubanFieldMapping(dataType);
+    const requiredFields = Object.entries(doubanFieldConfig)
+      .filter(([_, config]) => config.required)
+      .map(([field, _]) => field);
+
+    // 检查必需字段
+    const missingRequired = requiredFields.filter(field => !mappings[field]);
+    if (missingRequired.length > 0) {
+      throw new Error(`Missing required field mappings: ${missingRequired.join(', ')}`);
+    }
+
+    // 检查字段名有效性
+    const invalidFields = Object.keys(mappings).filter(field => !doubanFieldConfig[field]);
+    if (invalidFields.length > 0) {
+      throw new Error(`Invalid douban field names: ${invalidFields.join(', ')}`);
+    }
+
+    // 检查Field ID格式
+    const invalidFieldIds = Object.values(mappings).filter(fieldId => 
+      !fieldId.match(/^fld[a-zA-Z0-9]{14,}$/)
+    );
+    if (invalidFieldIds.length > 0) {
+      throw new Error(`Invalid Feishu field IDs: ${invalidFieldIds.join(', ')}`);
     }
   }
 
@@ -573,7 +462,8 @@ export class FieldMappingService {
       await this.redis.del(cacheKey);
       this.logger.log(`Cleared field mappings cache for ${appToken}:${tableId}`);
     } catch (error) {
-      this.logger.warn('Failed to clear field mappings cache:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.warn('Failed to clear field mappings cache:', errorMessage);
     }
   }
 
@@ -602,6 +492,8 @@ export class FieldMappingService {
             appToken,
             tableId,
             dataType: mapping._metadata?.dataType,
+            strategy: mapping._metadata?.strategy || 'unknown',
+            version: mapping._metadata?.version || '1.0',
             fieldCount,
             lastUpdated: mapping._metadata?.updatedAt,
           };
@@ -611,87 +503,9 @@ export class FieldMappingService {
       return stats;
 
     } catch (error) {
-      this.logger.error('Failed to get mapping stats:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.error('Failed to get mapping stats:', errorMessage);
       return null;
-    }
-  }
-
-  /**
-   * 导出字段映射配置
-   */
-  async exportMappings(userId: string): Promise<any> {
-    try {
-      const syncConfig = await this.prisma.syncConfig.findUnique({
-        where: { userId },
-        select: { tableMappings: true },
-      });
-
-      return {
-        userId,
-        exportedAt: new Date().toISOString(),
-        version: '1.0',
-        mappings: syncConfig?.tableMappings || {},
-      };
-
-    } catch (error) {
-      this.logger.error('Failed to export mappings:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * 导入字段映射配置
-   */
-  async importMappings(userId: string, importData: any): Promise<void> {
-    try {
-      // 验证导入数据格式
-      if (!importData.mappings || typeof importData.mappings !== 'object') {
-        throw new Error('Invalid import data format');
-      }
-
-      // 逐个验证映射配置
-      for (const [tableKey, mappings] of Object.entries(importData.mappings)) {
-        if (typeof mappings !== 'object') continue;
-        
-        const dataType = (mappings as any)._metadata?.dataType;
-        if (dataType && ['books', 'movies', 'tv'].includes(dataType)) {
-          // 提取实际字段映射（排除元数据）
-          const fieldMappings = Object.fromEntries(
-            Object.entries(mappings).filter(([key]) => !key.startsWith('_'))
-          );
-          
-          await this.validateMappings(fieldMappings, dataType as any);
-        }
-      }
-
-      // 保存到数据库
-      await this.prisma.syncConfig.upsert({
-        where: { userId },
-        update: {
-          tableMappings: {
-            ...(await this.getExistingTableMappings(userId)),
-            ...importData.mappings,
-          },
-        },
-        create: {
-          userId,
-          tableMappings: importData.mappings,
-        },
-      });
-
-      // 清除相关缓存
-      for (const tableKey of Object.keys(importData.mappings)) {
-        const [appToken, tableId] = tableKey.split(':');
-        if (appToken && tableId) {
-          await this.clearMappingsCache(appToken, tableId);
-        }
-      }
-
-      this.logger.log(`Field mappings imported for user ${userId}`);
-
-    } catch (error) {
-      this.logger.error('Failed to import mappings:', error);
-      throw error;
     }
   }
 }

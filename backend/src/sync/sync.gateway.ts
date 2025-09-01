@@ -10,7 +10,7 @@ import {
 import { Logger, UseGuards } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 
-import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { SyncProgress } from './interfaces/sync.interface';
 
 /**
@@ -71,7 +71,8 @@ export class SyncGateway implements OnGatewayConnection, OnGatewayDisconnect {
       });
 
     } catch (error) {
-      this.logger.error(`Connection error:`, error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Connection error:`, errorMessage);
       client.disconnect();
     }
   }
@@ -95,7 +96,8 @@ export class SyncGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.logger.log(`Client ${client.id} disconnected for user ${userId}`);
       }
     } catch (error) {
-      this.logger.error(`Disconnect error:`, error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Disconnect error:`, errorMessage);
     }
   }
 
@@ -129,7 +131,8 @@ export class SyncGateway implements OnGatewayConnection, OnGatewayDisconnect {
       });
 
     } catch (error) {
-      this.logger.error(`Subscribe error:`, error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Subscribe error:`, errorMessage);
       client.emit('error', { message: 'Subscription failed' });
     }
   }
@@ -156,7 +159,8 @@ export class SyncGateway implements OnGatewayConnection, OnGatewayDisconnect {
       });
 
     } catch (error) {
-      this.logger.error(`Unsubscribe error:`, error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Unsubscribe error:`, errorMessage);
     }
   }
 
@@ -181,7 +185,8 @@ export class SyncGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       this.logger.debug(`Progress sent to user ${userId}: ${progress.message}`);
     } catch (error) {
-      this.logger.error(`Failed to send progress notification:`, error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Failed to send progress notification:`, errorMessage);
     }
   }
 

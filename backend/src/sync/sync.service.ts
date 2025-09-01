@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
 import type { Queue } from 'bull';
 
-import { PrismaService } from '@/common/prisma/prisma.service';
+import { PrismaService } from '../common/prisma/prisma.service';
 import { SyncGateway } from './sync.gateway';
 import { TriggerSyncDto } from './dto/sync.dto';
 import { SyncJobData, SyncProgress } from './interfaces/sync.interface';
@@ -86,8 +86,9 @@ export class SyncService {
 
       return syncHistory.id;
     } catch (error) {
-      this.logger.error(`Failed to trigger sync for user ${userId}:`, error);
-      throw error;
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Failed to trigger sync for user ${userId}:`, errorMessage);
+      throw error instanceof Error ? error : new Error(String(error));
     }
   }
 
@@ -179,7 +180,8 @@ export class SyncService {
 
       return true;
     } catch (error) {
-      this.logger.error(`Failed to cancel sync ${syncId}:`, error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Failed to cancel sync ${syncId}:`, errorMessage);
       return false;
     }
   }
@@ -217,7 +219,8 @@ export class SyncService {
         this.syncGateway.notifyProgress(syncHistory.userId, progress);
       }
     } catch (error) {
-      this.logger.error(`Failed to update sync progress:`, error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Failed to update sync progress:`, errorMessage);
     }
   }
 

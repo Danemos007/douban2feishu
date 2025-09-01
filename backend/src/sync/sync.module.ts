@@ -6,10 +6,10 @@ import { SyncService } from './sync.service';
 import { SyncController } from './sync.controller';
 import { SyncProcessor } from './sync.processor';
 import { SyncGateway } from './sync.gateway';
-import { DoubanModule } from '@/douban/douban.module';
-import { FeishuModule } from '@/feishu/feishu.module';
-import { PrismaModule } from '@/common/prisma/prisma.module';
-import { CryptoModule } from '@/common/crypto/crypto.module';
+import { DoubanModule } from '../douban/douban.module';
+import { FeishuModule } from '../feishu/feishu.module';
+import { PrismaModule } from '../common/prisma/prisma.module';
+import { CryptoModule } from '../common/crypto/crypto.module';
 
 /**
  * 同步模块 - 企业级数据同步模块

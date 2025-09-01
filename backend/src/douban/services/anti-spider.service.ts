@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
+import axios from 'axios';
 import { CookieManagerService } from './cookie-manager.service';
 
 /**
@@ -53,7 +53,7 @@ export class AntiSpiderService {
   async makeRequest(
     url: string, 
     cookie: string, 
-    options: AxiosRequestConfig = {}
+    options: any = {}
   ): Promise<string> {
     
     // 确定域名类型
@@ -61,7 +61,7 @@ export class AntiSpiderService {
     const headers = this.cookieManager.getHeadersForDomain(domain, cookie);
 
     // 创建请求配置
-    const config: AxiosRequestConfig = {
+    const config: any = {
       method: 'GET',
       url,
       headers: {
@@ -73,7 +73,7 @@ export class AntiSpiderService {
       ...options
     };
 
-    let lastError: Error;
+    let lastError: Error = new Error('No attempts made');
 
     // 重试机制
     for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
@@ -97,25 +97,26 @@ export class AntiSpiderService {
         const html = response.data;
 
         // 人机验证检测
-        if (this.isHumanVerificationRequired(html)) {
+        if (this.isHumanVerificationRequired(html as string)) {
           throw new Error('Human verification required - please update cookie');
         }
 
         // 检查其他阻止指标
-        if (this.isBlocked(html)) {
+        if (this.isBlocked(html as string)) {
           throw new Error('Access blocked - content indicates restriction');
         }
 
         this.logger.debug(`Request successful - ${url}`);
-        return html;
+        return html as string;
 
       } catch (error) {
-        lastError = error;
+        lastError = error as Error;
+        const errorMessage = error instanceof Error ? error.message : String(error);
         
-        this.logger.warn(`Attempt ${attempt}/${this.maxRetries} failed:`, error.message);
+        this.logger.warn(`Attempt ${attempt}/${this.maxRetries} failed:`, errorMessage);
 
         // 如果是人机验证或403，不再重试
-        if (this.isHumanVerificationError(error) || error.message.includes('403')) {
+        if (this.isHumanVerificationError(error) || errorMessage.includes('403')) {
           throw error;
         }
 
@@ -275,7 +276,7 @@ export class AntiSpiderService {
       this.logger.error(`Cookie validation failed:`, error);
       return {
         isValid: false,
-        error: error.message || 'Cookie验证失败'
+        error: error instanceof Error ? error.message : 'Cookie验证失败'
       };
     }
   }
