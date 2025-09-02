@@ -7,7 +7,7 @@
  * - 支持中英文字段名识别
  */
 
-import { FeishuFieldType } from '../interfaces/feishu.interface';
+import { FeishuFieldType } from '../interfaces/api.interface';
 
 /**
  * 判断是否为评分字段类型（Rating类型，非Number类型）

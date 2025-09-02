@@ -3,7 +3,8 @@ import { InjectRedis } from '@liaoliaots/nestjs-redis';
 import Redis from 'ioredis';
 
 import { FeishuTableService } from './feishu-table.service';
-import { FeishuField, FeishuFieldType } from '../interfaces/feishu.interface';
+import { FeishuFieldType } from '../interfaces/api.interface';
+import { FeishuField } from '../interfaces/feishu.interface';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { 
   DOUBAN_FIELD_MAPPINGS, 

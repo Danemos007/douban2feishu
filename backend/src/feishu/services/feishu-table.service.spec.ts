@@ -30,7 +30,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { FeishuTableService } from './feishu-table.service';
 import { FeishuAuthService } from './feishu-auth.service';
-import { FeishuFieldType, FeishuApiResponse, FeishuField, FeishuCreateFieldPayload, FeishuRecordData } from '../interfaces/feishu.interface';
+import { FeishuFieldType, FeishuFieldInfo, FeishuCreateFieldRequest } from '../interfaces/api.interface';
+import { FeishuApiResponse, FeishuField, FeishuCreateFieldPayload, FeishuRecordData } from '../interfaces/feishu.interface';
 
 // ==================== Mock实现区域 ====================
 

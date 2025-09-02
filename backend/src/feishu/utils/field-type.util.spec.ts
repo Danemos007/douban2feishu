@@ -9,7 +9,7 @@
  */
 
 import { isRatingFieldType } from './field-type.util';
-import { FeishuFieldType } from '../interfaces/feishu.interface';
+import { FeishuFieldType } from '../interfaces/api.interface';
 
 describe('field-type.util', () => {
   describe('isRatingFieldType', () => {
