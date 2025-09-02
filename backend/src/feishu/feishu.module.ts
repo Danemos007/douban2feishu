@@ -8,6 +8,7 @@ import { FeishuAuthService } from './services/feishu-auth.service';
 import { FeishuTableService } from './services/feishu-table.service';
 import { FieldMappingService } from './services/field-mapping.service';
 import { SyncEngineService } from './services/sync-engine.service';
+import { FeishuContractValidatorService } from './contract/validator.service';
 import { CryptoModule } from '../common/crypto/crypto.module';
 import { PrismaModule } from '../common/prisma/prisma.module';
 
@@ -51,6 +52,7 @@ import { PrismaModule } from '../common/prisma/prisma.module';
     FeishuTableService,
     FieldMappingService,
     SyncEngineService,
+    FeishuContractValidatorService,
   ],
   controllers: [FeishuController],
   exports: [

@@ -1,0 +1,181 @@
+{
+  "code": 0,
+  "data": {
+    "has_more": false,
+    "items": [
+      {
+        "field_id": "fldFOzkZ68",
+        "field_name": "Subject ID",
+        "is_primary": true,
+        "property": null,
+        "type": 1,
+        "ui_type": "Text"
+      },
+      {
+        "description": "书籍标题",
+        "field_id": "fldnUzxPPV",
+        "field_name": "书名",
+        "is_primary": false,
+        "property": null,
+        "type": 1,
+        "ui_type": "Text"
+      },
+      {
+        "description": "书籍副标题",
+        "field_id": "fldbKPRlsh",
+        "field_name": "副标题",
+        "is_primary": false,
+        "property": null,
+        "type": 1,
+        "ui_type": "Text"
+      },
+      {
+        "description": "书籍作者，多个作者用/分隔",
+        "field_id": "fld8wROCff",
+        "field_name": "作者",
+        "is_primary": false,
+        "property": null,
+        "type": 1,
+        "ui_type": "Text"
+      },
+      {
+        "description": "翻译者姓名",
+        "field_id": "fldl2PWNOI",
+        "field_name": "译者",
+        "is_primary": false,
+        "property": null,
+        "type": 1,
+        "ui_type": "Text"
+      },
+      {
+        "description": "出版社名称",
+        "field_id": "fldm0CsfyK",
+        "field_name": "出版社",
+        "is_primary": false,
+        "property": null,
+        "type": 1,
+        "ui_type": "Text"
+      },
+      {
+        "description": "出版日期或年份",
+        "field_id": "fldgD2ySYL",
+        "field_name": "出版年份",
+        "is_primary": false,
+        "property": null,
+        "type": 1,
+        "ui_type": "Text"
+      },
+      {
+        "description": "豆瓣平均评分",
+        "field_id": "fldS0e9t1Q",
+        "field_name": "豆瓣评分",
+        "is_primary": false,
+        "property": {
+          "formatter": "0.0"
+        },
+        "type": 2,
+        "ui_type": "Number"
+      },
+      {
+        "field_id": "fldwpgIbnt",
+        "field_name": "我的评分",
+        "is_primary": false,
+        "property": {
+          "formatter": "0",
+          "max": 5,
+          "min": 1,
+          "rating": {
+            "symbol": "star"
+          }
+        },
+        "type": 2,
+        "ui_type": "Rating"
+      },
+      {
+        "description": "用户短评或备注",
+        "field_id": "fld6nh4S5V",
+        "field_name": "我的备注",
+        "is_primary": false,
+        "property": null,
+        "type": 1,
+        "ui_type": "Text"
+      },
+      {
+        "description": "书籍内容简介",
+        "field_id": "fldkBuRg0Y",
+        "field_name": "内容简介",
+        "is_primary": false,
+        "property": null,
+        "type": 1,
+        "ui_type": "Text"
+      },
+      {
+        "description": "封面图片URL",
+        "field_id": "fldezp2b51",
+        "field_name": "封面图",
+        "is_primary": false,
+        "property": null,
+        "type": 15,
+        "ui_type": "Url"
+      },
+      {
+        "description": "书籍原文标题",
+        "field_id": "fldf6Cb4O8",
+        "field_name": "原作名",
+        "is_primary": false,
+        "property": null,
+        "type": 1,
+        "ui_type": "Text"
+      },
+      {
+        "description": "标记为想读/在读/读过的日期",
+        "field_id": "fldoKnXnV6",
+        "field_name": "标记日期",
+        "is_primary": false,
+        "property": {
+          "auto_fill": false,
+          "date_formatter": "yyyy/MM/dd"
+        },
+        "type": 5,
+        "ui_type": "DateTime"
+      },
+      {
+        "field_id": "fldI1xY1ir",
+        "field_name": "我的标签",
+        "is_primary": false,
+        "property": null,
+        "type": 1,
+        "ui_type": "Text"
+      },
+      {
+        "field_id": "fldMrNCvN9",
+        "field_name": "我的状态",
+        "is_primary": false,
+        "property": {
+          "options": [
+            {
+              "color": 5,
+              "id": "opthDd4oEE",
+              "name": "想读"
+            },
+            {
+              "color": 4,
+              "id": "optUJctTOD",
+              "name": "在读"
+            },
+            {
+              "color": 0,
+              "id": "optYdUVE9H",
+              "name": "读过"
+            }
+          ]
+        },
+        "type": 3,
+        "ui_type": "SingleSelect"
+      }
+    ],
+    "page_token": "fldMrNCvN9",
+    "total": 16
+  },
+  "msg": "success"
+}

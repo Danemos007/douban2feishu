@@ -30,6 +30,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { FeishuTableService } from './feishu-table.service';
 import { FeishuAuthService } from './feishu-auth.service';
+import { FeishuContractValidatorService } from '../contract/validator.service';
 import { FeishuFieldType, FeishuFieldInfo, FeishuCreateFieldRequest } from '../interfaces/api.interface';
 import { FeishuApiResponse, FeishuField, FeishuCreateFieldPayload, FeishuRecordData } from '../interfaces/feishu.interface';
 
@@ -58,6 +59,24 @@ const createMockFeishuAuthService = () => ({
   getAccessToken: jest.fn().mockResolvedValue('mock-access-token-12345'),
   refreshToken: jest.fn().mockResolvedValue(true),
   validateToken: jest.fn().mockResolvedValue(true),
+});
+
+/**
+ * FeishuContractValidatorService Mock - 模拟契约验证服务
+ */
+const createMockContractValidator = () => ({
+  validateFieldsResponse: jest.fn().mockImplementation((data) => data),
+  validateAuthResponse: jest.fn().mockImplementation((data) => data),
+  validateRecordsResponse: jest.fn().mockImplementation((data) => data),
+  isRatingFieldValidation: jest.fn().mockImplementation((field) => 
+    field.field_name?.includes('我的评分') && field.type === 2
+  ),
+  getValidationStats: jest.fn().mockReturnValue({
+    totalValidations: 0,
+    successCount: 0,
+    failureCount: 0,
+  }),
+  resetStats: jest.fn(),
 });
 
 /**
@@ -173,12 +192,14 @@ describe('FeishuTableService - 完全重建版本', () => {
   let module: TestingModule;
   let mockConfigService: ReturnType<typeof createMockConfigService>;
   let mockFeishuAuthService: ReturnType<typeof createMockFeishuAuthService>;  
+  let mockContractValidator: ReturnType<typeof createMockContractValidator>;
   let mockRedis: ReturnType<typeof createMockRedis>;
 
   beforeEach(async () => {
     // 创建所有Mock实例
     mockConfigService = createMockConfigService();
     mockFeishuAuthService = createMockFeishuAuthService();
+    mockContractValidator = createMockContractValidator();
     mockRedis = createMockRedis();
 
     // 构建TestingModule - 使用正确的依赖注入配置
@@ -196,6 +217,12 @@ describe('FeishuTableService - 完全重建版本', () => {
         {
           provide: FeishuAuthService,
           useValue: mockFeishuAuthService,
+        },
+        
+        // FeishuContractValidatorService Mock
+        {
+          provide: FeishuContractValidatorService,
+          useValue: mockContractValidator,
         },
         
         // Redis Mock - 使用正确的Redis token

@@ -6,12 +6,11 @@ import axios, { AxiosRequestConfig, AxiosError } from 'axios';
 
 import { ExtendedAxiosRequestConfig } from '../../common/interfaces/http.interface';
 import { FeishuAuthService } from './feishu-auth.service';
+import { FeishuContractValidatorService } from '../contract/validator.service';
 import { 
   FeishuFieldInfo,
-  FeishuRecord, 
   FeishuRecordItem, 
-  FeishuFieldsResponse, 
-  FeishuRecordsResponse,
+  FeishuFieldsResponse as ApiFeishuFieldsResponse, 
   FeishuFieldType,
   FeishuCreateFieldRequest,
   FeishuRecordFilter,
@@ -19,13 +18,24 @@ import {
   FeishuErrorResponse
 } from '../interfaces/api.interface';
 import { 
-  FeishuField, 
   FeishuApiResponse, 
   FeishuCreateFieldPayload,
   FeishuSearchRecordPayload,
   FeishuRecordData
 } from '../interfaces/feishu.interface';
-import { isRatingFieldType } from '../utils/field-type.util';
+// 🔥 使用新的契约验证类型，替代遗留类型
+import { 
+  FeishuField, 
+  FeishuFieldsResponse,
+  FeishuRecordsResponse,
+  FeishuRecord,
+  FeishuRecordCreateRequest,
+  isRatingField,
+} from '../contract';
+
+// [CRITICAL-FIX-2025-09-02] 移除遗留的isRatingFieldType导入
+// 原因：历史遗留函数逻辑错误，已用基于真实API的判断逻辑替代
+// 修复：删除错误的导入，使用fieldName.includes('我的评分')的准确判断
 
 /**
  * 飞书表格操作服务 - 多维表格CRUD操作
@@ -64,6 +74,7 @@ export class FeishuTableService {
   constructor(
     private readonly configService: ConfigService,
     private readonly authService: FeishuAuthService,
+    private readonly contractValidator: FeishuContractValidatorService,
     @InjectRedis() private readonly redis: Redis,
   ) {
     this.httpClient = this.createHttpClient();
@@ -134,19 +145,21 @@ export class FeishuTableService {
       // 获取访问令牌
       const accessToken = await this.authService.getAccessToken(appId, appSecret);
 
-      // 调用飞书API
+      // 🔥 调用飞书API - 使用契约验证替代 `as any`
       const response = await this.httpClient.get(
         `/open-apis/bitable/v1/apps/${appToken}/tables/${tableId}/fields`,
         {
           headers: { Authorization: `Bearer ${accessToken}` },
         }
-      ) as any;
+      );
 
-      if (response.data.code !== 0) {
-        throw new Error(`Failed to get table fields: [${response.data.code}] ${response.data.msg}`);
-      }
+      // 🔥 使用契约验证器验证响应，替代手动检查
+      const validatedResponse = this.contractValidator.validateFieldsResponse(
+        response.data, 
+        'getTableFields'
+      );
 
-      const fields = response.data.data.items;
+      const fields = validatedResponse.data.items;
       
       // 缓存结果
       await this.cacheFields(cacheKey, fields);
@@ -210,7 +223,7 @@ export class FeishuTableService {
       let batchIndex = 0;
 
       while (batchIndex < batches.length) {
-        const currentBatches: Array<{ index: number; records: FeishuRecord[] }> = [];
+        const currentBatches: Array<{ index: number; records: FeishuRecordCreateRequest[] }> = [];
         
         for (let i = 0; i < this.apiConfig.concurrentBatches && batchIndex < batches.length; i++) {
           currentBatches.push({
@@ -298,19 +311,22 @@ export class FeishuTableService {
         payload.page_token = options.pageToken;
       }
 
-      const response = await this.httpClient.post<FeishuApiResponse>(
+      // 🔥 调用飞书API - 使用契约验证替代 `as any`
+      const response = await this.httpClient.post(
         `/open-apis/bitable/v1/apps/${appToken}/tables/${tableId}/records/search`,
         payload,
         {
           headers: { Authorization: `Bearer ${accessToken}` },
         }
-      ) as any;
+      );
 
-      if (response.data.code !== 0) {
-        throw new Error(`Search records failed: [${response.data.code}] ${response.data.msg}`);
-      }
+      // 🔥 使用契约验证器验证响应
+      const validatedResponse = this.contractValidator.validateRecordsResponse(
+        response.data, 
+        'searchRecords'
+      );
 
-      const data = response.data.data;
+      const data = validatedResponse.data;
       return {
         records: data.items || [],
         hasMore: data.has_more || false,
@@ -495,7 +511,7 @@ export class FeishuTableService {
     appSecret: string,
     appToken: string,
     tableId: string,
-    records: FeishuRecord[]
+    records: FeishuRecordCreateRequest[]
   ): Promise<void> {
     const accessToken = await this.authService.getAccessToken(appId, appSecret);
 
@@ -545,7 +561,7 @@ export class FeishuTableService {
   /**
    * 转换记录格式
    */
-  private transformRecord(record: FeishuRecordData, fieldMappings?: Record<string, string>): FeishuRecord {
+  private transformRecord(record: FeishuRecordData, fieldMappings?: Record<string, string>): FeishuRecordCreateRequest {
     const fields: Record<string, any> = {};
 
     // 处理包含fields属性的格式
@@ -793,8 +809,9 @@ export class FeishuTableService {
         type: fieldType,
       };
 
-      // 语义化的字段类型配置 - 避免枚举值直接比较
-      if (isRatingFieldType(fieldName, fieldType)) {
+      // 🔥 基于真实API发现的Rating字段逻辑
+      // Rating字段的判断：字段名包含"我的评分"且type为Number类型
+      if (fieldName.includes('我的评分') && fieldType === FeishuFieldType.Number) {
         fieldConfig.ui_type = 'Rating';
         fieldConfig.property = {
           formatter: '0',
