@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import axios from 'axios';
+import axios, { AxiosInstance } from 'axios';
 
 import { BatchCreateRecordsDto } from './dto/feishu.dto';
 import { FeishuRecord, FeishuTokenResponse } from './interfaces/feishu.interface';
@@ -18,7 +18,7 @@ import { FeishuRecord, FeishuTokenResponse } from './interfaces/feishu.interface
 @Injectable()
 export class FeishuService {
   private readonly logger = new Logger(FeishuService.name);
-  private readonly httpClient: any;
+  private readonly httpClient: AxiosInstance;
   private tokenCache = new Map<string, { token: string; expiresAt: number }>();
 
   constructor(private readonly configService: ConfigService) {
@@ -28,7 +28,7 @@ export class FeishuService {
   /**
    * 创建HTTP客户端
    */
-  private createHttpClient(): any {
+  private createHttpClient(): AxiosInstance {
     return axios.create({
       baseURL: this.configService.get<string>('FEISHU_BASE_URL', 'https://open.feishu.cn'),
       timeout: 30000,

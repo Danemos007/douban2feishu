@@ -1,11 +1,21 @@
 import { Injectable, Logger, OnModuleDestroy, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import axios from 'axios';
-type CacheType = any;
+import axios, { AxiosInstance, AxiosError, AxiosRequestConfig } from 'axios';
 import { InjectRedis } from '@liaoliaots/nestjs-redis';
 import Redis from 'ioredis';
 
 import { CryptoService } from '../../common/crypto/crypto.service';
+import { ExtendedAxiosRequestConfig } from '../../common/interfaces/http.interface';
+import { FeishuTokenResponse, FeishuErrorResponse } from '../interfaces/api.interface';
+
+/**
+ * Token统计信息接口
+ */
+interface TokenStats {
+  totalApps: number;
+  cachedTokens: number;
+  expiringSoon: number;
+}
 
 /**
  * 飞书认证服务 - 企业级Token管理
@@ -21,7 +31,7 @@ import { CryptoService } from '../../common/crypto/crypto.service';
 @Injectable()
 export class FeishuAuthService implements OnModuleDestroy {
   private readonly logger = new Logger(FeishuAuthService.name);
-  private readonly httpClient: any;
+  private readonly httpClient: AxiosInstance;
   private readonly tokenKeyPrefix = 'feishu:token:';
   private readonly rateLimitKeyPrefix = 'feishu:ratelimit:';
   
@@ -59,7 +69,7 @@ export class FeishuAuthService implements OnModuleDestroy {
   /**
    * 创建HTTP客户端 - 带重试和错误处理
    */
-  private createHttpClient(): any {
+  private createHttpClient(): AxiosInstance {
     const client = axios.create({
       baseURL: this.authConfig.baseUrl,
       timeout: this.authConfig.timeout,
@@ -72,7 +82,7 @@ export class FeishuAuthService implements OnModuleDestroy {
     // 响应拦截器 - 错误处理和日志
     client.interceptors.response.use(
       response => response,
-      async (error: any) => {
+      async (error: AxiosError) => {
         const context = {
           url: error.config?.url,
           method: error.config?.method,
@@ -284,7 +294,7 @@ export class FeishuAuthService implements OnModuleDestroy {
   /**
    * 判断是否应该重试
    */
-  private shouldRetry(error: any): boolean {
+  private shouldRetry(error: AxiosError): boolean {
     if (!error.response) {
       return true; // 网络错误，可以重试
     }
@@ -298,8 +308,8 @@ export class FeishuAuthService implements OnModuleDestroy {
   /**
    * 重试请求
    */
-  private async retryRequest(error: any): Promise<any> {
-    const config = error.config;
+  private async retryRequest(error: AxiosError): Promise<any> {
+    const config = error.config as ExtendedAxiosRequestConfig;
     if (!config) throw error;
     
     config.__retryCount = config.__retryCount || 0;
@@ -320,9 +330,9 @@ export class FeishuAuthService implements OnModuleDestroy {
   /**
    * 转换错误格式
    */
-  private transformError(error: any): Error {
+  private transformError(error: AxiosError): Error {
     if (error.response?.data) {
-      const { code, msg } = error.response.data as any;
+      const { code, msg } = error.response.data as FeishuErrorResponse;
       return new Error(`Feishu API Error: [${code}] ${msg}`);
     }
     
@@ -383,7 +393,7 @@ export class FeishuAuthService implements OnModuleDestroy {
   /**
    * 获取token统计信息
    */
-  async getTokenStats(): Promise<any> {
+  async getTokenStats(): Promise<TokenStats | null> {
     try {
       const pattern = `${this.tokenKeyPrefix}*`;
       const keys = await this.redis.keys(pattern);

@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import axios from 'axios';
+import axios, { AxiosRequestConfig, AxiosError } from 'axios';
 import { CookieManagerService } from './cookie-manager.service';
 
 /**
@@ -53,7 +53,7 @@ export class AntiSpiderService {
   async makeRequest(
     url: string, 
     cookie: string, 
-    options: any = {}
+    options: Partial<AxiosRequestConfig> = {}
   ): Promise<string> {
     
     // 确定域名类型
@@ -61,7 +61,7 @@ export class AntiSpiderService {
     const headers = this.cookieManager.getHeadersForDomain(domain, cookie);
 
     // 创建请求配置
-    const config: any = {
+    const config: AxiosRequestConfig = {
       method: 'GET',
       url,
       headers: {
@@ -116,7 +116,7 @@ export class AntiSpiderService {
         this.logger.warn(`Attempt ${attempt}/${this.maxRetries} failed:`, errorMessage);
 
         // 如果是人机验证或403，不再重试
-        if (this.isHumanVerificationError(error) || errorMessage.includes('403')) {
+        if (this.isHumanVerificationError(error as Error | AxiosError) || errorMessage.includes('403')) {
           throw error;
         }
 
@@ -170,9 +170,9 @@ export class AntiSpiderService {
   /**
    * 判断是否是人机验证错误
    */
-  private isHumanVerificationError(error: any): boolean {
+  private isHumanVerificationError(error: Error | AxiosError): boolean {
     const errorMessage = error.message?.toLowerCase() || '';
-    const responseData = error.response?.data?.toString().toLowerCase() || '';
+    const responseData = (error as AxiosError).response?.data?.toString().toLowerCase() || '';
     
     const verificationKeywords = [
       'human verification',
