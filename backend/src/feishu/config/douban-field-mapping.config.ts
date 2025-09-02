@@ -9,7 +9,7 @@
  * - **策略更正**: 飞书API仅支持字段名操作，不支持Field ID直接数据写入
  */
 
-import { FeishuFieldType } from '../interfaces/feishu.interface';
+import { FeishuFieldType } from '../interfaces/api.interface';
 
 // 字段类型映射
 export const FIELD_TYPE_MAPPING = {

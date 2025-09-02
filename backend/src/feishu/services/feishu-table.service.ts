@@ -2,26 +2,28 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRedis } from '@liaoliaots/nestjs-redis';
 import Redis from 'ioredis';
-import axios, { AxiosRequestConfig, AxiosError, InternalAxiosRequestConfig } from 'axios';
+import axios, { AxiosRequestConfig, AxiosError } from 'axios';
 
-// 扩展axios配置接口以支持重试计数
-interface ExtendedAxiosRequestConfig extends InternalAxiosRequestConfig {
-  __retryCount?: number;
-}
-
+import { ExtendedAxiosRequestConfig } from '../../common/interfaces/http.interface';
 import { FeishuAuthService } from './feishu-auth.service';
 import { 
-  FeishuField, 
+  FeishuFieldInfo,
   FeishuRecord, 
   FeishuRecordItem, 
-  FeishuApiResponse, 
+  FeishuFieldsResponse, 
   FeishuRecordsResponse,
   FeishuFieldType,
-  FeishuCreateFieldPayload,
+  FeishuCreateFieldRequest,
   FeishuRecordFilter,
-  FeishuSearchRecordPayload,
-  FeishuRecordData,
+  FeishuSearchRecordRequest,
   FeishuErrorResponse
+} from '../interfaces/api.interface';
+import { 
+  FeishuField, 
+  FeishuApiResponse, 
+  FeishuCreateFieldPayload,
+  FeishuSearchRecordPayload,
+  FeishuRecordData
 } from '../interfaces/feishu.interface';
 import { isRatingFieldType } from '../utils/field-type.util';
 
