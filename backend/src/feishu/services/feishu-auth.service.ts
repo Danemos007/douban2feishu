@@ -6,7 +6,9 @@ import Redis from 'ioredis';
 
 import { CryptoService } from '../../common/crypto/crypto.service';
 import { ExtendedAxiosRequestConfig } from '../../common/interfaces/http.interface';
-import { FeishuTokenResponse, FeishuErrorResponse } from '../interfaces/api.interface';
+import { FeishuErrorResponse } from '../interfaces/api.interface';
+import { FeishuContractValidatorService } from '../contract/validator.service';
+import { FeishuTokenResponse } from '../contract';
 
 /**
  * Token统计信息接口
@@ -52,6 +54,7 @@ export class FeishuAuthService implements OnModuleDestroy {
   constructor(
     private readonly configService: ConfigService,
     private readonly cryptoService: CryptoService,
+    private readonly contractValidator: FeishuContractValidatorService,
     @Optional() @InjectRedis() private readonly redis: Redis,
   ) {
     this.httpClient = this.createHttpClient();
@@ -202,11 +205,13 @@ export class FeishuAuthService implements OnModuleDestroy {
       app_secret: decryptedSecret,
     });
 
-    if (response.data.code !== 0) {
-      throw new Error(`Feishu auth failed: [${response.data.code}] ${response.data.msg}`);
-    }
+    // 🔥 使用契约验证器验证认证响应
+    const validatedResponse = this.contractValidator.validateAuthResponse(
+      response.data, 
+      'requestNewToken'
+    );
 
-    const { tenant_access_token, expire } = response.data;
+    const { tenant_access_token, expire } = validatedResponse;
     
     if (!tenant_access_token) {
       throw new Error('Invalid token response from Feishu API');
