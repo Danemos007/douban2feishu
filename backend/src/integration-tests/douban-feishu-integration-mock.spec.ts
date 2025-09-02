@@ -1,5 +1,7 @@
 /**
- * 豆瓣飞书端到端集成测试 (Mock版本)
+ * 豆瓣飞书集成测试 (基于Mock的集成测试)
+ * 
+ * 测试性质: Mock-based Integration Testing (非E2E端到端测试)
  * 
  * 架构设计原则:
  * 1. 使用Mock替代外部依赖，确保测试的独立性和可重复性
@@ -7,6 +9,8 @@
  * 3. 完整的错误处理和资源清理机制
  * 4. 快速执行，不依赖网络或外部服务
  * 5. 遵循AAA模式 (Arrange, Act, Assert)
+ * 
+ * 注意: 这不是真正的E2E测试，如需真正的端到端测试请查看项目技术债务清单
  * 
  * @author Claude (Senior Software Architect)
  * @version 2.0.0 (Mock-based Integration Testing)
@@ -108,7 +112,7 @@ class MockDataGenerator {
 }
 
 /**
- * 豆瓣飞书端到端集成测试套件 (Mock版本)
+ * 豆瓣飞书Mock集成测试套件 (非E2E测试)
  * 
  * 测试覆盖范围:
  * - 模块间依赖注入正确性
@@ -117,7 +121,7 @@ class MockDataGenerator {
  * - 错误处理和边界条件
  * - 性能指标基准
  */
-describe('Douban-Feishu End-to-End Integration (Mock)', () => {
+describe('Douban-Feishu Integration (Mock)', () => {
   let moduleRef: TestingModule;
   let doubanService: DoubanService;
   let fieldMappingService: FieldMappingService;
