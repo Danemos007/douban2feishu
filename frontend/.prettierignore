@@ -1,0 +1,19 @@
+# Dependencies
+node_modules
+
+# Next.js build output
+.next
+out
+build
+
+# Environment files
+.env*
+
+# Package manager files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# OS generated files
+.DS_Store
+Thumbs.db
