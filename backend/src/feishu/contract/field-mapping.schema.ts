@@ -13,9 +13,7 @@ import { z } from 'zod';
 /**
  * 支持的豆瓣数据类型
  */
-export const DoubanDataTypeSchema = z.enum(['books', 'movies', 'tv', 'documentary'], {
-  errorMap: () => ({ message: '不支持的豆瓣数据类型' })
-});
+export const DoubanDataTypeSchema = z.enum(['books', 'movies', 'tv', 'documentary']);
 
 /**
  * 字段类型枚举验证
@@ -23,9 +21,7 @@ export const DoubanDataTypeSchema = z.enum(['books', 'movies', 'tv', 'documentar
 export const FieldTypeSchema = z.enum([
   'text', 'number', 'rating', 'singleSelect', 'multiSelect', 
   'datetime', 'checkbox', 'url'
-], {
-  errorMap: () => ({ message: '不支持的字段类型' })
-});
+]);
 
 /**
  * 验证来源文件Schema
@@ -37,10 +33,8 @@ export const VerifiedSourceSchema = z.array(
     'sync-movie-from-cache.ts', 
     'sync-from-cache.ts',
     'real-douban-data-sync.ts'
-  ], {
-    errorMap: () => ({ message: '未知的验证来源文件' })
-  })
-).min(1, '至少需要一个验证来源');
+  ])
+).min(1);
 
 /**
  * 嵌套路径验证Schema
@@ -60,21 +54,19 @@ export const VerifiedFieldMappingConfigSchema = z.object({
   /** 豆瓣字段名：严格验证 */
   doubanFieldName: z
     .string()
-    .min(1, '豆瓣字段名不能为空')
-    .regex(/^[a-zA-Z][a-zA-Z0-9]*$/, {
-      message: '豆瓣字段名必须是有效的标识符'
-    }),
+    .min(1)
+    .regex(/^[a-zA-Z][a-zA-Z0-9]*$/),
     
   /** 飞书表格中文字段名：严格验证 */
   chineseName: z
     .string()
-    .min(1, '中文字段名不能为空')
-    .max(50, '中文字段名不能超过50个字符'),
+    .min(1)
+    .max(50),
     
   /** API字段名：与中文名一致性验证 */
   apiFieldName: z
     .string()
-    .min(1, 'API字段名不能为空'),
+    .min(1),
     
   /** 字段类型：枚举验证 */
   fieldType: FieldTypeSchema,
@@ -85,26 +77,17 @@ export const VerifiedFieldMappingConfigSchema = z.object({
   /** 字段描述：内容验证 */
   description: z
     .string()
-    .min(5, '字段描述至少需要5个字符')
-    .max(200, '字段描述不能超过200个字符'),
+    .min(5)
+    .max(200),
     
   /** 验证状态：必须为true表示已验证 */
-  verified: z.literal(true, {
-    errorMap: () => ({ message: '只接受已验证的字段配置' })
-  }),
+  verified: z.literal(true),
   
   /** 嵌套属性路径：可选但格式严格 */
   nestedPath: NestedPathSchema.optional(),
   
   /** 处理说明：可选 */
-  processingNotes: z
-    .string()
-    .min(10, '处理说明至少需要10个字符')
-    .max(500, '处理说明不能超过500个字符')
-    .optional(),
-    
-  /** 验证来源：严格验证已知文件 */
-  verifiedSource: VerifiedSourceSchema,
+  processingNotes: z.string().optional(),
 }).refine(
   // 自定义验证：确保API字段名与中文名一致
   (data) => data.apiFieldName === data.chineseName,
@@ -244,17 +227,6 @@ export type FieldMappingQuery = z.infer<typeof FieldMappingQuerySchema>;
 export type FieldMappingTransformResult = z.infer<typeof FieldMappingTransformResultSchema>;
 export type NestedValueExtraction = z.infer<typeof NestedValueExtractionSchema>;
 
-// Schema导出
-export {
-  VerifiedFieldMappingConfigSchema,
-  FieldMappingCollectionSchema,
-  VerifiedFieldMappingsSchema,
-  VerificationStatsSchema,
-  FieldMappingQuerySchema,
-  FieldMappingTransformResultSchema,
-  NestedValueExtractionSchema,
-};
-
 /**
  * 验证工具函数：验证整个字段映射配置
  */
@@ -267,7 +239,7 @@ export function validateFieldMappingConfig(
     return { success: true, data: validatedConfig };
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const errorMessage = error.errors
+      const errorMessage = error.issues
         .map(err => `${err.path.join('.')}: ${err.message}`)
         .join('; ');
       return { success: false, error: `字段映射配置验证失败: ${errorMessage}` };
@@ -296,7 +268,7 @@ export function validateFieldMappingCollection(
     return { success: true, data: validatedCollection };
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const errorMessage = error.errors
+      const errorMessage = error.issues
         .map(err => `${err.path.join('.')}: ${err.message}`)
         .join('; ');
       return { success: false, error: `字段映射集合验证失败: ${errorMessage}` };

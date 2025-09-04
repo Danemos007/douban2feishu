@@ -6,6 +6,7 @@ import { DoubanItem } from './interfaces/douban.interface';
 import { CookieManagerService } from './services/cookie-manager.service';
 import { AntiSpiderService } from './services/anti-spider.service';
 import { BookScraperService, BookData } from './services/book-scraper.service';
+import { DataTransformationService } from './services/data-transformation.service';
 
 /**
  * 豆瓣服务 - 基于obsidian-douban的成熟反爬虫策略
@@ -26,6 +27,7 @@ export class DoubanService {
     private readonly cookieManager: CookieManagerService,
     private readonly antiSpider: AntiSpiderService,
     private readonly bookScraper: BookScraperService,
+    private readonly dataTransformation: DataTransformationService,
   ) {}
 
   /**
@@ -79,6 +81,65 @@ export class DoubanService {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       this.logger.error(`Failed to fetch ${fetchDto.category} data:`, errorMessage);
+      throw error instanceof Error ? error : new Error(String(error));
+    }
+  }
+
+  /**
+   * 抓取并转换用户豆瓣数据 - 企业级集成方法
+   */
+  async scrapeAndTransform(fetchDto: FetchUserDataDto): Promise<{
+    rawData: DoubanItem[];
+    transformedData: any[];
+    transformationStats: {
+      totalProcessed: number;
+      repairsApplied: number;
+      validationWarnings: number;
+      processingTime: number;
+    };
+  }> {
+    const startTime = Date.now();
+    this.logger.log(`Starting scrape and transform for ${fetchDto.category} data`);
+
+    try {
+      // 抓取原始数据
+      const rawData = await this.fetchUserData(fetchDto);
+      
+      // 数据转换配置
+      const transformationOptions = {
+        enableIntelligentRepairs: true,
+        strictValidation: true,
+        preserveRawData: false,
+      };
+
+      // 执行数据转换
+      const transformationResult = await this.dataTransformation.transformDoubanData(
+        rawData,
+        fetchDto.category,
+        transformationOptions
+      );
+
+      const processingTime = Date.now() - startTime;
+
+      // 构建统计信息
+      const transformationStats = {
+        totalProcessed: rawData.length,
+        repairsApplied: transformationResult.statistics?.repairedFields || 0,
+        validationWarnings: transformationResult.warnings?.length || 0,
+        processingTime,
+      };
+
+      this.logger.log(`Transformation completed: ${transformationStats.totalProcessed} items, ${transformationStats.repairsApplied} repairs, ${transformationStats.validationWarnings} warnings`);
+
+      return {
+        rawData,
+        transformedData: transformationResult.data,
+        transformationStats,
+      };
+
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Failed to scrape and transform ${fetchDto.category} data:`, errorMessage);
       throw error instanceof Error ? error : new Error(String(error));
     }
   }
