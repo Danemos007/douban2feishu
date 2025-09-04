@@ -250,7 +250,7 @@ export class FeishuController {
     summary: '获取Token统计',
     description: '获取飞书Token缓存和使用统计信息',
   })
-  async getTokenStats() {
+  async getTokenStats(): Promise<{ stats: any }> {
     const stats = await this.authService.getTokenStats();
     return { stats };
   }
