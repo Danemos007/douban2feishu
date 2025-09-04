@@ -12,6 +12,11 @@ import {
   getDoubanFieldMapping,
   doubanFieldToChineseName
 } from '../config/douban-field-mapping.config';
+import { 
+  VERIFIED_FIELD_MAPPINGS,
+  getVerifiedFieldMapping,
+  VerifiedFieldMappingConfig
+} from '../config/douban-field-mapping-verified.config';
 
 /**
  * 字段映射管理服务 V2 - 精确匹配 + 自动创建策略
@@ -325,6 +330,190 @@ export class FieldMappingService {
       this.logger.error('Failed to preview field mappings:', errorMessage);
       throw error instanceof Error ? error : new Error(String(error));
     }
+  }
+
+  // =============== Phase 2 增强功能 ===============
+
+  /**
+   * 🔥 Phase 2.1: 嵌套属性值提取
+   * 
+   * 从复杂对象中提取嵌套属性值，支持点语法路径
+   * 整合版本A的嵌套属性解析逻辑
+   */
+  private extractNestedValue(data: any, fieldConfig: VerifiedFieldMappingConfig): any {
+    // 如果数据为null或undefined，直接返回undefined
+    if (data == null) {
+      return undefined;
+    }
+
+    const { nestedPath, doubanFieldName } = fieldConfig;
+
+    // 如果没有嵌套路径或路径为空，返回直接属性值
+    if (!nestedPath || !nestedPath.includes('.')) {
+      return data[doubanFieldName];
+    }
+
+    // 🔥 整合版本A的嵌套属性解析逻辑
+    const keys = nestedPath.split('.');
+    let value = data;
+    
+    for (const key of keys) {
+      if (value == null) {
+        return undefined;
+      }
+      value = value[key];
+    }
+
+    return value;
+  }
+
+  /**
+   * 🔥 Phase 2.2: 增强版字段映射配置校验
+   * 
+   * 整合版本B/C的字段存在性验证逻辑，基于VERIFIED_FIELD_MAPPINGS
+   */
+  private async validateFieldMappingsEnhanced(
+    mappings: Record<string, string>,
+    dataType: 'books' | 'movies' | 'tv' | 'documentary',
+    appId?: string,
+    appSecret?: string,
+    appToken?: string,
+    tableId?: string,
+    options?: { strict?: boolean }
+  ): Promise<{
+    isValid: boolean;
+    errors: string[];
+    warnings?: string[];
+    validatedFields?: string[];
+    nestedPathFields?: string[];
+    processingNotes?: Record<string, string>;
+    statistics?: {
+      totalFields: number;
+      validFields: number;
+      invalidFields: number;
+      missingRequiredFields: number;
+      fieldsWithNestedPath: number;
+    };
+  }> {
+    // 🔥 使用VERIFIED_FIELD_MAPPINGS进行校验
+    const verifiedConfig = getVerifiedFieldMapping(dataType);
+    const validationErrors: string[] = [];
+    const warnings: string[] = [];
+    const validatedFields: string[] = [];
+    const nestedPathFields: string[] = [];
+    const processingNotes: Record<string, string> = {};
+
+    let validFieldCount = 0;
+    let invalidFieldCount = 0;
+    let fieldsWithNestedPathCount = 0;
+
+    // 1. 校验每个字段映射
+    Object.entries(mappings).forEach(([doubanField, fieldId]) => {
+      const config = verifiedConfig[doubanField];
+      
+      if (!config) {
+        // 未知字段
+        validationErrors.push(`未知字段: ${doubanField}`);
+        invalidFieldCount++;
+      } else {
+        // 校验Field ID格式
+        if (!fieldId.match(/^fld[a-zA-Z0-9]{14,}$/)) {
+          validationErrors.push(`Field ID格式错误: ${fieldId}`);
+          invalidFieldCount++;
+          return;
+        }
+
+        // 有效字段
+        validatedFields.push(doubanField);
+        validFieldCount++;
+
+        // 记录嵌套路径字段
+        if (config.nestedPath) {
+          nestedPathFields.push(doubanField);
+          fieldsWithNestedPathCount++;
+        }
+
+        // 记录处理说明
+        if (config.processingNotes) {
+          processingNotes[doubanField] = config.processingNotes;
+        }
+      }
+    });
+
+    // 2. 校验必需字段存在性
+    const requiredFields = Object.entries(verifiedConfig)
+      .filter(([_, config]) => config.required)
+      .map(([field, _]) => field);
+
+    const missingRequired = requiredFields.filter(field => !mappings[field]);
+    missingRequired.forEach(field => {
+      validationErrors.push(`缺少必需字段: ${field}`);
+    });
+
+    // 3. 如果提供了飞书API参数，进行实际字段验证
+    if (appId && appSecret && appToken && tableId) {
+      try {
+        const existingFields = await this.tableService.getTableFields(
+          appId, appSecret, appToken, tableId
+        );
+        
+        const fieldIdToName = new Map<string, string>();
+        existingFields.forEach(field => {
+          fieldIdToName.set(field.field_id, field.field_name);
+        });
+
+        // 验证字段映射的准确性
+        Object.entries(mappings).forEach(([doubanField, fieldId]) => {
+          const config = verifiedConfig[doubanField];
+          if (config && fieldIdToName.has(fieldId)) {
+            const actualFieldName = fieldIdToName.get(fieldId);
+            const expectedFieldName = config.chineseName;
+            
+            if (actualFieldName !== expectedFieldName) {
+              validationErrors.push(
+                `字段映射不匹配: ${doubanField} -> ${actualFieldName}, 期望: ${expectedFieldName}`
+              );
+              invalidFieldCount++;
+              validFieldCount--;
+            }
+          }
+        });
+      } catch (error) {
+        warnings.push(`飞书API校验失败: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+
+    // 4. 严格模式校验
+    if (options?.strict) {
+      const expectedFieldCount = Object.keys(verifiedConfig).length;
+      const actualFieldCount = Object.keys(mappings).length;
+      
+      if (actualFieldCount < expectedFieldCount) {
+        const warningMsg = `严格模式: 期望${expectedFieldCount}个字段，实际只有${actualFieldCount}个`;
+        warnings.push(warningMsg);
+        // 🔥 严格模式下，字段数不足应该导致校验失败
+        validationErrors.push(warningMsg);
+      }
+    }
+
+    // 5. 编译结果
+    const statistics = {
+      totalFields: Object.keys(mappings).length,
+      validFields: validFieldCount,
+      invalidFields: invalidFieldCount,
+      missingRequiredFields: missingRequired.length,
+      fieldsWithNestedPath: fieldsWithNestedPathCount,
+    };
+
+    return {
+      isValid: validationErrors.length === 0,
+      errors: validationErrors,
+      warnings: warnings.length > 0 ? warnings : undefined,
+      validatedFields,
+      nestedPathFields,
+      processingNotes,
+      statistics,
+    };
   }
 
   // =============== 私有方法 ===============
