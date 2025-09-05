@@ -2,7 +2,7 @@
 
 /**
  * 飞书API契约事实核查脚本
- * 
+ *
  * 目的：调用真实飞书API，获取准确的响应数据结构，为Schema设计提供事实依据
  * 执行：npx ts-node src/contract-fact-check.ts
  */
@@ -11,13 +11,23 @@ import axios from 'axios';
 import * as fs from 'fs';
 import * as path from 'path';
 
-// 测试配置 - 使用项目文档中的飞书测试账号信息
+// 测试配置 - 使用环境变量
 const TEST_CONFIG = {
-  appId: 'cli_your_app_id_here',
-  appSecret: 'your_app_secret_here',
-  appToken: 'your_app_token_here',
-  tableId: 'your_book_table_id', // 书籍表格ID
+  appId: process.env.FEISHU_APP_ID || '',
+  appSecret: process.env.FEISHU_APP_SECRET || '',
+  appToken: process.env.FEISHU_APP_TOKEN || '',
+  tableId: process.env.FEISHU_BOOKS_TABLE_ID || '',
 };
+
+// 验证必需的环境变量
+const requiredEnvVars = ['FEISHU_APP_ID', 'FEISHU_APP_SECRET', 'FEISHU_APP_TOKEN', 'FEISHU_BOOKS_TABLE_ID'];
+const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
+
+if (missingVars.length > 0) {
+  console.error('❌ 缺少必需的环境变量:', missingVars.join(', '));
+  console.error('请在.env文件中设置这些变量，参考.env.example');
+  process.exit(1);
+}
 
 const FEISHU_BASE_URL = 'https://open.feishu.cn';
 
@@ -37,7 +47,7 @@ class FeishuApiFactChecker {
    */
   async getTenantAccessToken(): Promise<string> {
     console.log('\n🔑 步骤1: 获取租户访问令牌...');
-    
+
     try {
       const response = await axios.post(
         `${FEISHU_BASE_URL}/open-apis/auth/v3/tenant_access_token/internal`,
@@ -49,21 +59,31 @@ class FeishuApiFactChecker {
           headers: {
             'Content-Type': 'application/json; charset=utf-8',
           },
-        }
+        },
       );
 
-      this.logResult('POST /open-apis/auth/v3/tenant_access_token/internal', true, response.data);
+      this.logResult(
+        'POST /open-apis/auth/v3/tenant_access_token/internal',
+        true,
+        response.data,
+      );
 
       if (response.data.code !== 0) {
-        throw new Error(`获取令牌失败: [${response.data.code}] ${response.data.msg}`);
+        throw new Error(
+          `获取令牌失败: [${response.data.code}] ${response.data.msg}`,
+        );
       }
 
       console.log('✅ 令牌获取成功');
       return response.data.tenant_access_token;
-
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
-      this.logResult('POST /open-apis/auth/v3/tenant_access_token/internal', false, null, errorMsg);
+      this.logResult(
+        'POST /open-apis/auth/v3/tenant_access_token/internal',
+        false,
+        null,
+        errorMsg,
+      );
       console.error('❌ 令牌获取失败:', errorMsg);
       throw error;
     }
@@ -80,35 +100,46 @@ class FeishuApiFactChecker {
         `${FEISHU_BASE_URL}/open-apis/bitable/v1/apps/${TEST_CONFIG.appToken}/tables/${TEST_CONFIG.tableId}/fields`,
         {
           headers: {
-            'Authorization': `Bearer ${accessToken}`,
+            Authorization: `Bearer ${accessToken}`,
             'Content-Type': 'application/json; charset=utf-8',
           },
-        }
+        },
       );
 
-      this.logResult('GET /open-apis/bitable/v1/apps/.../tables/.../fields', true, response.data);
+      this.logResult(
+        'GET /open-apis/bitable/v1/apps/.../tables/.../fields',
+        true,
+        response.data,
+      );
 
       if (response.data.code !== 0) {
-        throw new Error(`获取字段信息失败: [${response.data.code}] ${response.data.msg}`);
+        throw new Error(
+          `获取字段信息失败: [${response.data.code}] ${response.data.msg}`,
+        );
       }
 
       console.log('✅ 字段信息获取成功');
       console.log(`📈 返回字段数量: ${response.data.data?.items?.length || 0}`);
-      
+
       // 打印字段类型分布
       if (response.data.data?.items) {
         const typeDistribution: Record<number, number> = {};
         response.data.data.items.forEach((field: any) => {
-          typeDistribution[field.type] = (typeDistribution[field.type] || 0) + 1;
+          typeDistribution[field.type] =
+            (typeDistribution[field.type] || 0) + 1;
         });
         console.log('📋 字段类型分布:', typeDistribution);
       }
 
       return response.data;
-
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
-      this.logResult('GET /open-apis/bitable/v1/apps/.../tables/.../fields', false, null, errorMsg);
+      this.logResult(
+        'GET /open-apis/bitable/v1/apps/.../tables/.../fields',
+        false,
+        null,
+        errorMsg,
+      );
       console.error('❌ 字段信息获取失败:', errorMsg);
       throw error;
     }
@@ -128,26 +159,36 @@ class FeishuApiFactChecker {
         },
         {
           headers: {
-            'Authorization': `Bearer ${accessToken}`,
+            Authorization: `Bearer ${accessToken}`,
             'Content-Type': 'application/json; charset=utf-8',
           },
-        }
+        },
       );
 
-      this.logResult('POST /open-apis/bitable/v1/apps/.../tables/.../records/search', true, response.data);
+      this.logResult(
+        'POST /open-apis/bitable/v1/apps/.../tables/.../records/search',
+        true,
+        response.data,
+      );
 
       if (response.data.code !== 0) {
-        throw new Error(`记录查询失败: [${response.data.code}] ${response.data.msg}`);
+        throw new Error(
+          `记录查询失败: [${response.data.code}] ${response.data.msg}`,
+        );
       }
 
       console.log('✅ 记录查询成功');
       console.log(`📊 返回记录数量: ${response.data.data?.items?.length || 0}`);
 
       return response.data;
-
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
-      this.logResult('POST /open-apis/bitable/v1/apps/.../tables/.../records/search', false, null, errorMsg);
+      this.logResult(
+        'POST /open-apis/bitable/v1/apps/.../tables/.../records/search',
+        false,
+        null,
+        errorMsg,
+      );
       console.error('❌ 记录查询失败:', errorMsg);
       throw error;
     }
@@ -156,7 +197,12 @@ class FeishuApiFactChecker {
   /**
    * 记录测试结果
    */
-  private logResult(endpoint: string, success: boolean, responseData?: any, error?: string) {
+  private logResult(
+    endpoint: string,
+    success: boolean,
+    responseData?: any,
+    error?: string,
+  ) {
     this.results.push({
       endpoint,
       success,
@@ -172,14 +218,19 @@ class FeishuApiFactChecker {
   async saveResults() {
     console.log('\n💾 保存测试结果...');
 
-    const outputDir = path.join(__dirname, 'feishu', 'contract', '__fixtures__');
+    const outputDir = path.join(
+      __dirname,
+      'feishu',
+      'contract',
+      '__fixtures__',
+    );
     await fs.promises.mkdir(outputDir, { recursive: true });
 
     // 保存完整测试结果
     const fullResultsPath = path.join(outputDir, 'fact-check-results.json');
     await fs.promises.writeFile(
       fullResultsPath,
-      JSON.stringify(this.results, null, 2)
+      JSON.stringify(this.results, null, 2),
     );
 
     // 提取关键API响应作为fixtures
@@ -198,7 +249,7 @@ class FeishuApiFactChecker {
           const fixturePath = path.join(outputDir, filename);
           await fs.promises.writeFile(
             fixturePath,
-            JSON.stringify(result.responseData, null, 2)
+            JSON.stringify(result.responseData, null, 2),
           );
           console.log(`✅ 已保存: ${filename}`);
         }
@@ -214,17 +265,19 @@ class FeishuApiFactChecker {
    */
   generateAnalysisReport(): void {
     console.log('\n📊 === 飞书API响应结构分析报告 ===');
-    
-    const fieldsResult = this.results.find(r => r.endpoint.includes('/fields') && r.success);
+
+    const fieldsResult = this.results.find(
+      (r) => r.endpoint.includes('/fields') && r.success,
+    );
     if (fieldsResult?.responseData?.data?.items) {
       const fields = fieldsResult.responseData.data.items;
-      
+
       console.log(`\n🔍 字段信息分析 (共${fields.length}个字段):`);
-      
+
       // 分析字段结构
       const firstField = fields[0];
       console.log('📋 字段对象结构:', Object.keys(firstField));
-      
+
       // 统计字段类型
       const typeStats: Record<number, { count: number; names: string[] }> = {};
       fields.forEach((field: any) => {
@@ -237,13 +290,15 @@ class FeishuApiFactChecker {
 
       console.log('\n📊 字段类型统计:');
       Object.entries(typeStats).forEach(([type, stats]) => {
-        console.log(`  类型 ${type}: ${stats.count}个字段 [${stats.names.slice(0, 3).join(', ')}${stats.names.length > 3 ? '...' : ''}]`);
+        console.log(
+          `  类型 ${type}: ${stats.count}个字段 [${stats.names.slice(0, 3).join(', ')}${stats.names.length > 3 ? '...' : ''}]`,
+        );
       });
 
       // 检查关键字段
       const requiredFields = ['field_id', 'field_name', 'type'];
       console.log('\n🔑 关键字段检查:');
-      requiredFields.forEach(fieldName => {
+      requiredFields.forEach((fieldName) => {
         const hasField = firstField.hasOwnProperty(fieldName);
         console.log(`  ${fieldName}: ${hasField ? '✅ 存在' : '❌ 缺失'}`);
         if (hasField) {
@@ -253,9 +308,11 @@ class FeishuApiFactChecker {
     }
 
     // 统计API调用成功率
-    const successCount = this.results.filter(r => r.success).length;
+    const successCount = this.results.filter((r) => r.success).length;
     const totalCount = this.results.length;
-    console.log(`\n📈 API调用成功率: ${successCount}/${totalCount} (${Math.round(successCount/totalCount*100)}%)`);
+    console.log(
+      `\n📈 API调用成功率: ${successCount}/${totalCount} (${Math.round((successCount / totalCount) * 100)}%)`,
+    );
   }
 }
 
@@ -289,17 +346,16 @@ async function main() {
 
     console.log('\n🎉 契约事实核查完成!');
     console.log(`📁 结果文件位置: ${outputDir}`);
-
   } catch (error) {
     console.error('\n💥 测试失败:', error);
-    
+
     // 即使失败也保存已有结果
     try {
       await checker.saveResults();
     } catch (saveError) {
       console.error('保存结果失败:', saveError);
     }
-    
+
     process.exit(1);
   }
 }

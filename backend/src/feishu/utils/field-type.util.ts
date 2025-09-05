@@ -1,6 +1,6 @@
 /**
  * 飞书字段类型判断工具函数
- * 
+ *
  * 职责：
  * - 基于字段名语义判断字段类型
  * - 区分Rating字段和Number字段
@@ -12,55 +12,77 @@ import { FeishuFieldType } from '../interfaces/api.interface';
 /**
  * 判断是否为评分字段类型（Rating类型，非Number类型）
  * [CRITICAL-FIX] 精确区分Rating和Number字段
- * 
+ *
  * 关键区别：
  * - "豆瓣评分" → Number类型 (0.0-10.0数字显示)
  * - "我的评分" → Rating类型 (1-5星星显示)
- * 
+ *
  * 飞书API说明：
  * - Rating和Number都使用type=2
  * - 通过ui_type区分："Rating" vs "Number"
  * - 因此必须基于字段名语义进行准确判断
  */
-export function isRatingFieldType(fieldName: string, fieldType: FeishuFieldType): boolean {
+export function isRatingFieldType(
+  fieldName: string,
+  fieldType: FeishuFieldType,
+): boolean {
   // [CRITICAL-FIX] 处理空值输入
   if (!fieldName || typeof fieldName !== 'string') {
     return false;
   }
-  
+
   // 明确的Rating类型字段名（仅限用户评分相关）
   const ratingFieldNames = [
-    '我的评分', '个人评分', '用户评分', '我给的评分',
-    'myrating', 'userrating', 'personalrating', 'myrate'
+    '我的评分',
+    '个人评分',
+    '用户评分',
+    '我给的评分',
+    'myrating',
+    'userrating',
+    'personalrating',
+    'myrate',
   ];
-  
+
   // 明确排除的Number类型字段名（官方评分等）
   // [CRITICAL-FIX] 官方评分优先级更高，包含更多关键词
   const numberFieldNames = [
-    '豆瓣评分', '平均评分', '官方评分', '网站评分',
-    'doubanrating', 'averagerating', 'officialrating', 'siterating',
+    '豆瓣评分',
+    '平均评分',
+    '官方评分',
+    '网站评分',
+    'doubanrating',
+    'averagerating',
+    'officialrating',
+    'siterating',
     // 添加更多官方评分的关键词模式（中英文都包含）
-    'douban', '豆瓣', 'official', '官方', 'average', '平均', 'site', '网站'
+    'douban',
+    '豆瓣',
+    'official',
+    '官方',
+    'average',
+    '平均',
+    'site',
+    '网站',
   ];
-  
+
   const lowerFieldName = fieldName.toLowerCase();
-  
+
   // 1. 优先排除：如果是明确的Number字段，直接返回false
   // [CRITICAL-FIX] 官方评分优先级：更严格的匹配逻辑
-  const isNumberField = numberFieldNames.some(name => {
+  const isNumberField = numberFieldNames.some((name) => {
     const lowerName = name.toLowerCase();
     return fieldName.includes(name) || lowerFieldName.includes(lowerName);
   });
-  
+
   if (isNumberField) {
     return false;
   }
-  
+
   // 2. 精确匹配：如果是明确的Rating字段，返回true
-  const isRatingField = ratingFieldNames.some(name => {
+  const isRatingField = ratingFieldNames.some((name) => {
     const lowerName = name.toLowerCase();
     return fieldName.includes(name) || lowerFieldName.includes(lowerName);
   });
-  
+
   return isRatingField;
 }

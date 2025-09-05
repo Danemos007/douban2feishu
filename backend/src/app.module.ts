@@ -24,7 +24,7 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 
 /**
  * 主应用模块 - 豆瓣飞书同步助手(D2F)
- * 
+ *
  * 架构特性:
  * - 模块化设计，职责清晰分离
  * - 三层加密安全架构
@@ -48,7 +48,7 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
         throttlers: [
           {
             ttl: parseInt(process.env.THROTTLE_TTL || '60') * 1000, // 60秒
-            limit: parseInt(process.env.THROTTLE_LIMIT || '100'),   // 100次请求
+            limit: parseInt(process.env.THROTTLE_LIMIT || '100'), // 100次请求
           },
         ],
       }),
@@ -65,32 +65,32 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
     DoubanModule,
     FeishuModule,
   ],
-  
+
   controllers: [AppController],
-  
+
   providers: [
     AppService,
-    
+
     // 全局守卫 - JWT认证
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
     },
-    
+
     // 全局管道 - 数据验证和转换
     {
       provide: APP_PIPE,
       useValue: new ValidationPipe({
-        whitelist: true,           // 只保留DTO中定义的属性
+        whitelist: true, // 只保留DTO中定义的属性
         forbidNonWhitelisted: true, // 拒绝未定义的属性
-        transform: true,           // 自动类型转换
+        transform: true, // 自动类型转换
         transformOptions: {
           enableImplicitConversion: true,
         },
-        errorHttpStatusCode: 422,  // 验证失败返回422
+        errorHttpStatusCode: 422, // 验证失败返回422
       }),
     },
-    
+
     // 全局拦截器 - 请求日志
     {
       provide: APP_INTERCEPTOR,

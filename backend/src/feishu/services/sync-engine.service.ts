@@ -10,7 +10,7 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 
 /**
  * 数据同步引擎 - Subject ID增量同步核心服务
- * 
+ *
  * 核心功能:
  * - Subject ID作为唯一键的同步逻辑
  * - 增量同步算法（字段变更检测）
@@ -22,7 +22,7 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 @Injectable()
 export class SyncEngineService {
   private readonly logger = new Logger(SyncEngineService.name);
-  
+
   // 缓存配置
   private readonly cacheConfig = {
     syncStateTtl: 3600, // 同步状态缓存1小时
@@ -64,58 +64,68 @@ export class SyncEngineService {
       fullSync?: boolean; // 是否强制全量同步
       onProgress?: (progress: SyncProgress) => void;
       conflictStrategy?: 'douban_wins' | 'feishu_wins' | 'merge';
-    } = {}
+    } = {},
   ): Promise<SyncResult> {
     try {
-      this.logger.log(`Starting ${options.fullSync ? 'full' : 'incremental'} sync for ${doubanData.length} records`);
+      this.logger.log(
+        `Starting ${options.fullSync ? 'full' : 'incremental'} sync for ${doubanData.length} records`,
+      );
 
       // 获取或自动配置字段映射
       let fieldMappings = await this.fieldMappingService.getFieldMappings(
         userId,
         syncConfig.appToken,
-        syncConfig.tableId
+        syncConfig.tableId,
       );
 
       // 如果没有字段映射，自动配置
       if (!fieldMappings) {
         this.logger.log('No field mappings found, auto-configuring...');
-        
+
         options.onProgress?.({
           phase: 'create',
           processed: 0,
           total: 1,
-          message: 'Auto-configuring field mappings...'
+          message: 'Auto-configuring field mappings...',
         });
 
-        const autoConfigResult = await this.fieldMappingService.autoConfigureFieldMappings(
-          userId,
-          syncConfig.appId,
-          syncConfig.appSecret,
-          syncConfig.appToken,
-          syncConfig.tableId,
-          syncConfig.dataType
-        );
+        const autoConfigResult =
+          await this.fieldMappingService.autoConfigureFieldMappings(
+            userId,
+            syncConfig.appId,
+            syncConfig.appSecret,
+            syncConfig.appToken,
+            syncConfig.tableId,
+            syncConfig.dataType,
+          );
 
         fieldMappings = autoConfigResult.mappings;
-        
-        this.logger.log(`Auto-configuration completed: ${autoConfigResult.matched.length} matched, ${autoConfigResult.created.length} created, ${autoConfigResult.errors.length} errors`);
+
+        this.logger.log(
+          `Auto-configuration completed: ${autoConfigResult.matched.length} matched, ${autoConfigResult.created.length} created, ${autoConfigResult.errors.length} errors`,
+        );
       }
 
       // 验证Subject ID映射
       if (!fieldMappings.subjectId) {
-        throw new Error('Subject ID field mapping is required for incremental sync. Auto-configuration failed to create this field.');
+        throw new Error(
+          'Subject ID field mapping is required for incremental sync. Auto-configuration failed to create this field.',
+        );
       }
 
       // 初始化同步状态
-      const syncState = await this.initializeSyncState(userId, syncConfig.tableId);
-      
+      const syncState = await this.initializeSyncState(
+        userId,
+        syncConfig.tableId,
+      );
+
       // 获取现有记录状态
       const existingRecords = await this.getExistingRecordsIndex(
         syncConfig.appId,
         syncConfig.appSecret,
         syncConfig.appToken,
         syncConfig.tableId,
-        fieldMappings.subjectId
+        fieldMappings.subjectId,
       );
 
       // 分析变更
@@ -123,7 +133,7 @@ export class SyncEngineService {
         doubanData,
         existingRecords,
         fieldMappings,
-        options.fullSync || false
+        options.fullSync || false,
       );
 
       // 执行同步操作
@@ -131,7 +141,7 @@ export class SyncEngineService {
         syncConfig,
         fieldMappings,
         changeAnalysis,
-        options
+        options,
       );
 
       // 更新同步状态
@@ -139,9 +149,9 @@ export class SyncEngineService {
 
       this.logger.log(`Sync completed: ${JSON.stringify(syncResult.summary)}`);
       return syncResult;
-
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       this.logger.error('Incremental sync failed:', errorMessage);
       throw error instanceof Error ? error : new Error(String(error));
     }
@@ -154,7 +164,7 @@ export class SyncEngineService {
     doubanData: any[],
     existingRecords: Map<string, FeishuRecordItem>,
     fieldMappings: Record<string, string>,
-    fullSync: boolean
+    fullSync: boolean,
   ): Promise<ChangeAnalysis> {
     const changes: ChangeAnalysis = {
       toCreate: [],
@@ -165,7 +175,7 @@ export class SyncEngineService {
 
     // 创建豆瓣数据索引
     const doubanRecordMap = new Map<string, any>();
-    doubanData.forEach(record => {
+    doubanData.forEach((record) => {
       if (record.subjectId) {
         doubanRecordMap.set(record.subjectId, record);
       }
@@ -180,7 +190,7 @@ export class SyncEngineService {
       }
 
       const existingRecord = existingRecords.get(subjectId);
-      
+
       if (!existingRecord) {
         // 新记录 - 需要创建
         changes.toCreate.push({
@@ -192,7 +202,14 @@ export class SyncEngineService {
       }
 
       // 现有记录 - 检查是否需要更新
-      if (fullSync || await this.hasRecordChanged(doubanRecord, existingRecord, fieldMappings)) {
+      if (
+        fullSync ||
+        (await this.hasRecordChanged(
+          doubanRecord,
+          existingRecord,
+          fieldMappings,
+        ))
+      ) {
         changes.toUpdate.push({
           subjectId,
           recordId: existingRecord.record_id,
@@ -221,8 +238,10 @@ export class SyncEngineService {
       }
     }
 
-    this.logger.log(`Change analysis: Create=${changes.toCreate.length}, Update=${changes.toUpdate.length}, Delete=${changes.toDelete.length}, Unchanged=${changes.unchanged.length}`);
-    
+    this.logger.log(
+      `Change analysis: Create=${changes.toCreate.length}, Update=${changes.toUpdate.length}, Delete=${changes.toDelete.length}, Unchanged=${changes.unchanged.length}`,
+    );
+
     return changes;
   }
 
@@ -232,21 +251,27 @@ export class SyncEngineService {
   private async hasRecordChanged(
     doubanRecord: any,
     feishuRecord: FeishuRecordItem,
-    fieldMappings: Record<string, string>
+    fieldMappings: Record<string, string>,
   ): Promise<boolean> {
     try {
       // 生成豆瓣记录的哈希值
       const doubanHash = this.generateRecordHash(doubanRecord, fieldMappings);
-      
+
       // 生成飞书记录的哈希值
-      const feishuHash = this.generateFeishuRecordHash(feishuRecord, fieldMappings);
-      
+      const feishuHash = this.generateFeishuRecordHash(
+        feishuRecord,
+        fieldMappings,
+      );
+
       // 比较哈希值
       return doubanHash !== feishuHash;
-
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      this.logger.warn(`Failed to check record changes for ${doubanRecord.subjectId}:`, errorMessage);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      this.logger.warn(
+        `Failed to check record changes for ${doubanRecord.subjectId}:`,
+        errorMessage,
+      );
       // 出现错误时默认认为记录已变更，进行更新
       return true;
     }
@@ -255,12 +280,15 @@ export class SyncEngineService {
   /**
    * 生成豆瓣记录哈希值
    */
-  private generateRecordHash(record: any, fieldMappings: Record<string, string>): string {
+  private generateRecordHash(
+    record: any,
+    fieldMappings: Record<string, string>,
+  ): string {
     // 只对映射的字段生成哈希，确保一致性
     const mappedFields = Object.keys(fieldMappings)
-      .filter(key => !key.startsWith('_')) // 排除元数据
+      .filter((key) => !key.startsWith('_')) // 排除元数据
       .sort() // 确保字段顺序一致
-      .map(key => `${key}:${this.normalizeValue(record[key])}`)
+      .map((key) => `${key}:${this.normalizeValue(record[key])}`)
       .join('|');
 
     return createHash(this.syncConfig.hashAlgorithm)
@@ -273,7 +301,7 @@ export class SyncEngineService {
    */
   private generateFeishuRecordHash(
     feishuRecord: FeishuRecordItem,
-    fieldMappings: Record<string, string>
+    fieldMappings: Record<string, string>,
   ): string {
     // ~~反向映射：从Field ID到字段名~~ **字段映射处理**
     const reverseMapping: Record<string, string> = {};
@@ -285,9 +313,9 @@ export class SyncEngineService {
 
     // 提取对应字段值并生成哈希
     const mappedFields = Object.keys(fieldMappings)
-      .filter(key => !key.startsWith('_'))
+      .filter((key) => !key.startsWith('_'))
       .sort()
-      .map(key => {
+      .map((key) => {
         const fieldId = fieldMappings[key];
         const value = feishuRecord.fields[fieldId];
         return `${key}:${this.normalizeValue(value)}`;
@@ -306,30 +334,30 @@ export class SyncEngineService {
     if (value === null || value === undefined) {
       return 'null';
     }
-    
+
     if (typeof value === 'string') {
       return value.trim().toLowerCase();
     }
-    
+
     if (typeof value === 'number') {
       return value.toString();
     }
-    
+
     if (typeof value === 'boolean') {
       return value.toString();
     }
-    
+
     if (Array.isArray(value)) {
       return value
-        .map(item => this.normalizeValue(item))
+        .map((item) => this.normalizeValue(item))
         .sort()
         .join(',');
     }
-    
+
     if (typeof value === 'object') {
       return JSON.stringify(value);
     }
-    
+
     return String(value);
   }
 
@@ -340,11 +368,14 @@ export class SyncEngineService {
     syncConfig: any,
     fieldMappings: Record<string, string>,
     changes: ChangeAnalysis,
-    options: any
+    options: any,
   ): Promise<SyncResult> {
     const result: SyncResult = {
       summary: {
-        total: changes.toCreate.length + changes.toUpdate.length + changes.toDelete.length,
+        total:
+          changes.toCreate.length +
+          changes.toUpdate.length +
+          changes.toDelete.length,
         created: 0,
         updated: 0,
         deleted: 0,
@@ -368,11 +399,16 @@ export class SyncEngineService {
       // 1. 批量创建新记录
       if (changes.toCreate.length > 0) {
         this.logger.log(`Creating ${changes.toCreate.length} new records`);
-        const createResult = await this.batchCreateRecords(syncConfig, fieldMappings, changes.toCreate, options);
+        const createResult = await this.batchCreateRecords(
+          syncConfig,
+          fieldMappings,
+          changes.toCreate,
+          options,
+        );
         result.summary.created = createResult.success;
         result.summary.failed += createResult.failed;
         result.details.createdRecords = createResult.details;
-        
+
         options.onProgress?.({
           phase: 'create',
           processed: createResult.success + createResult.failed,
@@ -383,11 +419,16 @@ export class SyncEngineService {
       // 2. 批量更新现有记录
       if (changes.toUpdate.length > 0) {
         this.logger.log(`Updating ${changes.toUpdate.length} existing records`);
-        const updateResult = await this.batchUpdateRecords(syncConfig, fieldMappings, changes.toUpdate, options);
+        const updateResult = await this.batchUpdateRecords(
+          syncConfig,
+          fieldMappings,
+          changes.toUpdate,
+          options,
+        );
         result.summary.updated = updateResult.success;
         result.summary.failed += updateResult.failed;
         result.details.updatedRecords = updateResult.details;
-        
+
         options.onProgress?.({
           phase: 'update',
           processed: updateResult.success + updateResult.failed,
@@ -398,11 +439,15 @@ export class SyncEngineService {
       // 3. 删除不存在的记录（可选）
       if (options.deleteOrphans && changes.toDelete.length > 0) {
         this.logger.log(`Deleting ${changes.toDelete.length} orphaned records`);
-        const deleteResult = await this.batchDeleteRecords(syncConfig, changes.toDelete, options);
+        const deleteResult = await this.batchDeleteRecords(
+          syncConfig,
+          changes.toDelete,
+          options,
+        );
         result.summary.deleted = deleteResult.success;
         result.summary.failed += deleteResult.failed;
         result.details.deletedRecords = deleteResult.details;
-        
+
         options.onProgress?.({
           phase: 'delete',
           processed: deleteResult.success + deleteResult.failed,
@@ -412,12 +457,14 @@ export class SyncEngineService {
 
       // 完成时间计算
       result.performance.endTime = new Date();
-      result.performance.duration = result.performance.endTime.getTime() - result.performance.startTime.getTime();
+      result.performance.duration =
+        result.performance.endTime.getTime() -
+        result.performance.startTime.getTime();
 
       return result;
-
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       this.logger.error('Sync operations failed:', errorMessage);
       throw error instanceof Error ? error : new Error(String(error));
     }
@@ -430,10 +477,12 @@ export class SyncEngineService {
     syncConfig: any,
     fieldMappings: Record<string, string>,
     createItems: ChangeItem[],
-    options: any
+    options: any,
   ): Promise<BatchOperationResult> {
-    const records = createItems.map(item => this.transformRecordForFeishu(item.doubanData, fieldMappings));
-    
+    const records = createItems.map((item) =>
+      this.transformRecordForFeishu(item.doubanData, fieldMappings),
+    );
+
     const result = await this.tableService.batchCreateRecords(
       syncConfig.appId,
       syncConfig.appSecret,
@@ -444,7 +493,7 @@ export class SyncEngineService {
       {
         skipDuplicates: true,
         validateFields: false, // 已经验证过
-      }
+      },
     );
 
     return {
@@ -466,11 +515,12 @@ export class SyncEngineService {
     syncConfig: any,
     fieldMappings: Record<string, string>,
     updateItems: ChangeItem[],
-    options: any
+    options: any,
   ): Promise<BatchOperationResult> {
-    const updates = updateItems.map(item => ({
+    const updates = updateItems.map((item) => ({
       recordId: item.recordId!,
-      fields: this.transformRecordForFeishu(item.doubanData, fieldMappings).fields,
+      fields: this.transformRecordForFeishu(item.doubanData, fieldMappings)
+        .fields,
     }));
 
     const result = await this.tableService.batchUpdateRecords(
@@ -478,7 +528,7 @@ export class SyncEngineService {
       syncConfig.appSecret,
       syncConfig.appToken,
       syncConfig.tableId,
-      updates
+      updates,
     );
 
     return {
@@ -500,7 +550,7 @@ export class SyncEngineService {
   private async batchDeleteRecords(
     syncConfig: any,
     deleteItems: ChangeItem[],
-    options: any
+    options: any,
   ): Promise<BatchOperationResult> {
     let success = 0;
     let failed = 0;
@@ -519,7 +569,7 @@ export class SyncEngineService {
           syncConfig.appSecret,
           syncConfig.appToken,
           syncConfig.tableId,
-          item.recordId!
+          item.recordId!,
         );
         success++;
         details.push({
@@ -530,7 +580,8 @@ export class SyncEngineService {
         });
       } catch (error) {
         failed++;
-        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
         details.push({
           subjectId: item.subjectId,
           recordId: item.recordId,
@@ -555,7 +606,7 @@ export class SyncEngineService {
     appSecret: string,
     appToken: string,
     tableId: string,
-    subjectIdFieldId: string
+    subjectIdFieldId: string,
   ): Promise<Map<string, FeishuRecordItem>> {
     const recordsMap = new Map<string, FeishuRecordItem>();
     let pageToken: string | undefined;
@@ -571,7 +622,7 @@ export class SyncEngineService {
           {
             pageSize: 500, // 最大页面大小
             pageToken,
-          }
+          },
         );
 
         for (const record of response.records) {
@@ -588,22 +639,27 @@ export class SyncEngineService {
         if (pageToken) {
           await this.delay(1000);
         }
-
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
         this.logger.error('Failed to fetch existing records:', errorMessage);
         break;
       }
     } while (pageToken);
 
-    this.logger.log(`Fetched ${totalFetched} existing records from Feishu table`);
+    this.logger.log(
+      `Fetched ${totalFetched} existing records from Feishu table`,
+    );
     return recordsMap;
   }
 
   /**
    * 转换记录格式用于飞书
    */
-  private transformRecordForFeishu(record: any, fieldMappings: Record<string, string>): any {
+  private transformRecordForFeishu(
+    record: any,
+    fieldMappings: Record<string, string>,
+  ): any {
     const fields: Record<string, any> = {};
 
     Object.entries(fieldMappings).forEach(([doubanField, feishuFieldId]) => {
@@ -632,9 +688,12 @@ export class SyncEngineService {
   /**
    * 初始化同步状态
    */
-  private async initializeSyncState(userId: string, tableId: string): Promise<any> {
+  private async initializeSyncState(
+    userId: string,
+    tableId: string,
+  ): Promise<any> {
     const stateKey = `${this.cacheConfig.syncStateKeyPrefix}${userId}:${tableId}`;
-    
+
     const syncState = {
       userId,
       tableId,
@@ -644,16 +703,24 @@ export class SyncEngineService {
       total: 0,
     };
 
-    await this.redis.setex(stateKey, this.cacheConfig.syncStateTtl, JSON.stringify(syncState));
+    await this.redis.setex(
+      stateKey,
+      this.cacheConfig.syncStateTtl,
+      JSON.stringify(syncState),
+    );
     return syncState;
   }
 
   /**
    * 更新同步状态
    */
-  private async updateSyncState(userId: string, tableId: string, syncResult: SyncResult): Promise<void> {
+  private async updateSyncState(
+    userId: string,
+    tableId: string,
+    syncResult: SyncResult,
+  ): Promise<void> {
     const stateKey = `${this.cacheConfig.syncStateKeyPrefix}${userId}:${tableId}`;
-    
+
     const syncState = {
       userId,
       tableId,
@@ -662,7 +729,11 @@ export class SyncEngineService {
       summary: syncResult.summary,
     };
 
-    await this.redis.setex(stateKey, this.cacheConfig.syncStateTtl, JSON.stringify(syncState));
+    await this.redis.setex(
+      stateKey,
+      this.cacheConfig.syncStateTtl,
+      JSON.stringify(syncState),
+    );
   }
 
   /**
@@ -674,7 +745,8 @@ export class SyncEngineService {
       const state = await this.redis.get(stateKey);
       return state ? JSON.parse(state) : null;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       this.logger.error('Failed to get sync state:', errorMessage);
       return null;
     }
@@ -684,7 +756,7 @@ export class SyncEngineService {
    * 延迟工具函数
    */
   private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }
 

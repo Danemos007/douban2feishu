@@ -44,7 +44,7 @@ export class AppService {
   async getHealthCheck() {
     const timestamp = new Date().toISOString();
     const uptime = Math.floor((Date.now() - this.startTime) / 1000);
-    
+
     // 检查各个依赖项的健康状态
     const checks = {
       database: 'unknown',
@@ -70,7 +70,9 @@ export class AppService {
     }
 
     // 确定整体健康状态
-    const isHealthy = Object.values(checks).every(status => status === 'healthy');
+    const isHealthy = Object.values(checks).every(
+      (status) => status === 'healthy',
+    );
     const status = isHealthy ? 'healthy' : 'unhealthy';
 
     const healthData = {

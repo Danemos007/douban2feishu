@@ -1,12 +1,12 @@
 /**
  * 豆瓣字段到飞书字段的实战验证映射配置
- * 
+ *
  * 基于四个历史测试文件的逻辑抢救和整合：
- * - 🏆 核心基准：sync-all-movies-fixed.ts 的100%真实API映射 
+ * - 🏆 核心基准：sync-all-movies-fixed.ts 的100%真实API映射
  * - 🔥 通用框架：real-douban-data-sync.ts 的嵌套属性解析能力
  * - ⚡ 精确校正：sync-movie-from-cache.ts 和 sync-from-cache.ts 的字段验证
  * - 📋 企业级：保持现有配置结构和元数据
- * 
+ *
  * 创建时间: 2025-09-03
  * 验证状态: 基于真实飞书API调用验证
  */
@@ -43,7 +43,10 @@ export interface VerifiedFieldMappingConfig {
  * 🏆 电影字段映射配置（18字段完整版）
  * 基于sync-all-movies-fixed.ts的100%真实API映射验证
  */
-export const VERIFIED_MOVIES_FIELD_MAPPING: Record<string, VerifiedFieldMappingConfig> = {
+export const VERIFIED_MOVIES_FIELD_MAPPING: Record<
+  string,
+  VerifiedFieldMappingConfig
+> = {
   subjectId: {
     doubanFieldName: 'subjectId',
     chineseName: 'Subject ID',
@@ -54,7 +57,7 @@ export const VERIFIED_MOVIES_FIELD_MAPPING: Record<string, VerifiedFieldMappingC
     verified: true,
     verifiedSource: ['sync-all-movies-fixed.ts', 'sync-movie-from-cache.ts'],
   },
-  
+
   title: {
     doubanFieldName: 'title',
     chineseName: '电影名',
@@ -65,7 +68,7 @@ export const VERIFIED_MOVIES_FIELD_MAPPING: Record<string, VerifiedFieldMappingC
     verified: true,
     verifiedSource: ['sync-all-movies-fixed.ts', 'sync-movie-from-cache.ts'],
   },
-  
+
   myStatus: {
     doubanFieldName: 'myStatus',
     chineseName: '我的状态',
@@ -77,7 +80,7 @@ export const VERIFIED_MOVIES_FIELD_MAPPING: Record<string, VerifiedFieldMappingC
     processingNotes: '电影只有2个状态选项，与书籍的3个状态不同',
     verifiedSource: ['sync-all-movies-fixed.ts', 'sync-movie-from-cache.ts'],
   },
-  
+
   genre: {
     doubanFieldName: 'genre',
     chineseName: '类型',
@@ -88,7 +91,7 @@ export const VERIFIED_MOVIES_FIELD_MAPPING: Record<string, VerifiedFieldMappingC
     verified: true,
     verifiedSource: ['sync-all-movies-fixed.ts', 'sync-movie-from-cache.ts'],
   },
-  
+
   coverImage: {
     doubanFieldName: 'coverImage',
     chineseName: '封面图',
@@ -98,9 +101,13 @@ export const VERIFIED_MOVIES_FIELD_MAPPING: Record<string, VerifiedFieldMappingC
     description: '电影海报URL',
     verified: true,
     processingNotes: '确认使用coverImage而非coverUrl，需要{link: url}格式',
-    verifiedSource: ['sync-all-movies-fixed.ts', 'sync-movie-from-cache.ts', 'sync-from-cache.ts'],
+    verifiedSource: [
+      'sync-all-movies-fixed.ts',
+      'sync-movie-from-cache.ts',
+      'sync-from-cache.ts',
+    ],
   },
-  
+
   doubanRating: {
     doubanFieldName: 'doubanRating',
     chineseName: '豆瓣评分',
@@ -111,7 +118,7 @@ export const VERIFIED_MOVIES_FIELD_MAPPING: Record<string, VerifiedFieldMappingC
     verified: true,
     verifiedSource: ['sync-all-movies-fixed.ts', 'sync-movie-from-cache.ts'],
   },
-  
+
   myComment: {
     doubanFieldName: 'myComment',
     chineseName: '我的备注',
@@ -122,7 +129,7 @@ export const VERIFIED_MOVIES_FIELD_MAPPING: Record<string, VerifiedFieldMappingC
     verified: true,
     verifiedSource: ['sync-all-movies-fixed.ts', 'sync-movie-from-cache.ts'],
   },
-  
+
   duration: {
     doubanFieldName: 'duration',
     chineseName: '片长',
@@ -134,7 +141,7 @@ export const VERIFIED_MOVIES_FIELD_MAPPING: Record<string, VerifiedFieldMappingC
     processingNotes: 'sync-all-movies-fixed.ts包含复杂片长解析逻辑',
     verifiedSource: ['sync-all-movies-fixed.ts'],
   },
-  
+
   releaseDate: {
     doubanFieldName: 'releaseDate',
     chineseName: '上映日期',
@@ -143,10 +150,11 @@ export const VERIFIED_MOVIES_FIELD_MAPPING: Record<string, VerifiedFieldMappingC
     required: false,
     description: '上映日期，支持多地区格式，用" / "分隔',
     verified: true,
-    processingNotes: 'sync-all-movies-fixed.ts包含多地区日期处理逻辑，保留完整信息',
+    processingNotes:
+      'sync-all-movies-fixed.ts包含多地区日期处理逻辑，保留完整信息',
     verifiedSource: ['sync-all-movies-fixed.ts'],
   },
-  
+
   summary: {
     doubanFieldName: 'summary',
     chineseName: '剧情简介',
@@ -157,7 +165,7 @@ export const VERIFIED_MOVIES_FIELD_MAPPING: Record<string, VerifiedFieldMappingC
     verified: true,
     verifiedSource: ['sync-all-movies-fixed.ts', 'sync-movie-from-cache.ts'],
   },
-  
+
   cast: {
     doubanFieldName: 'cast',
     chineseName: '主演',
@@ -168,7 +176,7 @@ export const VERIFIED_MOVIES_FIELD_MAPPING: Record<string, VerifiedFieldMappingC
     verified: true,
     verifiedSource: ['sync-all-movies-fixed.ts', 'sync-movie-from-cache.ts'],
   },
-  
+
   director: {
     doubanFieldName: 'director',
     chineseName: '导演',
@@ -179,7 +187,7 @@ export const VERIFIED_MOVIES_FIELD_MAPPING: Record<string, VerifiedFieldMappingC
     verified: true,
     verifiedSource: ['sync-all-movies-fixed.ts', 'sync-movie-from-cache.ts'],
   },
-  
+
   writer: {
     doubanFieldName: 'writer',
     chineseName: '编剧',
@@ -190,7 +198,7 @@ export const VERIFIED_MOVIES_FIELD_MAPPING: Record<string, VerifiedFieldMappingC
     verified: true,
     verifiedSource: ['sync-all-movies-fixed.ts', 'sync-movie-from-cache.ts'],
   },
-  
+
   country: {
     doubanFieldName: 'country',
     chineseName: '制片地区',
@@ -202,7 +210,7 @@ export const VERIFIED_MOVIES_FIELD_MAPPING: Record<string, VerifiedFieldMappingC
     processingNotes: 'sync-all-movies-fixed.ts包含智能分割逻辑，去除干扰信息',
     verifiedSource: ['sync-all-movies-fixed.ts'],
   },
-  
+
   language: {
     doubanFieldName: 'language',
     chineseName: '语言',
@@ -214,7 +222,7 @@ export const VERIFIED_MOVIES_FIELD_MAPPING: Record<string, VerifiedFieldMappingC
     processingNotes: 'sync-all-movies-fixed.ts包含智能分割逻辑，去除干扰信息',
     verifiedSource: ['sync-all-movies-fixed.ts'],
   },
-  
+
   myRating: {
     doubanFieldName: 'myRating',
     chineseName: '我的评分',
@@ -225,7 +233,7 @@ export const VERIFIED_MOVIES_FIELD_MAPPING: Record<string, VerifiedFieldMappingC
     verified: true,
     verifiedSource: ['sync-all-movies-fixed.ts', 'sync-movie-from-cache.ts'],
   },
-  
+
   myTags: {
     doubanFieldName: 'myTags',
     chineseName: '我的标签',
@@ -236,7 +244,7 @@ export const VERIFIED_MOVIES_FIELD_MAPPING: Record<string, VerifiedFieldMappingC
     verified: true,
     verifiedSource: ['sync-all-movies-fixed.ts', 'sync-movie-from-cache.ts'],
   },
-  
+
   markDate: {
     doubanFieldName: 'markDate',
     chineseName: '标记日期',
@@ -254,7 +262,10 @@ export const VERIFIED_MOVIES_FIELD_MAPPING: Record<string, VerifiedFieldMappingC
  * 🔥 书籍字段映射配置（16字段完整版）
  * 融合real-douban-data-sync.ts的嵌套属性和sync-from-cache.ts的存在性验证
  */
-export const VERIFIED_BOOKS_FIELD_MAPPING: Record<string, VerifiedFieldMappingConfig> = {
+export const VERIFIED_BOOKS_FIELD_MAPPING: Record<
+  string,
+  VerifiedFieldMappingConfig
+> = {
   subjectId: {
     doubanFieldName: 'subjectId',
     chineseName: 'Subject ID',
@@ -265,7 +276,7 @@ export const VERIFIED_BOOKS_FIELD_MAPPING: Record<string, VerifiedFieldMappingCo
     verified: true,
     verifiedSource: ['real-douban-data-sync.ts', 'sync-from-cache.ts'],
   },
-  
+
   title: {
     doubanFieldName: 'title',
     chineseName: '书名',
@@ -276,7 +287,7 @@ export const VERIFIED_BOOKS_FIELD_MAPPING: Record<string, VerifiedFieldMappingCo
     verified: true,
     verifiedSource: ['real-douban-data-sync.ts', 'sync-from-cache.ts'],
   },
-  
+
   subtitle: {
     doubanFieldName: 'subtitle',
     chineseName: '副标题',
@@ -287,7 +298,7 @@ export const VERIFIED_BOOKS_FIELD_MAPPING: Record<string, VerifiedFieldMappingCo
     verified: true,
     verifiedSource: ['sync-from-cache.ts'],
   },
-  
+
   originalTitle: {
     doubanFieldName: 'originalTitle',
     chineseName: '原作名',
@@ -299,7 +310,7 @@ export const VERIFIED_BOOKS_FIELD_MAPPING: Record<string, VerifiedFieldMappingCo
     processingNotes: 'real-douban-data-sync.ts中映射到"副标题"，但原作名更准确',
     verifiedSource: ['real-douban-data-sync.ts', 'sync-from-cache.ts'],
   },
-  
+
   author: {
     doubanFieldName: 'author',
     chineseName: '作者',
@@ -311,7 +322,7 @@ export const VERIFIED_BOOKS_FIELD_MAPPING: Record<string, VerifiedFieldMappingCo
     processingNotes: 'real-douban-data-sync.ts中为authors数组，需要join处理',
     verifiedSource: ['real-douban-data-sync.ts', 'sync-from-cache.ts'],
   },
-  
+
   translator: {
     doubanFieldName: 'translator',
     chineseName: '译者',
@@ -320,10 +331,11 @@ export const VERIFIED_BOOKS_FIELD_MAPPING: Record<string, VerifiedFieldMappingCo
     required: false,
     description: '翻译者姓名',
     verified: true,
-    processingNotes: 'real-douban-data-sync.ts中为translators数组，需要join处理',
+    processingNotes:
+      'real-douban-data-sync.ts中为translators数组，需要join处理',
     verifiedSource: ['real-douban-data-sync.ts', 'sync-from-cache.ts'],
   },
-  
+
   publisher: {
     doubanFieldName: 'publisher',
     chineseName: '出版社',
@@ -334,7 +346,7 @@ export const VERIFIED_BOOKS_FIELD_MAPPING: Record<string, VerifiedFieldMappingCo
     verified: true,
     verifiedSource: ['real-douban-data-sync.ts', 'sync-from-cache.ts'],
   },
-  
+
   publishDate: {
     doubanFieldName: 'publishDate',
     chineseName: '出版年份',
@@ -345,7 +357,7 @@ export const VERIFIED_BOOKS_FIELD_MAPPING: Record<string, VerifiedFieldMappingCo
     verified: true,
     verifiedSource: ['real-douban-data-sync.ts', 'sync-from-cache.ts'],
   },
-  
+
   doubanRating: {
     doubanFieldName: 'doubanRating',
     chineseName: '豆瓣评分',
@@ -358,7 +370,7 @@ export const VERIFIED_BOOKS_FIELD_MAPPING: Record<string, VerifiedFieldMappingCo
     processingNotes: 'real-douban-data-sync.ts中支持嵌套属性rating.average',
     verifiedSource: ['real-douban-data-sync.ts', 'sync-from-cache.ts'],
   },
-  
+
   myRating: {
     doubanFieldName: 'myRating',
     chineseName: '我的评分',
@@ -370,7 +382,7 @@ export const VERIFIED_BOOKS_FIELD_MAPPING: Record<string, VerifiedFieldMappingCo
     processingNotes: 'sync-from-cache.ts包含1-5范围验证逻辑',
     verifiedSource: ['real-douban-data-sync.ts', 'sync-from-cache.ts'],
   },
-  
+
   myTags: {
     doubanFieldName: 'myTags',
     chineseName: '我的标签',
@@ -382,7 +394,7 @@ export const VERIFIED_BOOKS_FIELD_MAPPING: Record<string, VerifiedFieldMappingCo
     processingNotes: 'real-douban-data-sync.ts中为userTags数组，需要join处理',
     verifiedSource: ['real-douban-data-sync.ts', 'sync-from-cache.ts'],
   },
-  
+
   myStatus: {
     doubanFieldName: 'myStatus',
     chineseName: '我的状态',
@@ -394,7 +406,7 @@ export const VERIFIED_BOOKS_FIELD_MAPPING: Record<string, VerifiedFieldMappingCo
     processingNotes: '书籍有3个状态选项，sync-from-cache.ts包含严格验证逻辑',
     verifiedSource: ['sync-from-cache.ts'],
   },
-  
+
   myComment: {
     doubanFieldName: 'myComment',
     chineseName: '我的备注',
@@ -405,7 +417,7 @@ export const VERIFIED_BOOKS_FIELD_MAPPING: Record<string, VerifiedFieldMappingCo
     verified: true,
     verifiedSource: ['real-douban-data-sync.ts', 'sync-from-cache.ts'],
   },
-  
+
   summary: {
     doubanFieldName: 'summary',
     chineseName: '内容简介',
@@ -416,7 +428,7 @@ export const VERIFIED_BOOKS_FIELD_MAPPING: Record<string, VerifiedFieldMappingCo
     verified: true,
     verifiedSource: ['real-douban-data-sync.ts', 'sync-from-cache.ts'],
   },
-  
+
   coverImage: {
     doubanFieldName: 'coverImage',
     chineseName: '封面图',
@@ -425,10 +437,11 @@ export const VERIFIED_BOOKS_FIELD_MAPPING: Record<string, VerifiedFieldMappingCo
     required: false,
     description: '封面图片URL',
     verified: true,
-    processingNotes: 'sync-from-cache.ts确认需要{link: url}格式，real-douban-data-sync.ts中为coverUrl',
+    processingNotes:
+      'sync-from-cache.ts确认需要{link: url}格式，real-douban-data-sync.ts中为coverUrl',
     verifiedSource: ['sync-from-cache.ts'],
   },
-  
+
   markDate: {
     doubanFieldName: 'markDate',
     chineseName: '标记日期',
@@ -448,29 +461,35 @@ export const VERIFIED_BOOKS_FIELD_MAPPING: Record<string, VerifiedFieldMappingCo
 export const VERIFIED_FIELD_MAPPINGS = {
   books: VERIFIED_BOOKS_FIELD_MAPPING,
   movies: VERIFIED_MOVIES_FIELD_MAPPING,
-  tv: VERIFIED_MOVIES_FIELD_MAPPING,        // 电视剧使用相同的19字段结构
+  tv: VERIFIED_MOVIES_FIELD_MAPPING, // 电视剧使用相同的19字段结构
   documentary: VERIFIED_MOVIES_FIELD_MAPPING, // 纪录片使用相同的19字段结构
 };
 
 /**
  * 获取验证过的字段映射配置
  */
-export function getVerifiedFieldMapping(dataType: 'books' | 'movies' | 'tv' | 'documentary'): Record<string, VerifiedFieldMappingConfig> {
+export function getVerifiedFieldMapping(
+  dataType: 'books' | 'movies' | 'tv' | 'documentary',
+): Record<string, VerifiedFieldMappingConfig> {
   return VERIFIED_FIELD_MAPPINGS[dataType] || VERIFIED_FIELD_MAPPINGS.books;
 }
 
 /**
  * 获取中文字段名列表（已验证）
  */
-export function getVerifiedChineseFieldNames(dataType: 'books' | 'movies' | 'tv' | 'documentary'): string[] {
+export function getVerifiedChineseFieldNames(
+  dataType: 'books' | 'movies' | 'tv' | 'documentary',
+): string[] {
   const mapping = getVerifiedFieldMapping(dataType);
-  return Object.values(mapping).map(config => config.chineseName);
+  return Object.values(mapping).map((config) => config.chineseName);
 }
 
 /**
  * 获取必需字段列表（已验证）
  */
-export function getVerifiedRequiredFields(dataType: 'books' | 'movies' | 'tv' | 'documentary'): string[] {
+export function getVerifiedRequiredFields(
+  dataType: 'books' | 'movies' | 'tv' | 'documentary',
+): string[] {
   const mapping = getVerifiedFieldMapping(dataType);
   return Object.entries(mapping)
     .filter(([_, config]) => config.required)
@@ -480,7 +499,10 @@ export function getVerifiedRequiredFields(dataType: 'books' | 'movies' | 'tv' | 
 /**
  * 豆瓣字段名转中文名（已验证）
  */
-export function verifiedDoubanFieldToChineseName(fieldName: string, dataType: 'books' | 'movies' | 'tv' | 'documentary'): string {
+export function verifiedDoubanFieldToChineseName(
+  fieldName: string,
+  dataType: 'books' | 'movies' | 'tv' | 'documentary',
+): string {
   const mapping = getVerifiedFieldMapping(dataType);
   return mapping[fieldName]?.chineseName || fieldName;
 }
@@ -496,17 +518,20 @@ export function getVerificationStats(): {
 } {
   const booksCount = Object.keys(VERIFIED_BOOKS_FIELD_MAPPING).length;
   const moviesCount = Object.keys(VERIFIED_MOVIES_FIELD_MAPPING).length;
-  
-  const allConfigs = [...Object.values(VERIFIED_BOOKS_FIELD_MAPPING), ...Object.values(VERIFIED_MOVIES_FIELD_MAPPING)];
-  const verifiedCount = allConfigs.filter(config => config.verified).length;
-  
+
+  const allConfigs = [
+    ...Object.values(VERIFIED_BOOKS_FIELD_MAPPING),
+    ...Object.values(VERIFIED_MOVIES_FIELD_MAPPING),
+  ];
+  const verifiedCount = allConfigs.filter((config) => config.verified).length;
+
   const sourceCoverage: Record<string, number> = {};
-  allConfigs.forEach(config => {
-    config.verifiedSource.forEach(source => {
+  allConfigs.forEach((config) => {
+    config.verifiedSource.forEach((source) => {
       sourceCoverage[source] = (sourceCoverage[source] || 0) + 1;
     });
   });
-  
+
   return {
     totalBooks: booksCount,
     totalMovies: moviesCount,

@@ -1,11 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { 
-  IsString, 
-  IsEnum, 
-  IsBoolean, 
-  IsOptional, 
+import {
+  IsString,
+  IsEnum,
+  IsBoolean,
+  IsOptional,
   IsObject,
-  MinLength 
+  MinLength,
 } from 'class-validator';
 
 /**
@@ -52,8 +52,8 @@ export class UpdateSyncConfigDto {
     enum: ['THREE_TABLES', 'FOUR_TABLES'],
     example: 'THREE_TABLES',
   })
-  @IsEnum(['THREE_TABLES', 'FOUR_TABLES'], { 
-    message: '映射类型必须是THREE_TABLES或FOUR_TABLES' 
+  @IsEnum(['THREE_TABLES', 'FOUR_TABLES'], {
+    message: '映射类型必须是THREE_TABLES或FOUR_TABLES',
   })
   mappingType!: 'THREE_TABLES' | 'FOUR_TABLES';
 

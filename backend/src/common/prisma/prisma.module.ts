@@ -3,7 +3,7 @@ import { PrismaService } from './prisma.service';
 
 /**
  * Prisma模块 - 全局数据库访问层
- * 
+ *
  * 功能:
  * - PostgreSQL数据库连接
  * - 连接池管理

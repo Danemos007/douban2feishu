@@ -4,7 +4,7 @@ import { CookieManagerService } from './cookie-manager.service';
 
 /**
  * 反爬虫策略服务 - 基于obsidian-douban的成熟方案
- * 
+ *
  * 核心策略:
  * - 智能延迟 (4-8秒正常模式, 10-15秒慢速模式)
  * - 人机验证检测
@@ -17,12 +17,12 @@ export class AntiSpiderService {
   private requestCount = 0;
 
   // 反爬虫配置 - 参考obsidian-douban Constants.ts
-  private readonly baseDelay = 4000;           // 基础延迟4秒
-  private readonly randomDelay = 4000;         // 随机延迟范围4秒  
-  private readonly slowModeThreshold = 200;    // 200条后进入慢速模式
-  private readonly slowDelay = 10000;          // 慢速模式基础延迟10秒
-  private readonly slowRandomDelay = 5000;     // 慢速模式随机延迟5秒
-  private readonly maxRetries = 3;             // 最大重试次数
+  private readonly baseDelay = 4000; // 基础延迟4秒
+  private readonly randomDelay = 4000; // 随机延迟范围4秒
+  private readonly slowModeThreshold = 200; // 200条后进入慢速模式
+  private readonly slowDelay = 10000; // 慢速模式基础延迟10秒
+  private readonly slowRandomDelay = 5000; // 慢速模式随机延迟5秒
+  private readonly maxRetries = 3; // 最大重试次数
 
   constructor(private readonly cookieManager: CookieManagerService) {}
 
@@ -31,19 +31,23 @@ export class AntiSpiderService {
    */
   async intelligentDelay(): Promise<void> {
     this.requestCount++;
-    
+
     let delay: number;
-    
+
     if (this.requestCount > this.slowModeThreshold) {
       // 慢速模式：10-15秒延迟
       delay = this.slowDelay + Math.random() * this.slowRandomDelay;
-      this.logger.debug(`Slow mode (${this.requestCount} requests) - delay: ${Math.round(delay)}ms`);
+      this.logger.debug(
+        `Slow mode (${this.requestCount} requests) - delay: ${Math.round(delay)}ms`,
+      );
     } else {
       // 正常模式：4-8秒延迟
       delay = this.baseDelay + Math.random() * this.randomDelay;
-      this.logger.debug(`Normal mode (${this.requestCount} requests) - delay: ${Math.round(delay)}ms`);
+      this.logger.debug(
+        `Normal mode (${this.requestCount} requests) - delay: ${Math.round(delay)}ms`,
+      );
     }
-    
+
     await this.sleep(delay);
   }
 
@@ -51,11 +55,10 @@ export class AntiSpiderService {
    * 带反爬虫保护的HTTP请求
    */
   async makeRequest(
-    url: string, 
-    cookie: string, 
-    options: Partial<AxiosRequestConfig> = {}
+    url: string,
+    cookie: string,
+    options: Partial<AxiosRequestConfig> = {},
   ): Promise<string> {
-    
     // 确定域名类型
     const domain = this.extractDomainType(url);
     const headers = this.cookieManager.getHeadersForDomain(domain, cookie);
@@ -66,11 +69,11 @@ export class AntiSpiderService {
       url,
       headers: {
         ...headers,
-        ...options.headers
+        ...options.headers,
       },
       timeout: 30000,
       validateStatus: (status) => status < 500, // 允许4xx错误进入响应处理
-      ...options
+      ...options,
     };
 
     let lastError: Error = new Error('No attempts made');
@@ -108,15 +111,21 @@ export class AntiSpiderService {
 
         this.logger.debug(`Request successful - ${url}`);
         return html as string;
-
       } catch (error) {
         lastError = error as Error;
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        
-        this.logger.warn(`Attempt ${attempt}/${this.maxRetries} failed:`, errorMessage);
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
+
+        this.logger.warn(
+          `Attempt ${attempt}/${this.maxRetries} failed:`,
+          errorMessage,
+        );
 
         // 如果是人机验证或403，不再重试
-        if (this.isHumanVerificationError(error as Error | AxiosError) || errorMessage.includes('403')) {
+        if (
+          this.isHumanVerificationError(error as Error | AxiosError) ||
+          errorMessage.includes('403')
+        ) {
           throw error;
         }
 
@@ -137,16 +146,16 @@ export class AntiSpiderService {
    */
   private isHumanVerificationRequired(html: string): boolean {
     const indicators = [
-      '<title>禁止访问</title>',     // obsidian-douban的核心检测
+      '<title>禁止访问</title>', // obsidian-douban的核心检测
       '验证码',
-      '人机验证', 
+      '人机验证',
       'captcha',
       'robot check',
-      '安全验证'
+      '安全验证',
     ];
 
-    return indicators.some(indicator => 
-      html.toLowerCase().includes(indicator.toLowerCase())
+    return indicators.some((indicator) =>
+      html.toLowerCase().includes(indicator.toLowerCase()),
     );
   }
 
@@ -159,11 +168,11 @@ export class AntiSpiderService {
       'access denied',
       '请求频繁',
       'too many requests',
-      '系统繁忙'
+      '系统繁忙',
     ];
 
-    return blockIndicators.some(indicator =>
-      html.toLowerCase().includes(indicator.toLowerCase())
+    return blockIndicators.some((indicator) =>
+      html.toLowerCase().includes(indicator.toLowerCase()),
     );
   }
 
@@ -172,18 +181,20 @@ export class AntiSpiderService {
    */
   private isHumanVerificationError(error: Error | AxiosError): boolean {
     const errorMessage = error.message?.toLowerCase() || '';
-    const responseData = (error as AxiosError).response?.data?.toString().toLowerCase() || '';
-    
+    const responseData =
+      (error as AxiosError).response?.data?.toString().toLowerCase() || '';
+
     const verificationKeywords = [
       'human verification',
-      'captcha', 
+      'captcha',
       '禁止访问',
       '验证码',
-      '人机验证'
+      '人机验证',
     ];
 
-    return verificationKeywords.some(keyword =>
-      errorMessage.includes(keyword) || responseData.includes(keyword)
+    return verificationKeywords.some(
+      (keyword) =>
+        errorMessage.includes(keyword) || responseData.includes(keyword),
     );
   }
 
@@ -201,7 +212,7 @@ export class AntiSpiderService {
    * 睡眠函数
    */
   private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /**
@@ -221,7 +232,7 @@ export class AntiSpiderService {
       isSlowMode: this.requestCount > this.slowModeThreshold,
       slowModeThreshold: this.slowModeThreshold,
       baseDelay: this.baseDelay,
-      slowDelay: this.slowDelay
+      slowDelay: this.slowDelay,
     };
   }
 
@@ -245,7 +256,10 @@ export class AntiSpiderService {
   /**
    * 验证Cookie有效性
    */
-  async validateCookie(userId: string, cookie: string): Promise<{
+  async validateCookie(
+    userId: string,
+    cookie: string,
+  ): Promise<{
     isValid: boolean;
     error?: string;
   }> {
@@ -258,7 +272,7 @@ export class AntiSpiderService {
       if (html.includes('登录') && html.includes('注册')) {
         return {
           isValid: false,
-          error: 'Cookie已失效，需要重新登录'
+          error: 'Cookie已失效，需要重新登录',
         };
       }
 
@@ -266,17 +280,16 @@ export class AntiSpiderService {
       if (this.isHumanVerificationRequired(html) || this.isBlocked(html)) {
         return {
           isValid: false,
-          error: '账号受限或需要验证'
+          error: '账号受限或需要验证',
         };
       }
 
       return { isValid: true };
-
     } catch (error) {
       this.logger.error(`Cookie validation failed:`, error);
       return {
         isValid: false,
-        error: error instanceof Error ? error.message : 'Cookie验证失败'
+        error: error instanceof Error ? error.message : 'Cookie验证失败',
       };
     }
   }
@@ -286,14 +299,14 @@ export class AntiSpiderService {
    */
   getCurrentDelayConfig() {
     const isSlowMode = this.requestCount > this.slowModeThreshold;
-    
+
     return {
       mode: isSlowMode ? 'slow' : 'normal',
       baseDelay: isSlowMode ? this.slowDelay : this.baseDelay,
       randomRange: isSlowMode ? this.slowRandomDelay : this.randomDelay,
-      expectedDelay: isSlowMode 
-        ? `${this.slowDelay + this.slowRandomDelay / 2}ms` 
-        : `${this.baseDelay + this.randomDelay / 2}ms`
+      expectedDelay: isSlowMode
+        ? `${this.slowDelay + this.slowRandomDelay / 2}ms`
+        : `${this.baseDelay + this.randomDelay / 2}ms`,
     };
   }
 }

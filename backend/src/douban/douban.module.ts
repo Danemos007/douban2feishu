@@ -12,7 +12,7 @@ import { MovieScraperService } from './services/movie-scraper.service';
 
 /**
  * 豆瓣模块 - 豆瓣数据抓取
- * 
+ *
  * 功能:
  * - 反爬虫策略实现
  * - Cookie认证管理

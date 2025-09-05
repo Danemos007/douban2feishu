@@ -1,11 +1,11 @@
 /**
  * 端到端测试环境设置
- * 
+ *
  * 功能:
  * - 环境变量配置
  * - 全局测试配置
  * - 资源清理设置
- * 
+ *
  * @author Claude (Senior Software Architect)
  */
 

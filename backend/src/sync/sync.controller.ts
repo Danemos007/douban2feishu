@@ -59,7 +59,7 @@ export class SyncController {
     @Body() triggerSyncDto: TriggerSyncDto,
   ) {
     const syncId = await this.syncService.triggerSync(userId, triggerSyncDto);
-    
+
     return {
       syncId,
       message: 'Sync task created successfully',
@@ -141,11 +141,11 @@ export class SyncController {
     @CurrentUser('id') userId: string,
   ) {
     const cancelled = await this.syncService.cancelSync(syncId, userId);
-    
+
     if (!cancelled) {
       return { message: 'Sync not found or cannot be cancelled' };
     }
-    
+
     return { message: 'Sync cancelled successfully' };
   }
 

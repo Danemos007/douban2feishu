@@ -1,4 +1,8 @@
-import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  ConflictException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
@@ -6,11 +10,15 @@ import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { CryptoService } from '../common/crypto/crypto.service';
 import { LoginDto, RegisterDto } from './dto/auth.dto';
-import { JwtPayload, TokenResponse, AuthenticatedUser } from './interfaces/auth.interface';
+import {
+  JwtPayload,
+  TokenResponse,
+  AuthenticatedUser,
+} from './interfaces/auth.interface';
 
 /**
  * 认证服务 - 核心业务逻辑
- * 
+ *
  * 安全措施:
  * - bcrypt密码哈希 (rounds: 12)
  * - JWT token双重验证
@@ -71,7 +79,10 @@ export class AuthService {
   /**
    * 用户登录 - 本地策略验证
    */
-  async validateUser(email: string, password: string): Promise<AuthenticatedUser | null> {
+  async validateUser(
+    email: string,
+    password: string,
+  ): Promise<AuthenticatedUser | null> {
     const user = await this.prisma.user.findUnique({
       where: { email },
       include: {
@@ -124,7 +135,9 @@ export class AuthService {
   async refreshToken(refreshToken: string): Promise<TokenResponse> {
     try {
       const payload = this.jwtService.verify(refreshToken, {
-        secret: this.configService.get<string>('JWT_REFRESH_SECRET') || 'default-refresh-secret-key',
+        secret:
+          this.configService.get<string>('JWT_REFRESH_SECRET') ||
+          'default-refresh-secret-key',
       });
 
       const user = await this.prisma.user.findUnique({
@@ -157,12 +170,19 @@ export class AuthService {
 
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload, {
-        secret: this.configService.get<string>('JWT_SECRET') || 'default-secret-key-for-development',
+        secret:
+          this.configService.get<string>('JWT_SECRET') ||
+          'default-secret-key-for-development',
         expiresIn: this.configService.get<string>('JWT_EXPIRES_IN', '7d'),
       }),
       this.jwtService.signAsync(payload, {
-        secret: this.configService.get<string>('JWT_REFRESH_SECRET') || 'default-refresh-secret-key',
-        expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRES_IN', '30d'),
+        secret:
+          this.configService.get<string>('JWT_REFRESH_SECRET') ||
+          'default-refresh-secret-key',
+        expiresIn: this.configService.get<string>(
+          'JWT_REFRESH_EXPIRES_IN',
+          '30d',
+        ),
       }),
     ]);
 

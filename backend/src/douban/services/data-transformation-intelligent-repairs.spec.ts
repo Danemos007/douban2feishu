@@ -1,12 +1,12 @@
 /**
  * DataTransformationService 智能修复引擎 TDD测试套件
- * 
+ *
  * 🎯 整合目标 - 实现D的复杂解析逻辑:
  * - 片长修复: 支持多版本和无v:runtime的复杂解析
  * - 上映日期修复: 保留完整多地区信息
  * - 制片地区修复: 智能分割和清理
  * - 语言修复: 智能分割和格式化
- * 
+ *
  * TDD原则: 先写失败测试，再实现功能让其通过
  * 基于sync-all-movies-fixed.ts的战斗验证逻辑
  */
@@ -47,16 +47,21 @@ describe('DataTransformationService - 智能修复引擎 TDD', () => {
           duration: '142分钟', // 正常格式，无需修复
           releaseDate: '1994-09-10(加拿大多伦多电影节) / 1994-10-14(美国)', // 正常格式
           country: '美国',
-          language: '英语'
+          language: '英语',
         };
 
-        const result = await (service as any).applyIntelligentRepairs(movieData, 'movies');
+        const result = await (service as any).applyIntelligentRepairs(
+          movieData,
+          'movies',
+        );
 
         expect(result).toBeDefined();
         expect(result.subjectId).toBe('1292052');
         expect(result.title).toBe('肖申克的救赎');
         expect(result.duration).toBe('142分钟');
-        expect(result.releaseDate).toBe('1994-09-10(加拿大多伦多电影节) / 1994-10-14(美国)');
+        expect(result.releaseDate).toBe(
+          '1994-09-10(加拿大多伦多电影节) / 1994-10-14(美国)',
+        );
       });
 
       it('应该对书籍数据应用智能修复', async () => {
@@ -64,10 +69,13 @@ describe('DataTransformationService - 智能修复引擎 TDD', () => {
           subjectId: '1007305',
           title: '红楼梦',
           publishDate: '1996-12', // 可能需要格式化
-          author: ['曹雪芹', '高鹗']
+          author: ['曹雪芹', '高鹗'],
         };
 
-        const result = await (service as any).applyIntelligentRepairs(bookData, 'books');
+        const result = await (service as any).applyIntelligentRepairs(
+          bookData,
+          'books',
+        );
 
         expect(result).toBeDefined();
         expect(result.subjectId).toBe('1007305');
@@ -76,19 +84,19 @@ describe('DataTransformationService - 智能修复引擎 TDD', () => {
 
       it('应该支持修复选项控制', async () => {
         const movieData = { title: '测试电影', duration: '复杂片长格式' };
-        
+
         // 禁用智能修复
         const resultDisabled = await (service as any).applyIntelligentRepairs(
-          movieData, 
-          'movies', 
-          { enableIntelligentRepairs: false }
+          movieData,
+          'movies',
+          { enableIntelligentRepairs: false },
         );
 
         // 启用智能修复
         const resultEnabled = await (service as any).applyIntelligentRepairs(
-          movieData, 
-          'movies', 
-          { enableIntelligentRepairs: true }
+          movieData,
+          'movies',
+          { enableIntelligentRepairs: true },
         );
 
         expect(resultDisabled).toEqual(movieData); // 无修复，直接返回
@@ -102,7 +110,7 @@ describe('DataTransformationService - 智能修复引擎 TDD', () => {
       it('应该修复标准片长格式', async () => {
         const movieData = {
           duration: null,
-          html: '<span property="v:runtime">142</span>'
+          html: '<span property="v:runtime">142</span>',
         };
 
         // 🔥 TDD: repairMovieData方法还不存在，会失败
@@ -114,7 +122,7 @@ describe('DataTransformationService - 智能修复引擎 TDD', () => {
       it('应该修复复杂HTML片长格式', async () => {
         const movieData = {
           duration: null,
-          html: '片长:</span> 142分钟 / 120分03秒(导演剪辑版) <br>'
+          html: '片长:</span> 142分钟 / 120分03秒(导演剪辑版) <br>',
         };
 
         const result = await (service as any).repairMovieData(movieData);
@@ -126,7 +134,7 @@ describe('DataTransformationService - 智能修复引擎 TDD', () => {
         // 🔥 基于真实案例：《鹬 Piper》的"6分03秒"格式
         const movieData = {
           duration: null,
-          html: '片长:</span> 6分03秒 <br>'
+          html: '片长:</span> 6分03秒 <br>',
         };
 
         const result = await (service as any).repairMovieData(movieData);
@@ -137,7 +145,7 @@ describe('DataTransformationService - 智能修复引擎 TDD', () => {
       it('应该处理无v:runtime的备选解析', async () => {
         const movieData = {
           duration: null,
-          html: '<span class="pl">片长:</span> 142分钟 <br>'
+          html: '<span class="pl">片长:</span> 142分钟 <br>',
         };
 
         const result = await (service as any).repairMovieData(movieData);
@@ -148,7 +156,7 @@ describe('DataTransformationService - 智能修复引擎 TDD', () => {
       it('应该处理多版本片长信息', async () => {
         const movieData = {
           duration: null,
-          html: '片长:</span> 142分钟(美国) / 140分钟(中国大陆) <br>'
+          html: '片长:</span> 142分钟(美国) / 140分钟(中国大陆) <br>',
         };
 
         const result = await (service as any).repairMovieData(movieData);
@@ -159,7 +167,7 @@ describe('DataTransformationService - 智能修复引擎 TDD', () => {
       it('应该正确处理片长解析失败的情况', async () => {
         const movieData = {
           duration: '原始片长信息',
-          html: '<span>无有效片长信息</span>'
+          html: '<span>无有效片长信息</span>',
         };
 
         const result = await (service as any).repairMovieData(movieData);
@@ -172,7 +180,7 @@ describe('DataTransformationService - 智能修复引擎 TDD', () => {
       it('应该修复单个上映日期', async () => {
         const movieData = {
           releaseDate: null,
-          html: '<span property="v:initialReleaseDate">1994-09-10</span>'
+          html: '<span property="v:initialReleaseDate">1994-09-10</span>',
         };
 
         // 🔥 TDD: repairReleaseDateField方法还不存在，会失败
@@ -188,29 +196,33 @@ describe('DataTransformationService - 智能修复引擎 TDD', () => {
             <span property="v:initialReleaseDate">1994-09-10(加拿大多伦多电影节)</span>
             <span property="v:initialReleaseDate">1994-10-14(美国)</span>
             <span property="v:initialReleaseDate">1995-03-17(中国大陆)</span>
-          `
+          `,
         };
 
         const result = await (service as any).repairMovieData(movieData);
 
-        expect(result.releaseDate).toBe('1994-09-10(加拿大多伦多电影节) / 1994-10-14(美国) / 1995-03-17(中国大陆)');
+        expect(result.releaseDate).toBe(
+          '1994-09-10(加拿大多伦多电影节) / 1994-10-14(美国) / 1995-03-17(中国大陆)',
+        );
       });
 
       it('应该处理复杂地区信息格式', async () => {
         const movieData = {
           releaseDate: null,
-          html: '<span property="v:initialReleaseDate">2021-12-16(中国大陆) / 2021-12-18(美国)</span>'
+          html: '<span property="v:initialReleaseDate">2021-12-16(中国大陆) / 2021-12-18(美国)</span>',
         };
 
         const result = await (service as any).repairMovieData(movieData);
 
-        expect(result.releaseDate).toBe('2021-12-16(中国大陆) / 2021-12-18(美国)');
+        expect(result.releaseDate).toBe(
+          '2021-12-16(中国大陆) / 2021-12-18(美国)',
+        );
       });
 
       it('应该正确处理上映日期解析失败', async () => {
         const movieData = {
           releaseDate: '原始上映信息',
-          html: '<span>无有效日期信息</span>'
+          html: '<span>无有效日期信息</span>',
         };
 
         const result = await (service as any).repairMovieData(movieData);
@@ -222,7 +234,7 @@ describe('DataTransformationService - 智能修复引擎 TDD', () => {
     describe('制片地区修复 (repairCountryField)', () => {
       it('应该清理制片地区的干扰信息', async () => {
         const movieData = {
-          country: '美国语言:英语上映日期:1994-10-14片长:142分钟'
+          country: '美国语言:英语上映日期:1994-10-14片长:142分钟',
         };
 
         // 🔥 TDD: repairCountryField方法还不存在，会失败
@@ -233,7 +245,7 @@ describe('DataTransformationService - 智能修复引擎 TDD', () => {
 
       it('应该处理多制片地区信息', async () => {
         const movieData = {
-          country: '美国 / 英国语言:英语 / 法语'
+          country: '美国 / 英国语言:英语 / 法语',
         };
 
         const result = await (service as any).repairMovieData(movieData);
@@ -243,7 +255,7 @@ describe('DataTransformationService - 智能修复引擎 TDD', () => {
 
       it('应该处理复杂分割情况', async () => {
         const movieData = {
-          country: '中国大陆 / 香港又名:别名信息IMDb:tt1234567'
+          country: '中国大陆 / 香港又名:别名信息IMDb:tt1234567',
         };
 
         const result = await (service as any).repairMovieData(movieData);
@@ -253,7 +265,7 @@ describe('DataTransformationService - 智能修复引擎 TDD', () => {
 
       it('应该正确处理纯净的制片地区信息', async () => {
         const movieData = {
-          country: '日本'
+          country: '日本',
         };
 
         const result = await (service as any).repairMovieData(movieData);
@@ -265,7 +277,8 @@ describe('DataTransformationService - 智能修复引擎 TDD', () => {
     describe('语言修复 (repairLanguageField)', () => {
       it('应该清理语言的干扰信息', async () => {
         const movieData = {
-          language: '英语上映日期:1994-10-14片长:142分钟又名:The Shawshank Redemption'
+          language:
+            '英语上映日期:1994-10-14片长:142分钟又名:The Shawshank Redemption',
         };
 
         // 🔥 TDD: repairLanguageField方法还不存在，会失败
@@ -276,7 +289,7 @@ describe('DataTransformationService - 智能修复引擎 TDD', () => {
 
       it('应该处理多语言信息', async () => {
         const movieData = {
-          language: '英语 / 法语 / 德语片长:120分钟'
+          language: '英语 / 法语 / 德语片长:120分钟',
         };
 
         const result = await (service as any).repairMovieData(movieData);
@@ -286,7 +299,7 @@ describe('DataTransformationService - 智能修复引擎 TDD', () => {
 
       it('应该处理复杂语言格式', async () => {
         const movieData = {
-          language: '汉语普通话 / 粤语IMDb:tt1234567'
+          language: '汉语普通话 / 粤语IMDb:tt1234567',
         };
 
         const result = await (service as any).repairMovieData(movieData);
@@ -296,7 +309,7 @@ describe('DataTransformationService - 智能修复引擎 TDD', () => {
 
       it('应该正确处理纯净语言信息', async () => {
         const movieData = {
-          language: '日语'
+          language: '日语',
         };
 
         const result = await (service as any).repairMovieData(movieData);
@@ -365,7 +378,7 @@ describe('DataTransformationService - 智能修复引擎 TDD', () => {
       it('应该修复评分嵌套提取', async () => {
         const bookData = {
           rating: { average: 9.6, numRaters: 15000 },
-          doubanRating: null
+          doubanRating: null,
         };
 
         const result = await (service as any).repairBookData(bookData);
@@ -403,25 +416,35 @@ describe('DataTransformationService - 智能修复引擎 TDD', () => {
       it('应该正确检测片长是否需要修复', async () => {
         // 🔥 TDD: needsDurationRepair方法还不存在，会失败
         expect(await (service as any).needsDurationRepair(null)).toBe(true);
-        expect(await (service as any).needsDurationRepair(undefined)).toBe(true);
+        expect(await (service as any).needsDurationRepair(undefined)).toBe(
+          true,
+        );
         expect(await (service as any).needsDurationRepair('')).toBe(true);
-        expect(await (service as any).needsDurationRepair('142分钟')).toBe(false);
+        expect(await (service as any).needsDurationRepair('142分钟')).toBe(
+          false,
+        );
       });
 
       it('应该正确检测上映日期是否需要修复', async () => {
         expect(await (service as any).needsReleaseDateRepair(null)).toBe(true);
         expect(await (service as any).needsReleaseDateRepair('')).toBe(true);
-        expect(await (service as any).needsReleaseDateRepair('1994-10-14')).toBe(false);
+        expect(
+          await (service as any).needsReleaseDateRepair('1994-10-14'),
+        ).toBe(false);
       });
 
       it('应该正确检测制片地区是否需要修复', async () => {
-        expect(await (service as any).needsCountryRepair('美国语言:英语')).toBe(true);
+        expect(await (service as any).needsCountryRepair('美国语言:英语')).toBe(
+          true,
+        );
         expect(await (service as any).needsCountryRepair('美国')).toBe(false);
         expect(await (service as any).needsCountryRepair(null)).toBe(false);
       });
 
       it('应该正确检测语言是否需要修复', async () => {
-        expect(await (service as any).needsLanguageRepair('英语片长:142分钟')).toBe(true);
+        expect(
+          await (service as any).needsLanguageRepair('英语片长:142分钟'),
+        ).toBe(true);
         expect(await (service as any).needsLanguageRepair('英语')).toBe(false);
         expect(await (service as any).needsLanguageRepair(null)).toBe(false);
       });
@@ -435,7 +458,7 @@ describe('DataTransformationService - 智能修复引擎 TDD', () => {
           duration: null, // 需要修复
           country: '美国语言:英语', // 需要修复
           language: '英语', // 不需要修复
-          releaseDate: '1994-10-14' // 不需要修复
+          releaseDate: '1994-10-14', // 不需要修复
         };
 
         const result = await (service as any).repairMovieData(movieData);
@@ -447,16 +470,16 @@ describe('DataTransformationService - 智能修复引擎 TDD', () => {
 
       it('应该记录修复操作日志', async () => {
         const logSpy = jest.spyOn(service['logger'], 'debug');
-        
+
         const movieData = {
           duration: null,
-          html: '<span property="v:runtime">142</span>'
+          html: '<span property="v:runtime">142</span>',
         };
 
         await (service as any).repairMovieData(movieData);
 
         expect(logSpy).toHaveBeenCalledWith(
-          expect.stringContaining('修复字段: duration')
+          expect.stringContaining('修复字段: duration'),
         );
       });
     });
@@ -466,7 +489,7 @@ describe('DataTransformationService - 智能修复引擎 TDD', () => {
     it('应该处理HTML解析异常', async () => {
       const movieData = {
         duration: null,
-        html: null // 异常情况
+        html: null, // 异常情况
       };
 
       const result = await (service as any).repairMovieData(movieData);
@@ -478,7 +501,7 @@ describe('DataTransformationService - 智能修复引擎 TDD', () => {
     it('应该处理恶意HTML内容', async () => {
       const movieData = {
         duration: null,
-        html: '<script>alert("xss")</script><span property="v:runtime">142</span>'
+        html: '<script>alert("xss")</script><span property="v:runtime">142</span>',
       };
 
       const result = await (service as any).repairMovieData(movieData);
@@ -499,7 +522,7 @@ describe('DataTransformationService - 智能修复引擎 TDD', () => {
     it('应该处理超大HTML内容', async () => {
       const movieData = {
         duration: null,
-        html: '<span property="v:runtime">142</span>' + 'x'.repeat(100000)
+        html: '<span property="v:runtime">142</span>' + 'x'.repeat(100000),
       };
 
       const result = await (service as any).repairMovieData(movieData);

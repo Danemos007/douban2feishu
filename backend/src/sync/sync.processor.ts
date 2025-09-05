@@ -13,7 +13,7 @@ import { CryptoService } from '../common/crypto/crypto.service';
 
 /**
  * 同步任务处理器 - BullMQ任务执行
- * 
+ *
  * 功能:
  * - 异步执行豆瓣数据抓取
  * - 批量同步到飞书多维表格
@@ -41,7 +41,7 @@ export class SyncProcessor {
   @Process('sync-douban-to-feishu')
   async handleSync(job: Job<SyncJobData>) {
     const { syncId, userId, options } = job.data;
-    
+
     this.logger.log(`Starting sync job ${job.id} for user ${userId}`);
 
     try {
@@ -57,13 +57,23 @@ export class SyncProcessor {
       // 第一阶段：从豆瓣抓取数据
       await this.updateProgress(job, 5, 'Fetching user credentials...');
       const userCredentials = await this.getUserCredentials(userId);
-      
+
       await this.updateProgress(job, 10, 'Connecting to Douban...');
-      const doubanData = await this.fetchDoubanData(userId, userCredentials, options, job);
+      const doubanData = await this.fetchDoubanData(
+        userId,
+        userCredentials,
+        options,
+        job,
+      );
 
       // 第二阶段：同步到飞书
       await this.updateProgress(job, 60, 'Starting Feishu sync...');
-      const syncResults = await this.syncToFeishu(userCredentials, doubanData, options, job);
+      const syncResults = await this.syncToFeishu(
+        userCredentials,
+        doubanData,
+        options,
+        job,
+      );
 
       // 完成同步
       await this.syncService.updateSyncProgress({
@@ -79,17 +89,16 @@ export class SyncProcessor {
         summary: syncResults.summary,
         duration: syncResults.performance?.duration,
       });
-      
+
       return {
         success: true,
         itemsProcessed: syncResults.totalSynced,
         summary: syncResults.summary,
         performance: syncResults.performance,
       };
-
     } catch (error) {
       this.logger.error(`Sync job ${job.id} failed:`, error);
-      
+
       await this.syncService.updateSyncProgress({
         syncId,
         jobId: job.id?.toString(),
@@ -117,12 +126,18 @@ export class SyncProcessor {
       }
 
       // 解密凭证
-      const doubanCookie = credentials.doubanCookieEncrypted 
-        ? await this.cryptoService.decrypt(credentials.doubanCookieEncrypted, userId)
+      const doubanCookie = credentials.doubanCookieEncrypted
+        ? await this.cryptoService.decrypt(
+            credentials.doubanCookieEncrypted,
+            userId,
+          )
         : null;
-      
+
       const feishuAppSecret = credentials.feishuAppSecretEncrypted
-        ? await this.cryptoService.decrypt(credentials.feishuAppSecretEncrypted, userId)
+        ? await this.cryptoService.decrypt(
+            credentials.feishuAppSecretEncrypted,
+            userId,
+          )
         : null;
 
       return {
@@ -139,14 +154,23 @@ export class SyncProcessor {
   /**
    * 从豆瓣抓取数据
    */
-  private async fetchDoubanData(userId: string, credentials: any, options: any, job: Job) {
+  private async fetchDoubanData(
+    userId: string,
+    credentials: any,
+    options: any,
+    job: Job,
+  ) {
     const categories: ('books' | 'movies' | 'tv')[] = ['books', 'movies', 'tv'];
     const allData: any[] = [];
     let totalProgress = 10;
 
     for (const category of categories) {
-      await this.updateProgress(job, totalProgress, `Fetching ${category} from Douban...`);
-      
+      await this.updateProgress(
+        job,
+        totalProgress,
+        `Fetching ${category} from Douban...`,
+      );
+
       try {
         const categoryData = await this.doubanService.fetchUserData({
           userId,
@@ -157,18 +181,18 @@ export class SyncProcessor {
 
         allData.push(...categoryData);
         totalProgress += 15;
-        
+
         await this.updateProgress(
-          job, 
-          totalProgress, 
-          `Fetched ${categoryData.length} ${category} items`
+          job,
+          totalProgress,
+          `Fetched ${categoryData.length} ${category} items`,
         );
 
         // 反爬虫延迟
         await this.delay(2000 + Math.random() * 3000);
-
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
         this.logger.warn(`Failed to fetch ${category}: ${errorMessage}`);
       }
     }
@@ -179,7 +203,12 @@ export class SyncProcessor {
   /**
    * 同步数据到飞书 - 使用增量同步引擎
    */
-  private async syncToFeishu(credentials: any, data: any[], options: any, job: Job) {
+  private async syncToFeishu(
+    credentials: any,
+    data: any[],
+    options: any,
+    job: Job,
+  ) {
     try {
       // 获取同步配置
       const syncConfig = await this.prisma.syncConfig.findUnique({
@@ -187,13 +216,15 @@ export class SyncProcessor {
       });
 
       if (!syncConfig?.tableMappings) {
-        throw new Error('Sync configuration not found. Please configure table mappings first.');
+        throw new Error(
+          'Sync configuration not found. Please configure table mappings first.',
+        );
       }
 
       // 假设使用第一个配置的表格（实际应该根据数据类型选择）
       const tableMappingsData = syncConfig.tableMappings as any;
       const firstTableKey = Object.keys(tableMappingsData)[0];
-      
+
       if (!firstTableKey) {
         throw new Error('No table mappings configured');
       }
@@ -219,14 +250,15 @@ export class SyncProcessor {
         {
           fullSync: options.fullSync || false,
           onProgress: (progress) => {
-            const totalProgress = 65 + (progress.processed / progress.total) * 30;
+            const totalProgress =
+              65 + (progress.processed / progress.total) * 30;
             this.updateProgress(
-              job, 
-              totalProgress, 
-              `${progress.phase}: ${progress.processed}/${progress.total}`
+              job,
+              totalProgress,
+              `${progress.phase}: ${progress.processed}/${progress.total}`,
             );
           },
-        }
+        },
       );
 
       return {
@@ -242,7 +274,6 @@ export class SyncProcessor {
         },
         performance: syncResult.performance,
       };
-
     } catch (error) {
       this.logger.error('Feishu sync failed:', error);
       throw error;
@@ -254,7 +285,7 @@ export class SyncProcessor {
    */
   private async updateProgress(job: Job, progress: number, message: string) {
     job.progress(progress);
-    
+
     await this.syncService.updateSyncProgress({
       syncId: job.data.syncId,
       jobId: job.id?.toString(),
@@ -279,6 +310,6 @@ export class SyncProcessor {
    * 延迟函数
    */
   private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }

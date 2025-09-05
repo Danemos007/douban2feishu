@@ -71,10 +71,13 @@ export class FeishuController {
 
     return {
       fields,
-      fieldMappings: fields.reduce((acc: Record<string, string>, field: any) => {
-        acc[field.field_name] = field.field_id;
-        return acc;
-      }, {}),
+      fieldMappings: fields.reduce(
+        (acc: Record<string, string>, field: any) => {
+          acc[field.field_name] = field.field_id;
+          return acc;
+        },
+        {},
+      ),
     };
   }
 
@@ -90,13 +93,14 @@ export class FeishuController {
   @ApiResponse({ status: 200, description: '字段映射发现完成' })
   async discoverFieldMappings(
     @CurrentUser() user: AuthenticatedUser,
-    @Body() body: {
+    @Body()
+    body: {
       appId: string;
       appSecret: string;
       appToken: string;
       tableId: string;
       dataType: 'books' | 'movies' | 'tv';
-    }
+    },
   ) {
     return this.fieldMappingService.autoConfigureFieldMappings(
       user.id,
@@ -104,7 +108,7 @@ export class FeishuController {
       body.appSecret,
       body.appToken,
       body.tableId,
-      body.dataType
+      body.dataType,
     );
   }
 
@@ -120,21 +124,22 @@ export class FeishuController {
   @ApiResponse({ status: 200, description: '字段映射设置成功' })
   async setFieldMappings(
     @CurrentUser() user: AuthenticatedUser,
-    @Body() body: {
+    @Body()
+    body: {
       appToken: string;
       tableId: string;
       mappings: Record<string, string>;
       dataType: 'books' | 'movies' | 'tv';
-    }
+    },
   ) {
     await this.fieldMappingService.setFieldMappings(
       user.id,
       body.appToken,
       body.tableId,
       body.mappings,
-      body.dataType
+      body.dataType,
     );
-    
+
     return { message: 'Field mappings saved successfully' };
   }
 
@@ -151,14 +156,14 @@ export class FeishuController {
   async getFieldMappings(
     @CurrentUser() user: AuthenticatedUser,
     @Param('appToken') appToken: string,
-    @Param('tableId') tableId: string
+    @Param('tableId') tableId: string,
   ) {
     const mappings = await this.fieldMappingService.getFieldMappings(
       user.id,
       appToken,
-      tableId
+      tableId,
     );
-    
+
     return { mappings };
   }
 
@@ -174,7 +179,8 @@ export class FeishuController {
   @ApiResponse({ status: 200, description: '增量同步完成' })
   async performIncrementalSync(
     @CurrentUser() user: AuthenticatedUser,
-    @Body() body: {
+    @Body()
+    body: {
       appId: string;
       appSecret: string;
       appToken: string;
@@ -184,7 +190,7 @@ export class FeishuController {
       doubanData: any[];
       fullSync?: boolean;
       deleteOrphans?: boolean;
-    }
+    },
   ) {
     return this.syncEngineService.performIncrementalSync(
       user.id,
@@ -200,7 +206,7 @@ export class FeishuController {
       {
         fullSync: body.fullSync,
         conflictStrategy: 'douban_wins',
-      }
+      },
     );
   }
 
@@ -215,7 +221,7 @@ export class FeishuController {
   @ApiParam({ name: 'tableId', description: '表格ID' })
   async getSyncStatus(
     @CurrentUser() user: AuthenticatedUser,
-    @Param('tableId') tableId: string
+    @Param('tableId') tableId: string,
   ) {
     const status = await this.syncEngineService.getSyncState(user.id, tableId);
     return { status };
@@ -232,13 +238,13 @@ export class FeishuController {
   })
   @ApiResponse({ status: 200, description: '凭证验证结果' })
   async validateCredentials(
-    @Body() body: { appId: string; appSecret: string }
+    @Body() body: { appId: string; appSecret: string },
   ) {
     const isValid = await this.authService.validateCredentials(
       body.appId,
-      body.appSecret
+      body.appSecret,
     );
-    
+
     return { valid: isValid };
   }
 
@@ -307,9 +313,15 @@ export class FeishuController {
   @ApiResponse({ status: 200, description: '配置导入成功' })
   async importMappings(
     @CurrentUser() user: AuthenticatedUser,
-    @Body() importData: any
+    @Body() importData: any,
   ) {
-    await this.fieldMappingService.setFieldMappings(user.id, importData.appToken, importData.tableId, importData.mappings, importData.dataType);
+    await this.fieldMappingService.setFieldMappings(
+      user.id,
+      importData.appToken,
+      importData.tableId,
+      importData.mappings,
+      importData.dataType,
+    );
     return { message: 'Field mappings imported successfully' };
   }
 
@@ -327,13 +339,14 @@ export class FeishuController {
   @ApiResponse({ status: 200, description: '字段映射自动配置完成' })
   async autoConfigureFieldMappings(
     @CurrentUser() user: AuthenticatedUser,
-    @Body() body: {
+    @Body()
+    body: {
       appId: string;
       appSecret: string;
       appToken: string;
       tableId: string;
       dataType: 'books' | 'movies' | 'tv' | 'documentary';
-    }
+    },
   ) {
     return this.fieldMappingService.autoConfigureFieldMappings(
       user.id,
@@ -341,7 +354,7 @@ export class FeishuController {
       body.appSecret,
       body.appToken,
       body.tableId,
-      body.dataType
+      body.dataType,
     );
   }
 
@@ -356,20 +369,21 @@ export class FeishuController {
   })
   @ApiResponse({ status: 200, description: '字段映射预览完成' })
   async previewFieldMappings(
-    @Body() body: {
+    @Body()
+    body: {
       appId: string;
       appSecret: string;
       appToken: string;
       tableId: string;
       dataType: 'books' | 'movies' | 'tv' | 'documentary';
-    }
+    },
   ) {
     return this.fieldMappingService.previewFieldMappings(
       body.appId,
       body.appSecret,
       body.appToken,
       body.tableId,
-      body.dataType
+      body.dataType,
     );
   }
 
@@ -386,14 +400,14 @@ export class FeishuController {
   async getFieldMappingsV2(
     @CurrentUser() user: AuthenticatedUser,
     @Param('appToken') appToken: string,
-    @Param('tableId') tableId: string
+    @Param('tableId') tableId: string,
   ) {
     const mappings = await this.fieldMappingService.getFieldMappings(
       user.id,
       appToken,
-      tableId
+      tableId,
     );
-    
+
     return { mappings };
   }
 
@@ -422,7 +436,7 @@ export class FeishuController {
   @ApiParam({ name: 'tableId', description: '表格ID' })
   async getTableStats(
     @Param('appToken') appToken: string,
-    @Param('tableId') tableId: string
+    @Param('tableId') tableId: string,
   ) {
     const stats = await this.tableService.getTableStats(appToken, tableId);
     return { stats };

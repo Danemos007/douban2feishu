@@ -213,6 +213,7 @@ WS     /api/sync/subscribe
   - ✅ 批量操作优化 (500条/批次并发处理)
   - ✅ ~~Field ID完全映射~~ **字段名精确匹配** (基于字段名的字段操作)
   - ✅ CRUD完整支持 (创建、读取、更新、删除)
+  - ✅ **🚀 FieldAutoCreationServiceV2架构突破** - **智能批量字段创建，带智能延迟和错误恢复，显著提升系统健壮性**
   - ✅ **字段自动创建** (createTableField + batchCreateFields)
   - ✅ 错误恢复机制 (批量失败自动降级单条处理)
   - ✅ API限流控制 (智能延迟 + 并发控制)
@@ -223,7 +224,8 @@ WS     /api/sync/subscribe
   - ✅ **精确匹配现有字段** (100%准确，无误判)
   - ✅ **自动创建缺失字段** (包含正确类型和描述)
   - ✅ **一次配置永久绑定** (~~Field ID绑定~~ **字段名绑定**，支持后续改名)
-  - ✅ **零配置用户体验** (开箱即用，无需手动设置)
+  - ✅ **💎 零配置用户体验突破** - **彻底解决用户手动配置痛点，实现真正的开箱即用**
+  - ✅ **🛡️ 企业级健壮性保障** - **三层缓存清理机制 + 完整错误恢复 + TDD质量验证**
   - ✅ 配置持久化存储 (数据库存储 + Redis缓存)
   - ✅ V2 API接口完整 (auto-configure, preview, stats)
   
@@ -315,6 +317,20 @@ const html = await this.antiSpiderService.makeRequest(url, cookie);
 - `HtmlParserService`: HTML解析为结构化数据  
 - `BookScraperService/MovieScraperService`: 业务逻辑协调
 - `SyncService`: 缓存数据同步到飞书
+
+### 🚀 "未来优先"原则 (Future-First Principle)
+
+**⚠️ 注意：此原则仅在产品 V1.0 正式上线前有效**
+
+#### 核心思想
+在产品正式上线前，我们的首要目标是构建一个最健壮、最清晰、最可维护的架构，而不是被早期不成熟的设计所束缚。
+
+#### 具体规则
+因此，在进行重构或添加新功能时，**你不需要优先考虑向后兼容性**。
+
+如果为了实现一个更简洁、更高效的设计而需要进行**破坏性变更 (Breaking Change)**，请大胆地提出并实施。我们优先选择面向未来的最佳设计，而不是保留过去的历史包袱。
+
+当然，所有破坏性变更都必须在 Pull Request 的描述中明确说明，并在该次修改的风险评估中进行重点分析。
 
 ## 关键技术实现细节
 
@@ -544,3 +560,116 @@ chore:    构建配置、依赖更新等
 **模型建议**: 
 - Opus: 架构设计、复杂算法
 - Sonnet: 日常开发、调试
+
+---
+
+## 🚀 未来计划
+
+### 系统监控与告警 (产品上线后择机实现)
+
+本章节记录在feature/integrate-legacy-systems架构集成过程中识别的运维改进需求，将在产品上线后择机实现。
+
+#### 📊 监控指标建议
+
+##### 核心性能指标
+- **API响应时间监控**
+  - `executeIntegratedSync()` 响应时间 < 30秒 (正常)
+  - `scrapeAndTransform()` 响应时间 < 15秒 (正常)
+  - 超时阈值告警: > 60秒
+
+- **系统资源监控**  
+  - Node.js内存使用 < 1GB (正常)
+  - CPU使用率 < 80% (正常)
+  - Redis缓存命中率 > 85% (正常)
+
+- **业务指标监控**
+  - 同步成功率 > 95% (目标)
+  - 数据转换错误率 < 5% (可接受)
+  - 智能修复应用率统计 (repairsApplied)
+  - 验证警告数量统计 (validationWarnings)
+
+##### 数据质量监控
+- **转换统计追踪**
+  - `transformationStats.totalProcessed` 处理总数
+  - `transformationStats.repairsApplied` 修复应用数
+  - `transformationStats.validationWarnings` 验证警告数
+  - `transformationStats.processingTime` 处理耗时
+
+- **飞书同步统计**
+  - `feishuSyncStats.total` 同步总数
+  - `feishuSyncStats.created` 新建记录数
+  - `feishuSyncStats.updated` 更新记录数
+  - `feishuSyncStats.failed` 失败记录数
+
+#### 🚨 告警设置建议
+
+##### 关键告警 (立即响应)
+- **连续同步失败**: 同一用户连续3次同步失败
+- **系统资源告警**: 内存使用 > 1.5GB 或 CPU > 90%
+- **API响应超时**: 平均响应时间 > 60秒持续5分钟
+- **数据库连接**: Prisma连接池耗尽或超时
+
+##### 警告级告警 (24小时内处理)
+- **性能degradation**: 响应时间增长50%以上
+- **数据质量**: 转换警告占比 > 50%
+- **缓存异常**: Redis缓存命中率 < 70%
+- **外部API**: 豆瓣反爬虫触发频率异常
+
+#### 🔧 性能优化建议
+
+##### 架构优化方向
+1. **异步化处理优化**
+   ```typescript
+   // 将长时间的转换和同步操作放到队列中
+   // 减少API响应时间，改善用户体验
+   async triggerAsyncSync(userId: string, options: any) {
+     const job = await this.syncQueue.add('integrated-sync', { userId, options });
+     return { jobId: job.id, status: 'queued' };
+   }
+   ```
+
+2. **分批处理策略**
+   ```typescript
+   // 大数据量时自动分批处理，避免内存溢出
+   const batchSize = 50; // 每批处理50条记录
+   for (const batch of chunk(rawData, batchSize)) {
+     await this.processDataBatch(batch);
+   }
+   ```
+
+3. **智能缓存策略**
+   ```typescript
+   // 转换结果缓存，相同数据避免重复转换
+   const cacheKey = `transform:${dataHash}`;
+   let transformedData = await this.redis.get(cacheKey);
+   if (!transformedData) {
+     transformedData = await this.dataTransformation.transformDoubanData(rawData);
+     await this.redis.setex(cacheKey, 3600, JSON.stringify(transformedData));
+   }
+   ```
+
+#### 📈 监控实施路径
+
+##### Phase 1: 基础监控 (上线后1个月内)
+- [ ] API响应时间监控集成
+- [ ] 基础系统资源监控  
+- [ ] 关键错误告警设置
+- [ ] 监控面板搭建 (Grafana/类似)
+
+##### Phase 2: 深度监控 (上线后3个月内)  
+- [ ] 业务指标监控完善
+- [ ] 数据质量监控集成
+- [ ] 性能趋势分析
+- [ ] 自动化告警响应
+
+##### Phase 3: 智能优化 (上线后6个月内)
+- [ ] 基于监控数据的自动调优
+- [ ] 预测性能问题预警
+- [ ] 容量规划和扩展建议
+- [ ] 用户行为分析和优化建议
+
+---
+
+**计划状态**: 📋 已规划，等待产品上线后实施  
+**优先级**: 中高 (性能和稳定性直接影响用户体验)  
+**预计工作量**: 2-3个开发周期 (分阶段实施)

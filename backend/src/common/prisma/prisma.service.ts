@@ -1,9 +1,14 @@
-import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  OnModuleInit,
+  OnModuleDestroy,
+  Logger,
+} from '@nestjs/common';
 import { PrismaClient } from '../../../generated/prisma';
 
 /**
  * Prisma服务 - 数据库客户端管理
- * 
+ *
  * 功能:
  * - 自动连接管理
  * - 连接池优化
@@ -12,7 +17,10 @@ import { PrismaClient } from '../../../generated/prisma';
  * - 事务支持
  */
 @Injectable()
-export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
+export class PrismaService
+  extends PrismaClient
+  implements OnModuleInit, OnModuleDestroy
+{
   private readonly logger = new Logger(PrismaService.name);
 
   constructor() {
@@ -23,7 +31,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
           url: process.env.DATABASE_URL || 'postgresql://localhost:5432/d2f',
         },
       },
-      
+
       // 日志配置
       log: [
         {
@@ -31,7 +39,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
           level: 'query',
         },
         {
-          emit: 'event', 
+          emit: 'event',
           level: 'error',
         },
         {
@@ -43,7 +51,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
           level: 'warn',
         },
       ],
-      
+
       // 错误格式化
       errorFormat: 'pretty',
     });
@@ -121,12 +129,12 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
 
   /**
    * 执行事务
-   * 
+   *
    * @param fn 事务函数
    * @returns 事务结果
    */
   async executeTransaction<T>(
-    fn: (prisma: PrismaClient) => Promise<T>
+    fn: (prisma: PrismaClient) => Promise<T>,
   ): Promise<T> {
     return (this as any).$transaction(fn);
   }
@@ -151,7 +159,9 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
         },
       });
 
-      this.logger.log(`Cleaned up ${deletedCount.count} expired sync history records`);
+      this.logger.log(
+        `Cleaned up ${deletedCount.count} expired sync history records`,
+      );
     } catch (error) {
       this.logger.error('Failed to cleanup expired data', error);
     }

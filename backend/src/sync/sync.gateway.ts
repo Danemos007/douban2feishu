@@ -15,7 +15,7 @@ import { SyncProgress } from './interfaces/sync.interface';
 
 /**
  * 同步WebSocket网关 - 实时状态更新
- * 
+ *
  * 功能:
  * - 实时同步进度推送
  * - 用户房间管理
@@ -45,7 +45,7 @@ export class SyncGateway implements OnGatewayConnection, OnGatewayDisconnect {
     try {
       // 从JWT token中提取用户ID
       const userId = this.extractUserFromSocket(client);
-      
+
       if (!userId) {
         this.logger.warn(`Connection rejected: No valid user ID`);
         client.disconnect();
@@ -54,7 +54,7 @@ export class SyncGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       // 将客户端加入用户房间
       await client.join(`user:${userId}`);
-      
+
       // 记录连接
       if (!this.userConnections.has(userId)) {
         this.userConnections.set(userId, new Set());
@@ -69,9 +69,9 @@ export class SyncGateway implements OnGatewayConnection, OnGatewayDisconnect {
         userId,
         timestamp: new Date().toISOString(),
       });
-
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       this.logger.error(`Connection error:`, errorMessage);
       client.disconnect();
     }
@@ -83,7 +83,7 @@ export class SyncGateway implements OnGatewayConnection, OnGatewayDisconnect {
   handleDisconnect(client: Socket) {
     try {
       const userId = this.extractUserFromSocket(client);
-      
+
       if (userId) {
         const userSockets = this.userConnections.get(userId);
         if (userSockets) {
@@ -92,11 +92,12 @@ export class SyncGateway implements OnGatewayConnection, OnGatewayDisconnect {
             this.userConnections.delete(userId);
           }
         }
-        
+
         this.logger.log(`Client ${client.id} disconnected for user ${userId}`);
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       this.logger.error(`Disconnect error:`, errorMessage);
     }
   }
@@ -111,7 +112,7 @@ export class SyncGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {
     try {
       const userId = this.extractUserFromSocket(client);
-      
+
       if (!userId) {
         client.emit('error', { message: 'Authentication required' });
         return;
@@ -129,9 +130,9 @@ export class SyncGateway implements OnGatewayConnection, OnGatewayDisconnect {
         syncIds: data.syncIds || [],
         timestamp: new Date().toISOString(),
       });
-
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       this.logger.error(`Subscribe error:`, errorMessage);
       client.emit('error', { message: 'Subscription failed' });
     }
@@ -157,9 +158,9 @@ export class SyncGateway implements OnGatewayConnection, OnGatewayDisconnect {
         syncIds: data.syncIds || [],
         timestamp: new Date().toISOString(),
       });
-
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       this.logger.error(`Unsubscribe error:`, errorMessage);
     }
   }
@@ -185,7 +186,8 @@ export class SyncGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       this.logger.debug(`Progress sent to user ${userId}: ${progress.message}`);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       this.logger.error(`Failed to send progress notification:`, errorMessage);
     }
   }
@@ -193,7 +195,10 @@ export class SyncGateway implements OnGatewayConnection, OnGatewayDisconnect {
   /**
    * 发送错误通知
    */
-  notifyError(userId: string, error: { syncId?: string; message: string; code?: string }) {
+  notifyError(
+    userId: string,
+    error: { syncId?: string; message: string; code?: string },
+  ) {
     try {
       this.server.to(`user:${userId}`).emit('sync-error', {
         ...error,
@@ -207,7 +212,10 @@ export class SyncGateway implements OnGatewayConnection, OnGatewayDisconnect {
   /**
    * 广播系统消息
    */
-  broadcastSystemMessage(message: string, level: 'info' | 'warning' | 'error' = 'info') {
+  broadcastSystemMessage(
+    message: string,
+    level: 'info' | 'warning' | 'error' = 'info',
+  ) {
     this.server.emit('system-message', {
       message,
       level,

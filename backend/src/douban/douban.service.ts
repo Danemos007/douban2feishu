@@ -10,7 +10,7 @@ import { DataTransformationService } from './services/data-transformation.servic
 
 /**
  * 豆瓣服务 - 基于obsidian-douban的成熟反爬虫策略
- * 
+ *
  * 核心特性:
  * - 智能请求延迟 (4-15秒动态调整)
  * - Cookie认证机制
@@ -34,8 +34,10 @@ export class DoubanService {
    * 抓取用户豆瓣数据 - 主要入口方法
    */
   async fetchUserData(fetchDto: FetchUserDataDto): Promise<DoubanItem[]> {
-    this.logger.log(`Starting to fetch ${fetchDto.category} data for user ${fetchDto.userId}`);
-    
+    this.logger.log(
+      `Starting to fetch ${fetchDto.category} data for user ${fetchDto.userId}`,
+    );
+
     try {
       // 验证Cookie格式
       if (!this.cookieManager.validateCookieFormat(fetchDto.cookie)) {
@@ -45,11 +47,17 @@ export class DoubanService {
       // 解密Cookie (如果已加密)
       let cookie = fetchDto.cookie;
       if (fetchDto.isEncrypted) {
-        cookie = await this.cookieManager.decryptCookie(fetchDto.userId, fetchDto.cookie);
+        cookie = await this.cookieManager.decryptCookie(
+          fetchDto.userId,
+          fetchDto.cookie,
+        );
       }
 
       // 验证Cookie有效性
-      const validation = await this.antiSpider.validateCookie(fetchDto.userId, cookie);
+      const validation = await this.antiSpider.validateCookie(
+        fetchDto.userId,
+        cookie,
+      );
       if (!validation.isValid) {
         throw new Error(`Cookie validation failed: ${validation.error}`);
       }
@@ -59,28 +67,37 @@ export class DoubanService {
       // 根据类型调用不同的抓取器
       switch (fetchDto.category) {
         case 'books':
-          const bookData = await this.fetchBooks(fetchDto.userId, cookie, fetchDto);
+          const bookData = await this.fetchBooks(
+            fetchDto.userId,
+            cookie,
+            fetchDto,
+          );
           results = bookData.map(this.mapBookToDoubanItem);
           break;
-          
+
         case 'movies':
           // TODO: 实现电影抓取
           throw new Error('Movie scraping not implemented yet');
-          
+
         case 'tv':
-          // TODO: 实现电视剧抓取  
+          // TODO: 实现电视剧抓取
           throw new Error('TV show scraping not implemented yet');
-          
+
         default:
           throw new Error(`Unsupported category: ${fetchDto.category}`);
       }
 
-      this.logger.log(`Successfully fetched ${results.length} ${fetchDto.category} items`);
+      this.logger.log(
+        `Successfully fetched ${results.length} ${fetchDto.category} items`,
+      );
       return results;
-
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      this.logger.error(`Failed to fetch ${fetchDto.category} data:`, errorMessage);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      this.logger.error(
+        `Failed to fetch ${fetchDto.category} data:`,
+        errorMessage,
+      );
       throw error instanceof Error ? error : new Error(String(error));
     }
   }
@@ -99,12 +116,14 @@ export class DoubanService {
     };
   }> {
     const startTime = Date.now();
-    this.logger.log(`Starting scrape and transform for ${fetchDto.category} data`);
+    this.logger.log(
+      `Starting scrape and transform for ${fetchDto.category} data`,
+    );
 
     try {
       // 抓取原始数据
       const rawData = await this.fetchUserData(fetchDto);
-      
+
       // 数据转换配置
       const transformationOptions = {
         enableIntelligentRepairs: true,
@@ -113,11 +132,12 @@ export class DoubanService {
       };
 
       // 执行数据转换
-      const transformationResult = await this.dataTransformation.transformDoubanData(
-        rawData,
-        fetchDto.category,
-        transformationOptions
-      );
+      const transformationResult =
+        await this.dataTransformation.transformDoubanData(
+          rawData,
+          fetchDto.category,
+          transformationOptions,
+        );
 
       const processingTime = Date.now() - startTime;
 
@@ -129,17 +149,22 @@ export class DoubanService {
         processingTime,
       };
 
-      this.logger.log(`Transformation completed: ${transformationStats.totalProcessed} items, ${transformationStats.repairsApplied} repairs, ${transformationStats.validationWarnings} warnings`);
+      this.logger.log(
+        `Transformation completed: ${transformationStats.totalProcessed} items, ${transformationStats.repairsApplied} repairs, ${transformationStats.validationWarnings} warnings`,
+      );
 
       return {
         rawData,
         transformedData: transformationResult.data,
         transformationStats,
       };
-
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      this.logger.error(`Failed to scrape and transform ${fetchDto.category} data:`, errorMessage);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      this.logger.error(
+        `Failed to scrape and transform ${fetchDto.category} data:`,
+        errorMessage,
+      );
       throw error instanceof Error ? error : new Error(String(error));
     }
   }
@@ -147,10 +172,14 @@ export class DoubanService {
   /**
    * 抓取书籍数据
    */
-  private async fetchBooks(userId: string, cookie: string, fetchDto: FetchUserDataDto): Promise<BookData[]> {
+  private async fetchBooks(
+    userId: string,
+    cookie: string,
+    fetchDto: FetchUserDataDto,
+  ): Promise<BookData[]> {
     return await this.bookScraper.fetchUserBooks(userId, cookie, {
       status: fetchDto.status,
-      limit: fetchDto.limit
+      limit: fetchDto.limit,
     });
   }
 
@@ -175,7 +204,10 @@ export class DoubanService {
   /**
    * 验证Cookie有效性
    */
-  async validateCookie(userId: string, cookie: string): Promise<{
+  async validateCookie(
+    userId: string,
+    cookie: string,
+  ): Promise<{
     isValid: boolean;
     error?: string;
   }> {
@@ -193,7 +225,7 @@ export class DoubanService {
 
     // 清理Cookie
     const cleanedCookie = this.cookieManager.sanitizeCookie(rawCookie);
-    
+
     // 加密存储
     return await this.cookieManager.encryptCookie(userId, cleanedCookie);
   }
@@ -204,7 +236,7 @@ export class DoubanService {
   getScrapingStats() {
     return {
       antiSpider: this.antiSpider.getRequestStats(),
-      books: this.bookScraper.getScrapingStats()
+      books: this.bookScraper.getScrapingStats(),
     };
   }
 

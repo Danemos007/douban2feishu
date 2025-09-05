@@ -5,7 +5,7 @@ import { CryptoService } from './crypto.service';
 
 /**
  * 加密模块 - 三层加密架构的核心组件
- * 
+ *
  * 功能:
  * - AES-256-GCM加密/解密
  * - 随机IV生成

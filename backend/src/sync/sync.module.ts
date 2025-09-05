@@ -13,7 +13,7 @@ import { CryptoModule } from '../common/crypto/crypto.module';
 
 /**
  * 同步模块 - 企业级数据同步模块
- * 
+ *
  * 功能:
  * - 豆瓣数据抓取 (反爬虫策略)
  * - 飞书增量同步 (Subject ID唯一键)
@@ -25,7 +25,7 @@ import { CryptoModule } from '../common/crypto/crypto.module';
 @Module({
   imports: [
     ConfigModule,
-    
+
     // BullMQ 任务队列配置
     BullModule.forRootAsync({
       imports: [ConfigModule],
@@ -35,11 +35,11 @@ import { CryptoModule } from '../common/crypto/crypto.module';
           host: configService.get<string>('BULL_REDIS_HOST', 'localhost'),
           port: configService.get<number>('BULL_REDIS_PORT', 6379),
         };
-        
+
         if (redisPassword) {
           redisConfig.password = redisPassword;
         }
-        
+
         return {
           redis: redisConfig,
           defaultJobOptions: {
@@ -67,11 +67,7 @@ import { CryptoModule } from '../common/crypto/crypto.module';
     PrismaModule,
     CryptoModule,
   ],
-  providers: [
-    SyncService,
-    SyncProcessor,
-    SyncGateway,
-  ],
+  providers: [SyncService, SyncProcessor, SyncGateway],
   controllers: [SyncController],
   exports: [SyncService],
 })

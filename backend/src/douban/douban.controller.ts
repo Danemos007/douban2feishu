@@ -47,9 +47,12 @@ export class DoubanController {
     },
   })
   async validateCookie(@Body() dto: ValidateCookieDto) {
-    const validation = await this.doubanService.validateCookie(dto.userId || 'anonymous', dto.cookie);
+    const validation = await this.doubanService.validateCookie(
+      dto.userId || 'anonymous',
+      dto.cookie,
+    );
     const isValid = validation.isValid;
-    
+
     return {
       valid: isValid,
       message: isValid ? 'Cookie is valid' : 'Cookie is invalid or expired',
