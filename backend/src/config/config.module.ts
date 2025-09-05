@@ -7,7 +7,7 @@ import { CryptoModule } from '../common/crypto/crypto.module';
 
 /**
  * 配置模块 - 用户配置管理
- * 
+ *
  * 功能:
  * - 豆瓣Cookie配置
  * - 飞书应用配置

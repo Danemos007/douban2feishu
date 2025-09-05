@@ -7,7 +7,7 @@ export const IS_PUBLIC_KEY = 'isPublic';
 
 /**
  * @Public() 装饰器 - 标记不需要认证的公开路由
- * 
+ *
  * 使用示例:
  * ```typescript
  * @Public()
@@ -16,7 +16,7 @@ export const IS_PUBLIC_KEY = 'isPublic';
  *   return { status: 'ok' };
  * }
  * ```
- * 
+ *
  * 功能:
  * - 跳过JWT认证检查
  * - 适用于公开API端点 (健康检查、文档等)

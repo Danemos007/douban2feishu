@@ -1,5 +1,13 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsEnum, IsOptional, IsNumber, Min, Max, IsBoolean } from 'class-validator';
+import {
+  IsString,
+  IsEnum,
+  IsOptional,
+  IsNumber,
+  Min,
+  Max,
+  IsBoolean,
+} from 'class-validator';
 
 /**
  * 获取用户数据DTO
@@ -33,8 +41,8 @@ export class FetchUserDataDto {
     enum: ['books', 'movies', 'tv'],
     example: 'books',
   })
-  @IsEnum(['books', 'movies', 'tv'], { 
-    message: '分类必须是books、movies或tv中的一个' 
+  @IsEnum(['books', 'movies', 'tv'], {
+    message: '分类必须是books、movies或tv中的一个',
   })
   category!: 'books' | 'movies' | 'tv';
 
@@ -45,7 +53,7 @@ export class FetchUserDataDto {
     required: false,
   })
   @IsEnum(['wish', 'do', 'collect'], {
-    message: '状态必须是wish、do或collect中的一个'
+    message: '状态必须是wish、do或collect中的一个',
   })
   @IsOptional()
   status?: 'wish' | 'do' | 'collect';

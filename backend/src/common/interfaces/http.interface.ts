@@ -3,7 +3,11 @@
  * 为项目中所有HTTP相关操作提供类型安全保障
  */
 
-import { AxiosRequestConfig, AxiosError, InternalAxiosRequestConfig } from 'axios';
+import {
+  AxiosRequestConfig,
+  AxiosError,
+  InternalAxiosRequestConfig,
+} from 'axios';
 
 /**
  * 扩展的Axios请求配置
@@ -28,7 +32,7 @@ export enum HttpStatus {
   INTERNAL_SERVER_ERROR = 500,
   BAD_GATEWAY = 502,
   SERVICE_UNAVAILABLE = 503,
-  GATEWAY_TIMEOUT = 504
+  GATEWAY_TIMEOUT = 504,
 }
 
 /**

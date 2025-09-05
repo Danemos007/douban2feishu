@@ -24,7 +24,7 @@ export interface ParsedListPage {
 
 /**
  * HTML解析服务 - 基于obsidian-douban的解析策略
- * 
+ *
  * 解析优先级:
  * 1. JSON-LD结构化数据
  * 2. Meta标签
@@ -55,9 +55,9 @@ export class HtmlParserService {
 
       this.logger.debug('Structured data parsed successfully');
       return structuredData;
-
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       this.logger.warn('Failed to parse structured data:', errorMessage);
       return null;
     }
@@ -108,10 +108,12 @@ export class HtmlParserService {
         const ratingValue = ratingInput.val();
         if (ratingValue && typeof ratingValue === 'string') {
           userState.rating = parseFloat(ratingValue);
-          this.logger.debug(`Found rating from detail page input: ${userState.rating}`);
+          this.logger.debug(
+            `Found rating from detail page input: ${userState.rating}`,
+          );
         }
       }
-      
+
       // 方法2: 列表页评分星级 (如果详情页没有找到评分)
       if (!userState.rating) {
         const ratingElement = $('div.date span[class*="rating"][class$="-t"]');
@@ -134,7 +136,7 @@ export class HtmlParserService {
         const tagsText = ratingSpan.next().text().trim();
         if (tagsText && tagsText.includes('标签:')) {
           const tagsStr = tagsText.replace('标签:', '').trim();
-          userState.tags = tagsStr.split(' ').filter(tag => tag.length > 0);
+          userState.tags = tagsStr.split(' ').filter((tag) => tag.length > 0);
         }
       }
 
@@ -156,9 +158,9 @@ export class HtmlParserService {
 
       // 评论/备注
       userState.comment = this.parseUserComment($);
-
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       this.logger.warn('Failed to parse user state:', errorMessage);
     }
 
@@ -173,7 +175,7 @@ export class HtmlParserService {
     const selectors = [
       '#interest_sect_level > div > span:nth-child(7)',
       '#interest_sect_level > div > span:nth-child(8)',
-      '#interest_sect_level > div > span:nth-child(9)'
+      '#interest_sect_level > div > span:nth-child(9)',
     ];
 
     for (const selector of selectors) {
@@ -202,20 +204,22 @@ export class HtmlParserService {
   /**
    * 映射用户状态文字到标准状态
    */
-  private mapUserState(stateText: string): 'wish' | 'do' | 'collect' | undefined {
+  private mapUserState(
+    stateText: string,
+  ): 'wish' | 'do' | 'collect' | undefined {
     const stateMap = {
       // 书籍
-      '想读': 'wish',
-      '在读': 'do', 
-      '读过': 'collect',
+      想读: 'wish',
+      在读: 'do',
+      读过: 'collect',
       // 电影/电视剧
-      '想看': 'wish',
-      '在看': 'do',
-      '看过': 'collect',
+      想看: 'wish',
+      在看: 'do',
+      看过: 'collect',
       // 音乐
-      '想听': 'wish',
-      '在听': 'do',
-      '听过': 'collect'
+      想听: 'wish',
+      在听: 'do',
+      听过: 'collect',
     };
 
     return stateMap[stateText] || undefined;
@@ -228,9 +232,9 @@ export class HtmlParserService {
     try {
       // 尝试多种日期格式
       const formats = [
-        /(\d{4})-(\d{1,2})-(\d{1,2})/,  // YYYY-MM-DD
+        /(\d{4})-(\d{1,2})-(\d{1,2})/, // YYYY-MM-DD
         /(\d{4})年(\d{1,2})月(\d{1,2})日/, // YYYY年MM月DD日
-        /(\d{1,2})-(\d{1,2})/,           // MM-DD (当年)
+        /(\d{1,2})-(\d{1,2})/, // MM-DD (当年)
       ];
 
       for (const format of formats) {
@@ -238,11 +242,19 @@ export class HtmlParserService {
         if (match) {
           if (match.length === 4) {
             // 完整日期
-            return new Date(parseInt(match[1]), parseInt(match[2]) - 1, parseInt(match[3]));
+            return new Date(
+              parseInt(match[1]),
+              parseInt(match[2]) - 1,
+              parseInt(match[3]),
+            );
           } else if (match.length === 3) {
             // 仅月日，使用当年
             const currentYear = new Date().getFullYear();
-            return new Date(currentYear, parseInt(match[1]) - 1, parseInt(match[2]));
+            return new Date(
+              currentYear,
+              parseInt(match[1]) - 1,
+              parseInt(match[2]),
+            );
           }
         }
       }
@@ -250,9 +262,9 @@ export class HtmlParserService {
       // 直接尝试解析
       const date = new Date(dateText);
       return isNaN(date.getTime()) ? undefined : date;
-
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       this.logger.warn(`Failed to parse date: ${dateText}`, errorMessage);
       return undefined;
     }
@@ -263,17 +275,17 @@ export class HtmlParserService {
    */
   parseListPage($: cheerio.CheerioAPI): ParsedListPage {
     const items: ParsedListItem[] = [];
-    
+
     try {
       // 解析条目列表 - .item-show
       $('.item-show').each((index, element) => {
         const $element = $(element);
-        
+
         // 标题和链接
         const linkElement = $element.find('div.title > a');
         const title = linkElement.text().trim();
         const url = linkElement.attr('href');
-        
+
         if (!url || !title) {
           return; // 跳过无效条目
         }
@@ -295,7 +307,7 @@ export class HtmlParserService {
           id,
           url,
           title,
-          updateDate
+          updateDate,
         });
       });
 
@@ -313,20 +325,21 @@ export class HtmlParserService {
       // 判断是否还有更多
       const hasMore = items.length === 30; // 每页30条
 
-      this.logger.debug(`Parsed list page: ${items.length} items, total: ${total}`);
+      this.logger.debug(
+        `Parsed list page: ${items.length} items, total: ${total}`,
+      );
 
       return {
         items,
         total,
-        hasMore
+        hasMore,
       };
-
     } catch (error) {
       this.logger.error('Failed to parse list page:', error);
       return {
         items: [],
         total: 0,
-        hasMore: false
+        hasMore: false,
       };
     }
   }
@@ -366,9 +379,9 @@ export class HtmlParserService {
       if (metaTags.image) {
         result['image'] = metaTags.image;
       }
-
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       this.logger.warn('Failed to parse basic info:', errorMessage);
     }
 
@@ -391,23 +404,32 @@ export class HtmlParserService {
       infoElement.find('span.pl').each((index, element) => {
         const $element = $(element);
         const key = $element.text().trim();
-        
+
         let value: any;
 
-        if (key.includes('译者') || key.includes('导演') || key.includes('编剧') || 
-            key.includes('主演') || key.includes('类型') || key.includes('制片国家') || 
-            key.includes('语言')) {
+        if (
+          key.includes('译者') ||
+          key.includes('导演') ||
+          key.includes('编剧') ||
+          key.includes('主演') ||
+          key.includes('类型') ||
+          key.includes('制片国家') ||
+          key.includes('语言')
+        ) {
           // 多值字段：提取链接数组或文本数组
           value = [];
-          
+
           // 首先尝试从链接中提取
-          $element.parent().find('a').each((i, link) => {
-            const linkText = $(link).text().trim();
-            if (linkText) {
-              value.push(linkText);
-            }
-          });
-          
+          $element
+            .parent()
+            .find('a')
+            .each((i, link) => {
+              const linkText = $(link).text().trim();
+              if (linkText) {
+                value.push(linkText);
+              }
+            });
+
           // 如果没有链接，则从文本中提取（用斜杠分隔）
           if (value.length === 0) {
             const nextElement = $element.next();
@@ -417,12 +439,17 @@ export class HtmlParserService {
                 // 处理用斜杠或逗号分隔的多值
                 value = textContent
                   .split(/[\/,、]/)
-                  .map(item => item.trim())
+                  .map((item) => item.trim())
                   .filter(Boolean);
               }
             }
           }
-        } else if (key.includes('作者') || key.includes('丛书') || key.includes('出版社') || key.includes('出品方')) {
+        } else if (
+          key.includes('作者') ||
+          key.includes('丛书') ||
+          key.includes('出版社') ||
+          key.includes('出品方')
+        ) {
           // 这些字段取next().next()的内容
           const nextElement = $element.next();
           if (nextElement.length > 0) {
@@ -445,9 +472,9 @@ export class HtmlParserService {
           infoMap.set(cleanKey, value);
         }
       });
-
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       this.logger.warn('Failed to parse info section:', errorMessage);
     }
 
@@ -459,7 +486,7 @@ export class HtmlParserService {
    */
   private mapInfoKey(key: string): string | undefined {
     const keyMap = {
-      '作者': 'author',
+      作者: 'author',
       '出版社:': 'publisher',
       '原作名:': 'originalTitle',
       '出版年:': 'datePublished',
@@ -468,7 +495,7 @@ export class HtmlParserService {
       '装帧:': 'binding',
       '丛书:': 'series',
       'ISBN:': 'isbn',
-      '译者': 'translator',
+      译者: 'translator',
       '副标题:': 'subTitle',
       '出品方:': 'producer',
       // 电影相关
@@ -481,7 +508,7 @@ export class HtmlParserService {
       '上映日期:': 'releaseDate',
       '片长:': 'duration',
       '集数:': 'episodes',
-      '单集片长:': 'episodeDuration'
+      '单集片长:': 'episodeDuration',
     };
 
     return keyMap[key];
@@ -500,7 +527,7 @@ export class HtmlParserService {
       '&#x27;': "'",
       '&#x2F;': '/',
       '&#x60;': '`',
-      '&#x3D;': '='
+      '&#x3D;': '=',
     };
 
     return str.replace(/&[#\w\d]+;/g, (entity) => {

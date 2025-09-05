@@ -3,7 +3,7 @@ import { AuthGuard } from '@nestjs/passport';
 
 /**
  * 本地认证守卫 - 用于登录接口
- * 
+ *
  * 功能:
  * - 验证用户名(邮箱)和密码
  * - 调用LocalStrategy进行身份验证
@@ -18,7 +18,7 @@ export class LocalAuthGuard extends AuthGuard('local') {
   override handleRequest<TUser = any>(err: any, user: any, info: any): TUser {
     if (err || !user) {
       let message = 'Authentication failed';
-      
+
       // 根据不同的认证失败原因提供具体错误信息
       if (info?.message === 'Missing credentials') {
         message = 'Email and password are required';
@@ -27,10 +27,10 @@ export class LocalAuthGuard extends AuthGuard('local') {
       } else if (err?.message) {
         message = err.message;
       }
-      
+
       throw new UnauthorizedException(message);
     }
-    
+
     return user;
   }
 }

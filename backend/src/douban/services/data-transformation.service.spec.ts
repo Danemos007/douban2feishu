@@ -1,11 +1,11 @@
 /**
  * DataTransformationService TDD测试套件
- * 
+ *
  * 🎯 整合目标:
  * - 实现A: 通用转换引擎 (嵌套属性 + 数组处理)
- * - 实现D: 智能修复引擎 (片长/日期/地区/语言)  
+ * - 实现D: 智能修复引擎 (片长/日期/地区/语言)
  * - 实现C: 严格验证系统 (字段验证 + 边界处理)
- * 
+ *
  * TDD原则: 先写失败测试，再实现功能让其通过
  */
 
@@ -13,10 +13,10 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { Logger } from '@nestjs/common';
 
 import { DataTransformationService } from './data-transformation.service';
-import { 
+import {
   VERIFIED_FIELD_MAPPINGS,
   getVerifiedFieldMapping,
-  VerifiedFieldMappingConfig 
+  VerifiedFieldMappingConfig,
 } from '../../feishu/config/douban-field-mapping-verified.config';
 
 // 定义期望的类型 - 基于我们的设计
@@ -46,9 +46,7 @@ describe('DataTransformationService - Enterprise Data Transformation', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        DataTransformationService,
-      ],
+      providers: [DataTransformationService],
     }).compile();
 
     service = module.get<DataTransformationService>(DataTransformationService);
@@ -74,7 +72,7 @@ describe('DataTransformationService - Enterprise Data Transformation', () => {
           author: ['曹雪芹', '高鹗'],
           rating: { average: 9.6, numRaters: 15000 },
           publisher: '人民文学出版社',
-          publishDate: '1996-12'
+          publishDate: '1996-12',
         };
 
         const result = await service.transformDoubanData(rawBookData, 'books');
@@ -83,7 +81,7 @@ describe('DataTransformationService - Enterprise Data Transformation', () => {
         expect(result.data).toBeDefined();
         expect(result.statistics).toBeDefined();
         expect(result.warnings).toBeInstanceOf(Array);
-        
+
         // 验证核心字段转换
         expect(result.data.subjectId).toBe('12345');
         expect(result.data.title).toBe('红楼梦');
@@ -100,17 +98,22 @@ describe('DataTransformationService - Enterprise Data Transformation', () => {
           duration: '142分钟',
           releaseDate: '1994-09-10(加拿大多伦多电影节) / 1994-10-14(美国)',
           country: '美国',
-          language: '英语'
+          language: '英语',
         };
 
-        const result = await service.transformDoubanData(rawMovieData, 'movies');
+        const result = await service.transformDoubanData(
+          rawMovieData,
+          'movies',
+        );
 
         expect(result.data.subjectId).toBe('67890');
         expect(result.data.title).toBe('肖申克的救赎');
         expect(result.data.director).toBe('弗兰克·德拉邦特');
         expect(result.data.cast).toBe('蒂姆·罗宾斯 / 摩根·弗里曼');
         expect(result.data.duration).toBe('142分钟');
-        expect(result.data.releaseDate).toBe('1994-09-10(加拿大多伦多电影节) / 1994-10-14(美国)');
+        expect(result.data.releaseDate).toBe(
+          '1994-09-10(加拿大多伦多电影节) / 1994-10-14(美国)',
+        );
       });
 
       it('应该支持转换选项配置', async () => {
@@ -118,10 +121,14 @@ describe('DataTransformationService - Enterprise Data Transformation', () => {
         const options: TransformationOptions = {
           enableIntelligentRepairs: false,
           strictValidation: false,
-          preserveRawData: true
+          preserveRawData: true,
         };
 
-        const result = await service.transformDoubanData(rawData, 'books', options);
+        const result = await service.transformDoubanData(
+          rawData,
+          'books',
+          options,
+        );
 
         expect(result.rawData).toEqual(rawData); // 保留原始数据
       });
@@ -136,7 +143,10 @@ describe('DataTransformationService - Enterprise Data Transformation', () => {
 
       it('应该正确处理null/undefined数据', async () => {
         const resultNull = await service.transformDoubanData(null, 'books');
-        const resultUndefined = await service.transformDoubanData(undefined, 'books');
+        const resultUndefined = await service.transformDoubanData(
+          undefined,
+          'books',
+        );
 
         expect(resultNull.data).toBeDefined();
         expect(resultUndefined.data).toBeDefined();
@@ -161,7 +171,7 @@ describe('DataTransformationService - Enterprise Data Transformation', () => {
       it('应该正确提取嵌套属性 rating.average', async () => {
         const data = {
           title: '红楼梦',
-          rating: { average: 9.6, numRaters: 15000 }
+          rating: { average: 9.6, numRaters: 15000 },
         };
         const config = getVerifiedFieldMapping('books')['doubanRating'];
 
@@ -175,16 +185,19 @@ describe('DataTransformationService - Enterprise Data Transformation', () => {
         const data = {
           metadata: {
             ratings: {
-              douban: { score: 8.7, count: 50000 }
-            }
-          }
+              douban: { score: 8.7, count: 50000 },
+            },
+          },
         };
         const mockConfig = {
           doubanFieldName: 'deepRating',
-          nestedPath: 'metadata.ratings.douban.score'
+          nestedPath: 'metadata.ratings.douban.score',
         } as VerifiedFieldMappingConfig;
 
-        const result = await (service as any).extractNestedValue(data, mockConfig);
+        const result = await (service as any).extractNestedValue(
+          data,
+          mockConfig,
+        );
 
         expect(result).toBe(8.7);
       });
@@ -201,8 +214,14 @@ describe('DataTransformationService - Enterprise Data Transformation', () => {
       it('应该处理null/undefined数据', async () => {
         const config = getVerifiedFieldMapping('books')['title'];
 
-        const resultNull = await (service as any).extractNestedValue(null, config);
-        const resultUndefined = await (service as any).extractNestedValue(undefined, config);
+        const resultNull = await (service as any).extractNestedValue(
+          null,
+          config,
+        );
+        const resultUndefined = await (service as any).extractNestedValue(
+          undefined,
+          config,
+        );
 
         expect(resultNull).toBeUndefined();
         expect(resultUndefined).toBeUndefined();
@@ -215,7 +234,10 @@ describe('DataTransformationService - Enterprise Data Transformation', () => {
         const config = getVerifiedFieldMapping('books')['author'];
 
         // 🔥 TDD: 这个方法还不存在，会失败
-        const result = await (service as any).processArrayField(authors, config);
+        const result = await (service as any).processArrayField(
+          authors,
+          config,
+        );
 
         expect(result).toBe('曹雪芹 / 高鹗');
       });
@@ -224,7 +246,10 @@ describe('DataTransformationService - Enterprise Data Transformation', () => {
         const directors = ['弗兰克·德拉邦特'];
         const config = getVerifiedFieldMapping('movies')['director'];
 
-        const result = await (service as any).processArrayField(directors, config);
+        const result = await (service as any).processArrayField(
+          directors,
+          config,
+        );
 
         expect(result).toBe('弗兰克·德拉邦特');
       });
@@ -242,7 +267,10 @@ describe('DataTransformationService - Enterprise Data Transformation', () => {
         const singleAuthor = '曹雪芹';
         const config = getVerifiedFieldMapping('books')['author'];
 
-        const result = await (service as any).processArrayField(singleAuthor, config);
+        const result = await (service as any).processArrayField(
+          singleAuthor,
+          config,
+        );
 
         expect(result).toBe('曹雪芹');
       });
@@ -251,7 +279,10 @@ describe('DataTransformationService - Enterprise Data Transformation', () => {
         const emptyArray: string[] = [];
         const config = getVerifiedFieldMapping('books')['author'];
 
-        const result = await (service as any).processArrayField(emptyArray, config);
+        const result = await (service as any).processArrayField(
+          emptyArray,
+          config,
+        );
 
         expect(result).toBe('');
       });
@@ -276,13 +307,13 @@ describe('DataTransformationService - Enterprise Data Transformation', () => {
         title: '指环王3：王者无敌',
         // 模拟从HTML解析得到的复杂片长信息
         html: '<span class="pl">片长:</span> 142分钟 / 120分03秒(导演剪辑版)',
-        duration: null
+        duration: null,
       };
-      
-      const result = await service.transformDoubanData(rawData, 'movies', { 
-        enableIntelligentRepairs: true 
+
+      const result = await service.transformDoubanData(rawData, 'movies', {
+        enableIntelligentRepairs: true,
       });
-      
+
       // 期望智能修复能够从HTML中提取复杂的片长信息
       expect(result.data.duration).toBe('142分钟 / 120分03秒(导演剪辑版)');
       expect(result.statistics.repairedFields).toBeGreaterThan(0);
@@ -294,15 +325,17 @@ describe('DataTransformationService - Enterprise Data Transformation', () => {
         title: '蜘蛛侠：英雄无归',
         // 模拟HTML中的多地区上映信息
         html: '<span property="v:initialReleaseDate">2021-12-16(中国大陆)</span><span property="v:initialReleaseDate">2021-12-18(美国)</span>',
-        releaseDate: null
+        releaseDate: null,
       };
-      
-      const result = await service.transformDoubanData(rawData, 'movies', { 
-        enableIntelligentRepairs: true 
+
+      const result = await service.transformDoubanData(rawData, 'movies', {
+        enableIntelligentRepairs: true,
       });
-      
+
       // 期望智能修复能够解析并合并多地区上映日期
-      expect(result.data.releaseDate).toBe('2021-12-16(中国大陆) / 2021-12-18(美国)');
+      expect(result.data.releaseDate).toBe(
+        '2021-12-16(中国大陆) / 2021-12-18(美国)',
+      );
       expect(result.statistics.repairedFields).toBeGreaterThan(0);
     });
 
@@ -312,13 +345,13 @@ describe('DataTransformationService - Enterprise Data Transformation', () => {
         title: '阿凡达',
         // 模拟复杂的制片地区信息
         html: '<span class="pl">制片国家/地区:</span> 美国 / 英国 / 新西兰',
-        country: null
+        country: null,
       };
-      
-      const result = await service.transformDoubanData(rawData, 'movies', { 
-        enableIntelligentRepairs: true 
+
+      const result = await service.transformDoubanData(rawData, 'movies', {
+        enableIntelligentRepairs: true,
       });
-      
+
       expect(result.data.country).toBe('美国 / 英国 / 新西兰');
       expect(result.statistics.repairedFields).toBeGreaterThan(0);
     });
@@ -328,13 +361,13 @@ describe('DataTransformationService - Enterprise Data Transformation', () => {
         subjectId: '22222',
         title: '寻梦环游记',
         html: '<span class="pl">语言:</span> 英语 / 西班牙语',
-        language: null
+        language: null,
       };
-      
-      const result = await service.transformDoubanData(rawData, 'movies', { 
-        enableIntelligentRepairs: true 
+
+      const result = await service.transformDoubanData(rawData, 'movies', {
+        enableIntelligentRepairs: true,
       });
-      
+
       expect(result.data.language).toBe('英语 / 西班牙语');
       expect(result.statistics.repairedFields).toBeGreaterThan(0);
     });
@@ -343,13 +376,13 @@ describe('DataTransformationService - Enterprise Data Transformation', () => {
       const rawData = {
         subjectId: '33333',
         title: '三体',
-        publishDate: '2019年1月1日' // 中文日期格式
+        publishDate: '2019年1月1日', // 中文日期格式
       };
-      
-      const result = await service.transformDoubanData(rawData, 'books', { 
-        enableIntelligentRepairs: true 
+
+      const result = await service.transformDoubanData(rawData, 'books', {
+        enableIntelligentRepairs: true,
       });
-      
+
       // 期望修复为标准日期格式
       expect(result.data.publishDate).toBe('2019-01-01');
       expect(result.statistics.repairedFields).toBeGreaterThan(0);
@@ -364,11 +397,14 @@ describe('DataTransformationService - Enterprise Data Transformation', () => {
           title: '红楼梦',
           author: ['曹雪芹', '高鹗'],
           rating: { average: 9.6 },
-          publisher: '人民文学出版社'
+          publisher: '人民文学出版社',
         };
 
         // 🔥 TDD: 这个方法还不存在，会失败
-        const result = await (service as any).applyGeneralTransformation(rawData, getVerifiedFieldMapping('books'));
+        const result = await (service as any).applyGeneralTransformation(
+          rawData,
+          getVerifiedFieldMapping('books'),
+        );
 
         expect(result.subjectId).toBe('12345'); // 直接属性
         expect(result.title).toBe('红楼梦'); // 直接属性
@@ -381,10 +417,13 @@ describe('DataTransformationService - Enterprise Data Transformation', () => {
         const rawData = {
           subjectId: '12345',
           unknownField: '未知字段',
-          title: '测试书籍'
+          title: '测试书籍',
         };
 
-        const result = await (service as any).applyGeneralTransformation(rawData, getVerifiedFieldMapping('books'));
+        const result = await (service as any).applyGeneralTransformation(
+          rawData,
+          getVerifiedFieldMapping('books'),
+        );
 
         expect(result.subjectId).toBe('12345');
         expect(result.title).toBe('测试书籍');
@@ -398,10 +437,13 @@ describe('DataTransformationService - Enterprise Data Transformation', () => {
           rating: { average: 8.5 }, // number - 嵌套路径 rating.average
           myRating: 4, // rating
           myStatus: '读过', // singleSelect
-          markDate: '2024-01-01' // datetime
+          markDate: '2024-01-01', // datetime
         };
 
-        const result = await (service as any).applyGeneralTransformation(rawData, getVerifiedFieldMapping('books'));
+        const result = await (service as any).applyGeneralTransformation(
+          rawData,
+          getVerifiedFieldMapping('books'),
+        );
 
         expect(result.subjectId).toBe('12345');
         expect(result.title).toBe('测试');
@@ -421,7 +463,7 @@ describe('DataTransformationService - Enterprise Data Transformation', () => {
           totalFields: 5,
           transformedFields: 4,
           failedFields: 1,
-          repairedFields: 2
+          repairedFields: 2,
         };
 
         const stats = await (service as any).generateTransformationStats();
@@ -438,7 +480,7 @@ describe('DataTransformationService - Enterprise Data Transformation', () => {
         // 设置一些警告状态
         (service as any).warnings = [
           '字段 unknownField 不在配置中，已跳过',
-          '字段 brokenField 转换失败'
+          '字段 brokenField 转换失败',
         ];
 
         // 🔥 TDD: 这个方法还不存在，会失败
@@ -458,7 +500,7 @@ describe('DataTransformationService - Enterprise Data Transformation', () => {
         subjectId: '<script>alert("xss")</script>',
         title: null,
         author: {},
-        rating: { average: 'not-a-number' }
+        rating: { average: 'not-a-number' },
       };
 
       const result = await service.transformDoubanData(maliciousData, 'books');
@@ -482,7 +524,7 @@ describe('DataTransformationService - Enterprise Data Transformation', () => {
       const largeData = {
         subjectId: '123',
         title: '测试',
-        summary: 'x'.repeat(100000) // 100KB 的字符串
+        summary: 'x'.repeat(100000), // 100KB 的字符串
       };
 
       const result = await service.transformDoubanData(largeData, 'books');
@@ -498,52 +540,72 @@ describe('DataTransformationService - Enterprise Data Transformation', () => {
         const movieData = {
           subjectId: '1292052',
           title: '肖申克的救赎',
-          myStatus: '已看完' // 无效状态，应该被修正
+          myStatus: '已看完', // 无效状态，应该被修正
         };
 
-        const result = await service.transformDoubanData(movieData, 'movies', { strictValidation: true });
+        const result = await service.transformDoubanData(movieData, 'movies', {
+          strictValidation: true,
+        });
 
         expect(result.data.myStatus).toBeNull(); // 无效值被设为null
-        expect(result.warnings.some(w => w.includes('Invalid status value: 已看完'))).toBe(true);
+        expect(
+          result.warnings.some((w) =>
+            w.includes('Invalid status value: 已看完'),
+          ),
+        ).toBe(true);
       });
 
       it('应该验证并保留有效的电影状态字段', async () => {
         const movieData = {
           subjectId: '1292052',
           title: '肖申克的救赎',
-          myStatus: '看过' // 有效状态
+          myStatus: '看过', // 有效状态
         };
 
-        const result = await service.transformDoubanData(movieData, 'movies', { strictValidation: true });
+        const result = await service.transformDoubanData(movieData, 'movies', {
+          strictValidation: true,
+        });
 
         expect(result.data.myStatus).toBe('看过');
-        expect(result.warnings.filter(w => w.includes('Invalid status')).length).toBe(0);
+        expect(
+          result.warnings.filter((w) => w.includes('Invalid status')).length,
+        ).toBe(0);
       });
 
       it('应该验证并修正无效的书籍状态字段', async () => {
         const bookData = {
           subjectId: '1007305',
           title: '红楼梦',
-          myStatus: '已读完' // 无效状态
+          myStatus: '已读完', // 无效状态
         };
 
-        const result = await service.transformDoubanData(bookData, 'books', { strictValidation: true });
+        const result = await service.transformDoubanData(bookData, 'books', {
+          strictValidation: true,
+        });
 
         expect(result.data.myStatus).toBeNull();
-        expect(result.warnings.some(w => w.includes('Invalid status value: 已读完'))).toBe(true);
+        expect(
+          result.warnings.some((w) =>
+            w.includes('Invalid status value: 已读完'),
+          ),
+        ).toBe(true);
       });
 
       it('应该验证并保留有效的书籍状态字段', async () => {
         const bookData = {
           subjectId: '1007305',
           title: '红楼梦',
-          myStatus: '读过' // 有效状态
+          myStatus: '读过', // 有效状态
         };
 
-        const result = await service.transformDoubanData(bookData, 'books', { strictValidation: true });
+        const result = await service.transformDoubanData(bookData, 'books', {
+          strictValidation: true,
+        });
 
         expect(result.data.myStatus).toBe('读过');
-        expect(result.warnings.filter(w => w.includes('Invalid status')).length).toBe(0);
+        expect(
+          result.warnings.filter((w) => w.includes('Invalid status')).length,
+        ).toBe(0);
       });
     });
 
@@ -551,23 +613,43 @@ describe('DataTransformationService - Enterprise Data Transformation', () => {
       describe('validateSelectField - 选择字段验证', () => {
         it('应该验证电影状态字段', async () => {
           // 🔥 TDD: validateSelectField方法需要实现
-          const validStatus = await (service as any).validateSelectField('看过', 'myStatus', 'movies');
-          const invalidStatus = await (service as any).validateSelectField('已看完', 'myStatus', 'movies');
+          const validStatus = await (service as any).validateSelectField(
+            '看过',
+            'myStatus',
+            'movies',
+          );
+          const invalidStatus = await (service as any).validateSelectField(
+            '已看完',
+            'myStatus',
+            'movies',
+          );
 
           expect(validStatus).toBe('看过');
           expect(invalidStatus).toBeNull();
         });
 
         it('应该验证书籍状态字段', async () => {
-          const validStatus = await (service as any).validateSelectField('读过', 'myStatus', 'books');
-          const invalidStatus = await (service as any).validateSelectField('已读完', 'myStatus', 'books');
+          const validStatus = await (service as any).validateSelectField(
+            '读过',
+            'myStatus',
+            'books',
+          );
+          const invalidStatus = await (service as any).validateSelectField(
+            '已读完',
+            'myStatus',
+            'books',
+          );
 
           expect(validStatus).toBe('读过');
           expect(invalidStatus).toBeNull();
         });
 
         it('应该验证其他选择字段保持原值', async () => {
-          const otherField = await (service as any).validateSelectField('其他值', 'otherField', 'books');
+          const otherField = await (service as any).validateSelectField(
+            '其他值',
+            'otherField',
+            'books',
+          );
           expect(otherField).toBe('其他值');
         });
       });
@@ -577,7 +659,7 @@ describe('DataTransformationService - Enterprise Data Transformation', () => {
           // 🔥 TDD: validateRatingField方法需要实现
           const validRating1 = await (service as any).validateRatingField(5);
           const validRating2 = await (service as any).validateRatingField(1);
-          
+
           expect(validRating1).toBe(5);
           expect(validRating2).toBe(1);
         });
@@ -585,10 +667,12 @@ describe('DataTransformationService - Enterprise Data Transformation', () => {
         it('应该修正无效的评分值', async () => {
           const invalidHigh = await (service as any).validateRatingField(6);
           const invalidLow = await (service as any).validateRatingField(0);
-          const invalidNegative = await (service as any).validateRatingField(-1);
+          const invalidNegative = await (service as any).validateRatingField(
+            -1,
+          );
 
           expect(invalidHigh).toBeNull();
-          expect(invalidLow).toBeNull(); 
+          expect(invalidLow).toBeNull();
           expect(invalidNegative).toBeNull();
         });
 
@@ -604,26 +688,38 @@ describe('DataTransformationService - Enterprise Data Transformation', () => {
       describe('validateDateTimeField - 日期时间字段验证', () => {
         it('应该验证有效的日期格式', async () => {
           // 🔥 TDD: validateDateTimeField方法需要实现
-          const validDate1 = await (service as any).validateDateTimeField('2024-01-01');
-          const validDate2 = await (service as any).validateDateTimeField('2024-12-31');
+          const validDate1 = await (service as any).validateDateTimeField(
+            '2024-01-01',
+          );
+          const validDate2 = await (service as any).validateDateTimeField(
+            '2024-12-31',
+          );
 
           expect(validDate1).toBe('2024-01-01');
           expect(validDate2).toBe('2024-12-31');
         });
 
         it('应该修正无效的日期格式', async () => {
-          const invalidDate1 = await (service as any).validateDateTimeField('2024-13-01'); // 无效月份
-          const invalidDate2 = await (service as any).validateDateTimeField('invalid-date');
-          const invalidDate3 = await (service as any).validateDateTimeField('2024/01/01'); // 错误分隔符
+          const invalidDate1 = await (service as any).validateDateTimeField(
+            '2024-13-01',
+          ); // 无效月份
+          const invalidDate2 = await (service as any).validateDateTimeField(
+            'invalid-date',
+          );
+          const invalidDate3 = await (service as any).validateDateTimeField(
+            '2024/01/01',
+          ); // 错误分隔符
 
           expect(invalidDate1).toBeNull();
-          expect(invalidDate2).toBeNull(); 
+          expect(invalidDate2).toBeNull();
           expect(invalidDate3).toBeNull();
         });
 
         it('应该处理空值和非字符串', async () => {
           const nullValue = await (service as any).validateDateTimeField(null);
-          const numberValue = await (service as any).validateDateTimeField(20240101);
+          const numberValue = await (service as any).validateDateTimeField(
+            20240101,
+          );
 
           expect(nullValue).toBeNull();
           expect(numberValue).toBeNull();
@@ -635,13 +731,17 @@ describe('DataTransformationService - Enterprise Data Transformation', () => {
       it('应该在禁用严格验证时跳过验证', async () => {
         const movieData = {
           title: '测试电影',
-          myStatus: '已看完' // 无效状态
+          myStatus: '已看完', // 无效状态
         };
 
-        const result = await service.transformDoubanData(movieData, 'movies', { strictValidation: false });
+        const result = await service.transformDoubanData(movieData, 'movies', {
+          strictValidation: false,
+        });
 
         expect(result.data.myStatus).toBe('已看完'); // 保持原值，未验证
-        expect(result.warnings.filter(w => w.includes('Invalid status')).length).toBe(0);
+        expect(
+          result.warnings.filter((w) => w.includes('Invalid status')).length,
+        ).toBe(0);
       });
     });
   });

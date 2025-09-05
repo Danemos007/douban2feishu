@@ -12,7 +12,7 @@ import { SyncEngineService } from '../feishu/services/sync-engine.service';
 
 /**
  * 同步服务 - 核心同步业务逻辑
- * 
+ *
  * 功能:
  * - 管理同步任务生命周期
  * - 队列任务调度
@@ -34,7 +34,10 @@ export class SyncService {
   /**
    * 触发同步任务
    */
-  async triggerSync(userId: string, triggerSyncDto: TriggerSyncDto): Promise<string> {
+  async triggerSync(
+    userId: string,
+    triggerSyncDto: TriggerSyncDto,
+  ): Promise<string> {
     try {
       // 检查是否有正在进行的同步任务
       const runningSyncExists = await this.prisma.syncHistory.findFirst({
@@ -91,8 +94,12 @@ export class SyncService {
 
       return syncHistory.id;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      this.logger.error(`Failed to trigger sync for user ${userId}:`, errorMessage);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      this.logger.error(
+        `Failed to trigger sync for user ${userId}:`,
+        errorMessage,
+      );
       throw error instanceof Error ? error : new Error(String(error));
     }
   }
@@ -159,8 +166,8 @@ export class SyncService {
 
       // 查找并取消队列中的任务
       const jobs = await this.syncQueue.getJobs(['active', 'waiting']);
-      const targetJob = jobs.find(job => job.data.syncId === syncId);
-      
+      const targetJob = jobs.find((job) => job.data.syncId === syncId);
+
       if (targetJob) {
         await targetJob.remove();
       }
@@ -185,7 +192,8 @@ export class SyncService {
 
       return true;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       this.logger.error(`Failed to cancel sync ${syncId}:`, errorMessage);
       return false;
     }
@@ -224,7 +232,8 @@ export class SyncService {
         this.syncGateway.notifyProgress(syncHistory.userId, progress);
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       this.logger.error(`Failed to update sync progress:`, errorMessage);
     }
   }
@@ -232,13 +241,16 @@ export class SyncService {
   /**
    * 企业级同步方法 - 集成数据转换功能
    */
-  async executeIntegratedSync(userId: string, options: {
-    category: 'books' | 'movies' | 'tv';
-    cookie: string;
-    isEncrypted?: boolean;
-    status?: string;
-    limit?: number;
-  }): Promise<{
+  async executeIntegratedSync(
+    userId: string,
+    options: {
+      category: 'books' | 'movies' | 'tv';
+      cookie: string;
+      isEncrypted?: boolean;
+      status?: string;
+      limit?: number;
+    },
+  ): Promise<{
     syncId: string;
     transformationResult: {
       rawData: any[];
@@ -252,9 +264,11 @@ export class SyncService {
     };
   }> {
     let syncHistory: any = null;
-    
+
     try {
-      this.logger.log(`Starting integrated sync for user ${userId}, category: ${options.category}`);
+      this.logger.log(
+        `Starting integrated sync for user ${userId}, category: ${options.category}`,
+      );
 
       // 创建同步历史记录
       syncHistory = await this.prisma.syncHistory.create({
@@ -291,7 +305,8 @@ export class SyncService {
       };
 
       // 执行抓取和转换
-      const transformationResult = await this.doubanService.scrapeAndTransform(fetchDto);
+      const transformationResult =
+        await this.doubanService.scrapeAndTransform(fetchDto);
 
       // [ARCHITECTURE-SAFETY] 验证转换后的数据结构完整性
       this.validateArchitectureSafety(transformationResult.transformedData);
@@ -314,24 +329,25 @@ export class SyncService {
 
       // 获取用户表格配置
       const tableId = this.getTableIdByCategory(options.category);
-      
+
       // 执行飞书同步
-      const feishuSyncResult = await this.feishuSyncEngine.performIncrementalSync(
-        userId,
-        {
-          appId: process.env.FEISHU_APP_ID || '',
-          appSecret: process.env.FEISHU_APP_SECRET || '',
-          appToken: process.env.FEISHU_APP_TOKEN || '',
-          tableId: tableId,
-          dataType: options.category,
-          subjectIdField: 'Subject ID',
-        },
-        transformationResult.transformedData,
-        {
-          fullSync: false,
-          conflictStrategy: 'douban_wins',
-        }
-      );
+      const feishuSyncResult =
+        await this.feishuSyncEngine.performIncrementalSync(
+          userId,
+          {
+            appId: process.env.FEISHU_APP_ID || '',
+            appSecret: process.env.FEISHU_APP_SECRET || '',
+            appToken: process.env.FEISHU_APP_TOKEN || '',
+            tableId: tableId,
+            dataType: options.category,
+            subjectIdField: 'Subject ID',
+          },
+          transformationResult.transformedData,
+          {
+            fullSync: false,
+            conflictStrategy: 'douban_wins',
+          },
+        );
 
       // 更新同步状态为成功
       await this.prisma.syncHistory.update({
@@ -362,17 +378,22 @@ export class SyncService {
         itemsProcessed: feishuSyncResult.summary.total || 0,
       });
 
-      this.logger.log(`Integrated sync completed for user ${userId}: ${transformationResult.transformationStats.totalProcessed} items`);
+      this.logger.log(
+        `Integrated sync completed for user ${userId}: ${transformationResult.transformationStats.totalProcessed} items`,
+      );
 
       return {
         syncId: syncHistory.id,
         transformationResult,
       };
-
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      this.logger.error(`Integrated sync failed for user ${userId}:`, errorMessage);
-      
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      this.logger.error(
+        `Integrated sync failed for user ${userId}:`,
+        errorMessage,
+      );
+
       // 更新同步状态为失败
       try {
         await this.prisma.syncHistory.update({
@@ -394,7 +415,10 @@ export class SyncService {
           });
         }
       } catch (updateError) {
-        this.logger.error('Failed to update sync history on error:', updateError);
+        this.logger.error(
+          'Failed to update sync history on error:',
+          updateError,
+        );
       }
 
       throw error instanceof Error ? error : new Error(String(error));
@@ -407,9 +431,9 @@ export class SyncService {
   private getTableIdByCategory(category: string): string {
     // [ARCHITECTURE-SAFETY] 防止硬编码表格ID，应从用户配置或环境变量获取
     const tableMapping: Record<string, string> = {
-      'books': process.env.FEISHU_BOOKS_TABLE_ID || 'tblgm24SCh26ZJ0o',
-      'movies': process.env.FEISHU_MOVIES_TABLE_ID || 'tblj9s2409ur7Rrx',
-      'tv': process.env.FEISHU_TV_TABLE_ID || 'tblLO7EWUWOExQ7P',
+      books: process.env.FEISHU_BOOKS_TABLE_ID || 'tblgm24SCh26ZJ0o',
+      movies: process.env.FEISHU_MOVIES_TABLE_ID || 'tblj9s2409ur7Rrx',
+      tv: process.env.FEISHU_TV_TABLE_ID || 'tblLO7EWUWOExQ7P',
     };
 
     const tableId = tableMapping[category];
@@ -431,17 +455,22 @@ export class SyncService {
     }
 
     // [ARCHITECTURE-SAFETY] 验证数据结构完整性
-    for (const item of data.slice(0, 5)) { // 检查前5条记录
+    for (const item of data.slice(0, 5)) {
+      // 检查前5条记录
       if (!item.subjectId) {
-        throw new Error('Data validation failed: missing subjectId (required for sync)');
+        throw new Error(
+          'Data validation failed: missing subjectId (required for sync)',
+        );
       }
-      
+
       if (typeof item !== 'object' || item === null) {
         throw new Error('Data validation failed: invalid data structure');
       }
     }
 
-    this.logger.log(`Architecture safety validation passed for ${data.length} items`);
+    this.logger.log(
+      `Architecture safety validation passed for ${data.length} items`,
+    );
   }
 
   /**

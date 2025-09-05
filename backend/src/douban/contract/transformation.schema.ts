@@ -1,9 +1,9 @@
 /**
  * 数据转换Zod验证Schema体系
- * 
+ *
  * 为DataTransformationService提供完整的运行时类型安全保障
  * 基于"宽进严出" + "类型唯一性"原则设计
- * 
+ *
  * 创建时间: 2025-09-04
  * 用途: 数据转换逻辑的类型安全和验证
  */
@@ -13,35 +13,44 @@ import { z } from 'zod';
 /**
  * 支持的豆瓣数据类型
  */
-export const DoubanDataTypeSchema = z.enum(['books', 'movies', 'tv', 'documentary']);
+export const DoubanDataTypeSchema = z.enum([
+  'books',
+  'movies',
+  'tv',
+  'documentary',
+]);
 
 /**
  * 转换选项配置Schema
  */
-const TransformationOptionsSchema = z.object({
-  enableIntelligentRepairs: z.boolean().default(true),
-  strictValidation: z.boolean().default(true),
-  preserveRawData: z.boolean().default(false),
-  customFieldMappings: z.record(z.string(), z.string()).optional(),
-}).partial(); // 所有字段都是可选的
+const TransformationOptionsSchema = z
+  .object({
+    enableIntelligentRepairs: z.boolean().default(true),
+    strictValidation: z.boolean().default(true),
+    preserveRawData: z.boolean().default(false),
+    customFieldMappings: z.record(z.string(), z.string()).optional(),
+  })
+  .partial(); // 所有字段都是可选的
 
 /**
  * 转换统计信息Schema
  */
-const TransformationStatisticsSchema = z.object({
-  totalFields: z.number().min(0, '总字段数不能为负数'),
-  transformedFields: z.number().min(0, '转换字段数不能为负数'),
-  repairedFields: z.number().min(0, '修复字段数不能为负数'),
-  failedFields: z.number().min(0, '失败字段数不能为负数'),
-}).refine(
-  // 自定义验证：确保数量逻辑合理
-  (data) => {
-    return data.transformedFields + data.failedFields <= data.totalFields;
-  },
-  {
-    message: '转换字段数 + 失败字段数不能超过总字段数'
-  }
-);
+const TransformationStatisticsSchema = z
+  .object({
+    totalFields: z.number().min(0, '总字段数不能为负数'),
+    transformedFields: z.number().min(0, '转换字段数不能为负数'),
+    repairedFields: z.number().min(0, '修复字段数不能为负数'),
+    failedFields: z.number().min(0, '失败字段数不能为负数'),
+  })
+  .refine(
+    // 自定义验证：确保数量逻辑合理
+    (data) => {
+      return data.transformedFields + data.failedFields <= data.totalFields;
+    },
+    {
+      message: '转换字段数 + 失败字段数不能超过总字段数',
+    },
+  );
 
 /**
  * 转换结果Schema
@@ -73,7 +82,16 @@ const IntelligentRepairConfigSchema = z.object({
 const FieldTransformationContextSchema = z.object({
   fieldName: z.string().min(1, '字段名不能为空'),
   sourceValue: z.any(),
-  targetFieldType: z.enum(['text', 'number', 'rating', 'singleSelect', 'multiSelect', 'datetime', 'checkbox', 'url']),
+  targetFieldType: z.enum([
+    'text',
+    'number',
+    'rating',
+    'singleSelect',
+    'multiSelect',
+    'datetime',
+    'checkbox',
+    'url',
+  ]),
   isRequired: z.boolean(),
   hasNestedPath: z.boolean(),
   processingNotes: z.string().optional(),
@@ -85,7 +103,12 @@ const FieldTransformationContextSchema = z.object({
  */
 const TransformationErrorSchema = z.object({
   fieldName: z.string().min(1, '字段名不能为空'),
-  errorType: z.enum(['validation_error', 'type_conversion_error', 'nested_path_error', 'repair_error']),
+  errorType: z.enum([
+    'validation_error',
+    'type_conversion_error',
+    'nested_path_error',
+    'repair_error',
+  ]),
   errorMessage: z.string().min(1, '错误信息不能为空'),
   sourceValue: z.any(),
   timestamp: z.date().default(() => new Date()),
@@ -119,18 +142,17 @@ const BatchTransformationResultSchema = z.object({
 /**
  * 转换性能指标Schema
  */
-const TransformationPerformanceSchema = z.object({
-  startTime: z.date(),
-  endTime: z.date(),
-  durationMs: z.number().min(0, '处理时间不能为负数'),
-  memoryUsageKB: z.number().min(0).optional(),
-  fieldsPerSecond: z.number().min(0).optional(),
-}).refine(
-  (data) => data.endTime >= data.startTime,
-  {
-    message: '结束时间不能早于开始时间'
-  }
-);
+const TransformationPerformanceSchema = z
+  .object({
+    startTime: z.date(),
+    endTime: z.date(),
+    durationMs: z.number().min(0, '处理时间不能为负数'),
+    memoryUsageKB: z.number().min(0).optional(),
+    fieldsPerSecond: z.number().min(0).optional(),
+  })
+  .refine((data) => data.endTime >= data.startTime, {
+    message: '结束时间不能早于开始时间',
+  });
 
 /**
  * 数据转换审计记录Schema
@@ -150,14 +172,28 @@ const TransformationAuditSchema = z.object({
 // ✅ 类型唯一性：所有TS类型从Schema生成
 export type DoubanDataType = z.infer<typeof DoubanDataTypeSchema>;
 export type TransformationOptions = z.infer<typeof TransformationOptionsSchema>;
-export type TransformationStatistics = z.infer<typeof TransformationStatisticsSchema>;
-export type TransformationResult<T = any> = z.infer<typeof TransformationResultSchema>;
-export type IntelligentRepairConfig = z.infer<typeof IntelligentRepairConfigSchema>;
-export type FieldTransformationContext = z.infer<typeof FieldTransformationContextSchema>;
+export type TransformationStatistics = z.infer<
+  typeof TransformationStatisticsSchema
+>;
+export type TransformationResult<T = any> = z.infer<
+  typeof TransformationResultSchema
+>;
+export type IntelligentRepairConfig = z.infer<
+  typeof IntelligentRepairConfigSchema
+>;
+export type FieldTransformationContext = z.infer<
+  typeof FieldTransformationContextSchema
+>;
 export type TransformationError = z.infer<typeof TransformationErrorSchema>;
-export type BatchTransformationRequest = z.infer<typeof BatchTransformationRequestSchema>;
-export type BatchTransformationResult = z.infer<typeof BatchTransformationResultSchema>;
-export type TransformationPerformance = z.infer<typeof TransformationPerformanceSchema>;
+export type BatchTransformationRequest = z.infer<
+  typeof BatchTransformationRequestSchema
+>;
+export type BatchTransformationResult = z.infer<
+  typeof BatchTransformationResultSchema
+>;
+export type TransformationPerformance = z.infer<
+  typeof TransformationPerformanceSchema
+>;
 export type TransformationAudit = z.infer<typeof TransformationAuditSchema>;
 
 // Schema导出
@@ -178,15 +214,17 @@ export {
  * 验证工具函数：验证转换选项
  */
 export function validateTransformationOptions(
-  options: unknown
-): { success: true; data: TransformationOptions } | { success: false; error: string } {
+  options: unknown,
+):
+  | { success: true; data: TransformationOptions }
+  | { success: false; error: string } {
   try {
     const validatedOptions = TransformationOptionsSchema.parse(options);
     return { success: true, data: validatedOptions };
   } catch (error) {
     if (error instanceof z.ZodError) {
       const errorMessage = error.issues
-        .map(err => `${err.path.join('.')}: ${err.message}`)
+        .map((err) => `${err.path.join('.')}: ${err.message}`)
         .join('; ');
       return { success: false, error: `转换选项验证失败: ${errorMessage}` };
     }
@@ -198,15 +236,17 @@ export function validateTransformationOptions(
  * 验证工具函数：验证转换结果
  */
 export function validateTransformationResult(
-  result: unknown
-): { success: true; data: TransformationResult } | { success: false; error: string } {
+  result: unknown,
+):
+  | { success: true; data: TransformationResult }
+  | { success: false; error: string } {
   try {
     const validatedResult = TransformationResultSchema.parse(result);
     return { success: true, data: validatedResult };
   } catch (error) {
     if (error instanceof z.ZodError) {
       const errorMessage = error.issues
-        .map(err => `${err.path.join('.')}: ${err.message}`)
+        .map((err) => `${err.path.join('.')}: ${err.message}`)
         .join('; ');
       return { success: false, error: `转换结果验证失败: ${errorMessage}` };
     }
@@ -217,7 +257,9 @@ export function validateTransformationResult(
 /**
  * 验证工具函数：验证豆瓣数据类型
  */
-export function validateDoubanDataType(dataType: unknown): dataType is DoubanDataType {
+export function validateDoubanDataType(
+  dataType: unknown,
+): dataType is DoubanDataType {
   try {
     DoubanDataTypeSchema.parse(dataType);
     return true;

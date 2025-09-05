@@ -3,11 +3,14 @@ import { ConfigService } from '@nestjs/config';
 import axios, { AxiosInstance } from 'axios';
 
 import { BatchCreateRecordsDto } from './dto/feishu.dto';
-import { FeishuRecord, FeishuTokenResponse } from './interfaces/feishu.interface';
+import {
+  FeishuRecord,
+  FeishuTokenResponse,
+} from './interfaces/feishu.interface';
 
 /**
  * 飞书服务 - 飞书多维表格API集成
- * 
+ *
  * 功能:
  * - 自动token管理
  * - 批量记录操作
@@ -30,7 +33,10 @@ export class FeishuService {
    */
   private createHttpClient(): AxiosInstance {
     return axios.create({
-      baseURL: this.configService.get<string>('FEISHU_BASE_URL', 'https://open.feishu.cn'),
+      baseURL: this.configService.get<string>(
+        'FEISHU_BASE_URL',
+        'https://open.feishu.cn',
+      ),
       timeout: 30000,
       headers: {
         'Content-Type': 'application/json; charset=utf-8',
@@ -41,20 +47,26 @@ export class FeishuService {
   /**
    * 获取访问令牌
    */
-  private async getAccessToken(appId: string, appSecret: string): Promise<string> {
+  private async getAccessToken(
+    appId: string,
+    appSecret: string,
+  ): Promise<string> {
     const cacheKey = `${appId}:${appSecret}`;
     const cached = this.tokenCache.get(cacheKey);
-    
+
     // 检查缓存是否有效 (提前5分钟过期)
     if (cached && cached.expiresAt > Date.now() + 300000) {
       return cached.token;
     }
 
     try {
-      const response = await this.httpClient.post('/open-apis/auth/v3/tenant_access_token/internal', {
-        app_id: appId,
-        app_secret: appSecret,
-      }) as any;
+      const response = (await this.httpClient.post(
+        '/open-apis/auth/v3/tenant_access_token/internal',
+        {
+          app_id: appId,
+          app_secret: appSecret,
+        },
+      )) as any;
 
       if (response.data.code !== 0) {
         throw new Error(`Failed to get access token: ${response.data.msg}`);
@@ -64,10 +76,9 @@ export class FeishuService {
       const expiresAt = Date.now() + (response.data.expire - 300) * 1000; // 提前5分钟
 
       this.tokenCache.set(cacheKey, { token, expiresAt });
-      
+
       this.logger.debug(`Access token obtained for app ${appId}`);
       return token;
-
     } catch (error) {
       this.logger.error(`Failed to get access token for app ${appId}:`, error);
       throw error;
@@ -77,39 +88,47 @@ export class FeishuService {
   /**
    * 批量创建记录
    */
-  async batchCreateRecords(dto: BatchCreateRecordsDto): Promise<{ success: number; failed: number }> {
+  async batchCreateRecords(
+    dto: BatchCreateRecordsDto,
+  ): Promise<{ success: number; failed: number }> {
     try {
       const token = await this.getAccessToken(dto.appId, dto.appSecret);
-      
+
       let success = 0;
       let failed = 0;
-      
+
       // 分批处理，每批最多500条记录
       const batchSize = 500;
       const batches = this.createBatches(dto.records, batchSize);
-      
+
       for (let i = 0; i < batches.length; i++) {
         const batch = batches[i];
-        
+
         try {
-          await this.processBatch(token, dto.appToken, dto.tableId, batch, dto.tableMapping);
+          await this.processBatch(
+            token,
+            dto.appToken,
+            dto.tableId,
+            batch,
+            dto.tableMapping,
+          );
           success += batch.length;
-          
-          this.logger.log(`Batch ${i + 1}/${batches.length} processed successfully (${batch.length} records)`);
-          
+
+          this.logger.log(
+            `Batch ${i + 1}/${batches.length} processed successfully (${batch.length} records)`,
+          );
+
           // API限流延迟
           if (i < batches.length - 1) {
             await this.delay(1000);
           }
-          
         } catch (error) {
           this.logger.error(`Batch ${i + 1} failed:`, error);
           failed += batch.length;
         }
       }
-      
+
       return { success, failed };
-      
     } catch (error) {
       this.logger.error('Batch create records failed:', error);
       throw error;
@@ -127,8 +146,10 @@ export class FeishuService {
     tableMapping?: Record<string, string>,
   ): Promise<void> {
     // 转换记录格式
-    const feishuRecords = records.map(record => this.transformRecord(record, tableMapping));
-    
+    const feishuRecords = records.map((record) =>
+      this.transformRecord(record, tableMapping),
+    );
+
     const response = await this.httpClient.post(
       `/open-apis/bitable/v1/apps/${appToken}/tables/${tableId}/records/batch_create`,
       {
@@ -149,15 +170,18 @@ export class FeishuService {
   /**
    * 转换记录格式 - 映射字段名到Field ID
    */
-  private transformRecord(record: any, tableMapping?: Record<string, string>): FeishuRecord {
+  private transformRecord(
+    record: any,
+    tableMapping?: Record<string, string>,
+  ): FeishuRecord {
     const fields: Record<string, any> = {};
-    
+
     for (const [key, value] of Object.entries(record)) {
       // 使用映射表转换字段名为Field ID
       const fieldId = tableMapping?.[key] || key;
       fields[fieldId] = this.formatFieldValue(value);
     }
-    
+
     return { fields };
   }
 
@@ -168,42 +192,47 @@ export class FeishuService {
     if (value === null || value === undefined) {
       return null;
     }
-    
+
     // 文本字段
     if (typeof value === 'string') {
       return value;
     }
-    
+
     // 数字字段
     if (typeof value === 'number') {
       return value;
     }
-    
+
     // 日期字段 - 转换为时间戳
     if (value instanceof Date) {
       return Math.floor(value.getTime() / 1000);
     }
-    
+
     // 数组字段 - 多选等
     if (Array.isArray(value)) {
       return value;
     }
-    
+
     // 对象字段 - JSON存储
     if (typeof value === 'object') {
       return JSON.stringify(value);
     }
-    
+
     return String(value);
   }
 
   /**
    * 获取表格字段信息
    */
-  async getTableFields(appId: string, appSecret: string, appToken: string, tableId: string) {
+  async getTableFields(
+    appId: string,
+    appSecret: string,
+    appToken: string,
+    tableId: string,
+  ) {
     try {
       const token = await this.getAccessToken(appId, appSecret);
-      
+
       const response = await this.httpClient.get(
         `/open-apis/bitable/v1/apps/${appToken}/tables/${tableId}/fields`,
         {
@@ -237,7 +266,7 @@ export class FeishuService {
   ) {
     try {
       const token = await this.getAccessToken(appId, appSecret);
-      
+
       const response = await this.httpClient.post(
         `/open-apis/bitable/v1/apps/${appToken}/tables/${tableId}/records/search`,
         {
@@ -282,7 +311,7 @@ export class FeishuService {
   ): Promise<void> {
     try {
       const token = await this.getAccessToken(appId, appSecret);
-      
+
       const response = await this.httpClient.put(
         `/open-apis/bitable/v1/apps/${appToken}/tables/${tableId}/records/${recordId}`,
         { fields },
@@ -317,7 +346,7 @@ export class FeishuService {
    * 延迟函数
    */
   private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /**

@@ -18,7 +18,13 @@ export interface SyncJobData {
 export interface SyncProgress {
   syncId: string;
   jobId?: string;
-  status: 'QUEUED' | 'RUNNING' | 'PROCESSING' | 'SUCCESS' | 'FAILED' | 'CANCELLED';
+  status:
+    | 'QUEUED'
+    | 'RUNNING'
+    | 'PROCESSING'
+    | 'SUCCESS'
+    | 'FAILED'
+    | 'CANCELLED';
   progress: number; // 0-100
   message: string;
   itemsProcessed?: number;

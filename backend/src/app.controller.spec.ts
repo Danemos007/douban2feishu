@@ -38,7 +38,9 @@ describe('AppController', () => {
       const result = appController.getWelcome();
       expect(result).toBeDefined();
       expect(result.name).toBe('豆瓣飞书同步助手 (D2F)');
-      expect(result.description).toBe('Douban to Feishu Sync Assistant - Backend API');
+      expect(result.description).toBe(
+        'Douban to Feishu Sync Assistant - Backend API',
+      );
       expect(result.version).toBeDefined();
       expect(result.environment).toBeDefined();
       expect(result.features).toBeInstanceOf(Array);

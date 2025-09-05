@@ -8,7 +8,7 @@ import { JwtPayload, AuthenticatedUser } from '../interfaces/auth.interface';
 
 /**
  * JWT认证策略 - Passport.js集成
- * 
+ *
  * 功能:
  * - 从Authorization header中提取JWT token
  * - 验证token签名和有效性
@@ -24,14 +24,16 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: configService.get<string>('JWT_SECRET') || 'default-secret-key-for-development',
+      secretOrKey:
+        configService.get<string>('JWT_SECRET') ||
+        'default-secret-key-for-development',
       algorithms: ['HS256'],
     });
   }
 
   /**
    * JWT载荷验证 - 由Passport自动调用
-   * 
+   *
    * @param payload JWT解码后的载荷
    * @returns 认证用户信息
    */
@@ -39,7 +41,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     try {
       // 验证用户是否存在且有效
       const user = await this.authService.validateJwtPayload(payload);
-      
+
       if (!user) {
         throw new UnauthorizedException('User not found or deactivated');
       }

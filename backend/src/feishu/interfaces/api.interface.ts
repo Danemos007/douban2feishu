@@ -3,7 +3,10 @@
  * 专门用于飞书API交互的类型安全保障
  */
 
-import { ApiResponse, ApiErrorResponse } from '../../common/interfaces/http.interface';
+import {
+  ApiResponse,
+  ApiErrorResponse,
+} from '../../common/interfaces/http.interface';
 
 /**
  * 飞书API认证相关类型
@@ -13,10 +16,11 @@ export interface FeishuTokenRequest {
   app_secret: string;
 }
 
-export interface FeishuTokenResponse extends ApiResponse<{
-  tenant_access_token: string;
-  expire: number;
-}> {}
+export interface FeishuTokenResponse
+  extends ApiResponse<{
+    tenant_access_token: string;
+    expire: number;
+  }> {}
 
 /**
  * 飞书多维表格字段相关类型
@@ -60,17 +64,23 @@ export interface FeishuFieldInfo {
   };
 }
 
-export interface FeishuFieldsResponse extends ApiResponse<{
-  items: FeishuFieldInfo[];
-  has_more: boolean;
-  page_token?: string;
-  total: number;
-}> {}
+export interface FeishuFieldsResponse
+  extends ApiResponse<{
+    items: FeishuFieldInfo[];
+    has_more: boolean;
+    page_token?: string;
+    total: number;
+  }> {}
 
 /**
  * 飞书多维表格记录相关类型
  */
-export type FeishuFieldValue = string | number | boolean | null | Array<string | number>;
+export type FeishuFieldValue =
+  | string
+  | number
+  | boolean
+  | null
+  | Array<string | number>;
 
 export interface FeishuRecordFields {
   [fieldId: string]: FeishuFieldValue;
@@ -95,19 +105,26 @@ export interface FeishuRecordItem {
   last_modified_time?: number;
 }
 
-export interface FeishuRecordsResponse extends ApiResponse<{
-  items: FeishuRecordItem[];
-  has_more: boolean;
-  page_token?: string;
-  total: number;
-}> {}
+export interface FeishuRecordsResponse
+  extends ApiResponse<{
+    items: FeishuRecordItem[];
+    has_more: boolean;
+    page_token?: string;
+    total: number;
+  }> {}
 
 /**
  * 飞书记录查询过滤条件
  */
 export interface FeishuFilterCondition {
   field_id: string;
-  operator: 'is' | 'isNot' | 'contains' | 'doesNotContain' | 'isEmpty' | 'isNotEmpty';
+  operator:
+    | 'is'
+    | 'isNot'
+    | 'contains'
+    | 'doesNotContain'
+    | 'isEmpty'
+    | 'isNotEmpty';
   value?: string | number | boolean;
 }
 
@@ -144,12 +161,13 @@ export interface FeishuBatchDeleteRequest {
   records: string[]; // record_ids
 }
 
-export interface FeishuBatchOperationResponse extends ApiResponse<{
-  records: Array<{
-    record_id?: string;
-    fields?: FeishuRecordFields;
-  }>;
-}> {}
+export interface FeishuBatchOperationResponse
+  extends ApiResponse<{
+    records: Array<{
+      record_id?: string;
+      fields?: FeishuRecordFields;
+    }>;
+  }> {}
 
 /**
  * 飞书错误响应专用类型
@@ -164,21 +182,21 @@ export interface FeishuErrorResponse extends ApiErrorResponse {
  * 飞书字段类型枚举
  */
 export enum FeishuFieldType {
-  Text = 1,           // 文本
-  Number = 2,         // 数字
-  SingleSelect = 3,   // 单选
-  MultiSelect = 4,    // 多选
-  DateTime = 5,       // 日期时间
-  Checkbox = 7,       // 复选框
-  User = 11,          // 人员
-  Phone = 13,         // 电话号码
-  URL = 15,           // 超链接
-  Attachment = 17,    // 附件
-  Formula = 20,       // 公式
-  Rating = 2,         // 评分（与Number共享type=2，通过ui_type区分）
+  Text = 1, // 文本
+  Number = 2, // 数字
+  SingleSelect = 3, // 单选
+  MultiSelect = 4, // 多选
+  DateTime = 5, // 日期时间
+  Checkbox = 7, // 复选框
+  User = 11, // 人员
+  Phone = 13, // 电话号码
+  URL = 15, // 超链接
+  Attachment = 17, // 附件
+  Formula = 20, // 公式
+  Rating = 2, // 评分（与Number共享type=2，通过ui_type区分）
   CreatedTime = 1001, // 创建时间
   ModifiedTime = 1002, // 修改时间
-  CreatedUser = 1003,  // 创建人
+  CreatedUser = 1003, // 创建人
   ModifiedUser = 1004, // 修改人
 }
 

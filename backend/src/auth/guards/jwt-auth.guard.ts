@@ -1,6 +1,6 @@
-import { 
-  Injectable, 
-  ExecutionContext, 
+import {
+  Injectable,
+  ExecutionContext,
   UnauthorizedException,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
@@ -10,7 +10,7 @@ import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 
 /**
  * JWT认证守卫 - 保护需要认证的路由
- * 
+ *
  * 功能:
  * - 验证JWT token的有效性
  * - 支持@Public()装饰器跳过认证
@@ -45,14 +45,14 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
    * 处理认证失败情况
    */
   override handleRequest<TUser = any>(
-    err: any, 
-    user: any, 
-    info: any, 
+    err: any,
+    user: any,
+    info: any,
     context: ExecutionContext,
   ): TUser {
     if (err || !user) {
       let message = 'Authentication failed';
-      
+
       if (info?.name === 'TokenExpiredError') {
         message = 'Token has expired';
       } else if (info?.name === 'JsonWebTokenError') {
@@ -60,10 +60,10 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       } else if (info?.message) {
         message = info.message;
       }
-      
+
       throw new UnauthorizedException(message);
     }
-    
+
     return user;
   }
 }

@@ -1,16 +1,16 @@
-import { 
-  Controller, 
-  Post, 
-  Body, 
-  UseGuards, 
+import {
+  Controller,
+  Post,
+  Body,
+  UseGuards,
   Request,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { 
-  ApiTags, 
-  ApiOperation, 
-  ApiResponse, 
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
   ApiBody,
   ApiBearerAuth,
 } from '@nestjs/swagger';
@@ -23,7 +23,7 @@ import { TokenResponse } from './interfaces/auth.interface';
 
 /**
  * 认证控制器 - RESTful API端点
- * 
+ *
  * 路由:
  * POST /api/auth/register - 用户注册
  * POST /api/auth/login    - 用户登录
@@ -40,23 +40,23 @@ export class AuthController {
    */
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ 
+  @ApiOperation({
     summary: '用户注册',
-    description: '使用邮箱和密码创建新用户账户' 
+    description: '使用邮箱和密码创建新用户账户',
   })
   @ApiBody({ type: RegisterDto })
-  @ApiResponse({ 
-    status: 201, 
+  @ApiResponse({
+    status: 201,
     description: '注册成功，返回JWT token',
     type: TokenResponse,
   })
-  @ApiResponse({ 
-    status: 409, 
-    description: '用户已存在' 
+  @ApiResponse({
+    status: 409,
+    description: '用户已存在',
   })
-  @ApiResponse({ 
-    status: 400, 
-    description: '请求参数无效' 
+  @ApiResponse({
+    status: 400,
+    description: '请求参数无效',
   })
   async register(@Body() registerDto: RegisterDto): Promise<TokenResponse> {
     return this.authService.register(registerDto);
@@ -68,23 +68,23 @@ export class AuthController {
   @UseGuards(LocalAuthGuard)
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ 
+  @ApiOperation({
     summary: '用户登录',
-    description: '使用邮箱和密码登录获取JWT token' 
+    description: '使用邮箱和密码登录获取JWT token',
   })
   @ApiBody({ type: LoginDto })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: '登录成功，返回JWT token',
     type: TokenResponse,
   })
-  @ApiResponse({ 
-    status: 401, 
-    description: '邮箱或密码错误' 
+  @ApiResponse({
+    status: 401,
+    description: '邮箱或密码错误',
   })
-  @ApiResponse({ 
-    status: 400, 
-    description: '请求参数无效' 
+  @ApiResponse({
+    status: 400,
+    description: '请求参数无效',
   })
   async login(@Request() req: any): Promise<TokenResponse> {
     return this.authService.login(req.user);
@@ -95,21 +95,23 @@ export class AuthController {
    */
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ 
+  @ApiOperation({
     summary: '刷新Token',
-    description: '使用refresh token获取新的access token' 
+    description: '使用refresh token获取新的access token',
   })
   @ApiBody({ type: RefreshTokenDto })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: '刷新成功，返回新的JWT token',
     type: TokenResponse,
   })
-  @ApiResponse({ 
-    status: 401, 
-    description: 'Refresh token无效或过期' 
+  @ApiResponse({
+    status: 401,
+    description: 'Refresh token无效或过期',
   })
-  async refreshToken(@Body() refreshTokenDto: RefreshTokenDto): Promise<TokenResponse> {
+  async refreshToken(
+    @Body() refreshTokenDto: RefreshTokenDto,
+  ): Promise<TokenResponse> {
     return this.authService.refreshToken(refreshTokenDto.refreshToken);
   }
 
@@ -120,17 +122,17 @@ export class AuthController {
   @Post('profile')
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth()
-  @ApiOperation({ 
+  @ApiOperation({
     summary: '获取用户信息',
-    description: '获取当前认证用户的详细信息' 
+    description: '获取当前认证用户的详细信息',
   })
-  @ApiResponse({ 
-    status: 200, 
-    description: '用户信息获取成功' 
+  @ApiResponse({
+    status: 200,
+    description: '用户信息获取成功',
   })
-  @ApiResponse({ 
-    status: 401, 
-    description: '未授权访问' 
+  @ApiResponse({
+    status: 401,
+    description: '未授权访问',
   })
   async getProfile(@Request() req: any) {
     return {

@@ -216,7 +216,7 @@ Object.entries(FIELD_MAPPINGS.books).forEach(([doubanKey, feishuFieldName]) => {
 
 **价值分析**: 这是经过大量调试的字段值处理逻辑，支持嵌套属性解析、数组合并、类型转换等复杂场景。
 
-##### B. 飞书Token获取逻辑
+##### 【已整合】B. 飞书Token获取逻辑
 
 ```typescript
 // [RESCUED-LOGIC] 飞书Token获取 - 直接API调用方式
@@ -227,7 +227,7 @@ const tokenResponse = await axios.post('https://open.feishu.cn/open-apis/auth/v3
 const accessToken = (tokenResponse.data as any).tenant_access_token;
 ```
 
-##### C. API限制防护逻辑
+##### 【已整合】C. API限制防护逻辑
 
 ```typescript
 // [RESCUED-LOGIC] API限制防护 - 1秒延迟
@@ -343,9 +343,9 @@ const CONFIG = {
 };
 ```
 
-#### 🔧 3. 独特业务逻辑 - **超高价值** ⭐⭐⭐⭐⭐
+#### 【已整合】🔧 3. 独特业务逻辑 - **超高价值** ⭐⭐⭐⭐⭐
 
-##### A. 企业级字段自动创建系统 (经过大量调试)
+##### 【已整合】A. 企业级字段自动创建系统 (经过大量调试)
 
 ```typescript
 // [RESCUED-LOGIC] 完整的字段创建switch逻辑 - 每种字段类型都经过测试验证
@@ -446,7 +446,7 @@ async createSingleField(fieldName: string): Promise<void> {
 
 **价值分析**: 这是完整的飞书字段创建配置，每种字段类型都有精确的参数设置，包括颜色、范围、格式等。
 
-##### B. 智能字段检查和自动创建流程
+##### 【已整合】B. 智能字段检查和自动创建流程
 
 ```typescript
 // [RESCUED-LOGIC] 字段检查和自动创建流程 - 企业级实现
@@ -678,9 +678,9 @@ const CONFIG = {
 };
 ```
 
-#### 🔧 3. 独特业务逻辑 - **超高价值** ⭐⭐⭐⭐⭐
+#### 【已整合】🔧 3. 独特业务逻辑 - **超高价值** ⭐⭐⭐⭐⭐
 
-##### A. 书籍状态字段自动创建逻辑 (经过精心调试)
+##### 【已整合】A. 书籍状态字段自动创建逻辑 (经过精心调试)
 
 ```typescript
 // [RESCUED-LOGIC] 书籍状态字段创建 - 包含颜色配置和状态选项
@@ -721,7 +721,7 @@ async function ensureStatusField(accessToken: string): Promise<void> {
 
 **价值分析**: 书籍专用的状态选项，与电影的"想看/看过"不同，书籍有"想读/在读/读过"三个状态。
 
-##### B. 状态字段选项映射和验证 (复杂验证逻辑)
+##### 【已整合】B. 状态字段选项映射和验证 (复杂验证逻辑)
 
 ```typescript
 // [RESCUED-LOGIC] 状态选项智能验证 - 排除错误选项

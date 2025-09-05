@@ -64,7 +64,13 @@ export interface FeishuCreateFieldPayload {
 export interface FeishuRecordFilter {
   conditions: Array<{
     field_id: string;
-    operator: 'is' | 'isNot' | 'contains' | 'doesNotContain' | 'isEmpty' | 'isNotEmpty';
+    operator:
+      | 'is'
+      | 'isNot'
+      | 'contains'
+      | 'doesNotContain'
+      | 'isEmpty'
+      | 'isNotEmpty';
     value?: string | number | boolean;
   }>;
   conjunction?: 'and' | 'or';
@@ -87,9 +93,18 @@ export interface FeishuSearchRecordPayload {
  * 通用的记录数据类型（用于批量操作）
  * 支持两种格式：直接字段映射 或 包含fields属性的对象
  */
-export type FeishuRecordData = 
+export type FeishuRecordData =
   | { [key: string]: string | number | boolean | null | Array<string | number> }
-  | { fields: { [key: string]: string | number | boolean | null | Array<string | number> } };
+  | {
+      fields: {
+        [key: string]:
+          | string
+          | number
+          | boolean
+          | null
+          | Array<string | number>;
+      };
+    };
 
 /**
  * 飞书API通用响应
@@ -127,7 +142,6 @@ export interface FeishuRecordItem {
   };
   last_modified_time?: number;
 }
-
 
 /**
  * 表格映射配置

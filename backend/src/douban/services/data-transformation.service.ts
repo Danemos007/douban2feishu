@@ -1,11 +1,11 @@
 /**
  * 数据转换引擎服务
- * 
+ *
  * 整合四个版本的高价值逻辑：
  * - 实现A: 通用转换引擎 (嵌套属性 + 数组处理)
  * - 实现D: 智能修复引擎 (片长/日期/地区/语言)
  * - 实现C: 严格验证系统 (字段验证 + 边界处理)
- * 
+ *
  * 设计原则：
  * - 严格TDD开发
  * - 企业级架构集成
@@ -24,18 +24,18 @@ import {
   FieldTransformationContext,
   TransformationError,
   validateTransformationOptions,
-  validateTransformationResult
+  validateTransformationResult,
 } from '../contract/transformation.schema';
 
-import { 
+import {
   getVerifiedFieldMapping,
-  VerifiedFieldMappingConfig 
+  VerifiedFieldMappingConfig,
 } from '../../feishu/config/douban-field-mapping-verified.config';
 
 @Injectable()
 export class DataTransformationService {
   private readonly logger = new Logger(DataTransformationService.name);
-  
+
   // 转换过程中的状态
   private warnings: string[] = [];
   private errors: TransformationError[] = [];
@@ -43,29 +43,34 @@ export class DataTransformationService {
 
   /**
    * 🔥 核心转换方法 - 整合四个版本的精华逻辑
-   * 
+   *
    * @param rawData 原始豆瓣数据
-   * @param dataType 数据类型 
+   * @param dataType 数据类型
    * @param options 转换选项
    * @returns 转换结果
    */
   async transformDoubanData<T = any>(
     rawData: any,
     dataType: DoubanDataType,
-    options?: TransformationOptions
+    options?: TransformationOptions,
   ): Promise<TransformationResult<T>> {
     // 🔥 TDD: 这个方法需要实现，目前只是骨架
     try {
       this.logger.log(`Starting data transformation for ${dataType}`);
-      
+
       // 重置状态
       this.warnings = [];
       this.errors = [];
-      this.statistics = { totalFields: 0, transformedFields: 0, repairedFields: 0, failedFields: 0 };
+      this.statistics = {
+        totalFields: 0,
+        transformedFields: 0,
+        repairedFields: 0,
+        failedFields: 0,
+      };
 
       // 1. 验证和处理选项
       const validatedOptions = await this.validateAndProcessOptions(options);
-      
+
       // 2. 处理空数据情况
       if (rawData == null) {
         this.addWarning('输入数据为null或undefined');
@@ -83,11 +88,14 @@ export class DataTransformationService {
       this.statistics.totalFields = Object.keys(fieldMappings).length;
 
       // 4. 应用通用转换 (实现A逻辑)
-      const transformedData = await this.applyGeneralTransformation(rawData, fieldMappings);
+      const transformedData = await this.applyGeneralTransformation(
+        rawData,
+        fieldMappings,
+      );
 
       // 5. 应用智能修复 (实现D逻辑) - [CRITICAL-FIX-2025-09-04] 传入原始HTML数据
       const dataWithHtml = { ...transformedData, html: rawData.html }; // 保留HTML用于智能修复
-      const enhancedData = validatedOptions.enableIntelligentRepairs 
+      const enhancedData = validatedOptions.enableIntelligentRepairs
         ? await this.applyIntelligentRepairs(dataWithHtml, dataType)
         : transformedData;
 
@@ -101,7 +109,7 @@ export class DataTransformationService {
         data: validatedData,
         statistics: this.generateTransformationStats(),
         warnings: this.collectWarnings(),
-        ...(validatedOptions.preserveRawData && { rawData })
+        ...(validatedOptions.preserveRawData && { rawData }),
       };
 
       // 8. 验证结果格式
@@ -113,20 +121,28 @@ export class DataTransformationService {
       this.logger.log(`Data transformation completed for ${dataType}`, {
         totalFields: this.statistics.totalFields,
         transformedFields: this.statistics.transformedFields,
-        warnings: this.warnings.length
+        warnings: this.warnings.length,
       });
 
       return validationResult.data;
-
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      this.logger.error(`Data transformation failed for ${dataType}:`, errorMessage);
-      
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      this.logger.error(
+        `Data transformation failed for ${dataType}:`,
+        errorMessage,
+      );
+
       // 返回错误状态的结果，而不是抛出异常
       return {
         data: {} as T,
-        statistics: { totalFields: 0, transformedFields: 0, repairedFields: 0, failedFields: 0 },
-        warnings: [...this.warnings, `转换失败: ${errorMessage}`]
+        statistics: {
+          totalFields: 0,
+          transformedFields: 0,
+          repairedFields: 0,
+          failedFields: 0,
+        },
+        warnings: [...this.warnings, `转换失败: ${errorMessage}`],
       };
     }
   }
@@ -136,7 +152,10 @@ export class DataTransformationService {
   /**
    * 🔥 嵌套属性值提取 (实现A核心逻辑)
    */
-  private async extractNestedValue(data: any, fieldConfig: VerifiedFieldMappingConfig): Promise<any> {
+  private async extractNestedValue(
+    data: any,
+    fieldConfig: VerifiedFieldMappingConfig,
+  ): Promise<any> {
     // 如果数据为null或undefined，直接返回undefined
     if (data == null) {
       return undefined;
@@ -152,7 +171,7 @@ export class DataTransformationService {
     // 🔥 整合版本A的嵌套属性解析逻辑
     const keys = nestedPath.split('.');
     let value = data;
-    
+
     for (const key of keys) {
       if (value == null) {
         return undefined;
@@ -166,7 +185,10 @@ export class DataTransformationService {
   /**
    * 🔥 数组字段智能处理 (实现A增强)
    */
-  private async processArrayField(value: any, fieldConfig: VerifiedFieldMappingConfig): Promise<string | any[]> {
+  private async processArrayField(
+    value: any,
+    fieldConfig: VerifiedFieldMappingConfig,
+  ): Promise<string | any[]> {
     // 如果不是数组，直接返回原值
     if (!Array.isArray(value)) {
       return value;
@@ -179,15 +201,22 @@ export class DataTransformationService {
 
     // 基于processingNotes决定处理方式
     // 检查是否包含join相关的处理说明
-    const hasJoinProcessing = fieldConfig.processingNotes && (
-      fieldConfig.processingNotes.includes('join') || 
-      fieldConfig.processingNotes.includes('数组') ||
-      fieldConfig.processingNotes.includes('需要join处理') ||
-      fieldConfig.processingNotes.includes('join处理')
-    );
+    const hasJoinProcessing =
+      fieldConfig.processingNotes &&
+      (fieldConfig.processingNotes.includes('join') ||
+        fieldConfig.processingNotes.includes('数组') ||
+        fieldConfig.processingNotes.includes('需要join处理') ||
+        fieldConfig.processingNotes.includes('join处理'));
 
     // 对于已知的数组字段（作者、导演、演员等），都进行join处理
-    const isKnownArrayField = ['author', 'director', 'actor', 'translator', 'myTags', 'userTags'].includes(fieldConfig.doubanFieldName);
+    const isKnownArrayField = [
+      'author',
+      'director',
+      'actor',
+      'translator',
+      'myTags',
+      'userTags',
+    ].includes(fieldConfig.doubanFieldName);
 
     if (hasJoinProcessing || isKnownArrayField) {
       return value.join(' / ');
@@ -201,14 +230,16 @@ export class DataTransformationService {
    * 🔥 通用字段转换应用
    */
   private async applyGeneralTransformation(
-    rawData: any, 
-    fieldMappings: Record<string, VerifiedFieldMappingConfig>
+    rawData: any,
+    fieldMappings: Record<string, VerifiedFieldMappingConfig>,
   ): Promise<any> {
     const transformedData: any = {};
     let transformedCount = 0;
     let failedCount = 0;
 
-    for (const [doubanFieldName, fieldConfig] of Object.entries(fieldMappings)) {
+    for (const [doubanFieldName, fieldConfig] of Object.entries(
+      fieldMappings,
+    )) {
       try {
         // 1. 提取值 (支持嵌套路径)
         let value = await this.extractNestedValue(rawData, fieldConfig);
@@ -227,9 +258,9 @@ export class DataTransformationService {
           this.addWarning(`必需字段 ${doubanFieldName} 值为空`);
           failedCount++;
         }
-
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
         this.addWarning(`字段 ${doubanFieldName} 转换失败: ${errorMessage}`);
         failedCount++;
       }
@@ -248,9 +279,9 @@ export class DataTransformationService {
    * 🔥 智能修复引擎 - 整合实现D的复杂解析逻辑
    */
   private async applyIntelligentRepairs(
-    data: any, 
+    data: any,
     dataType: DoubanDataType,
-    options?: { enableIntelligentRepairs?: boolean }
+    options?: { enableIntelligentRepairs?: boolean },
   ): Promise<any> {
     // 如果禁用智能修复，直接返回原数据
     if (options?.enableIntelligentRepairs === false) {
@@ -269,7 +300,8 @@ export class DataTransformationService {
           return data;
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       this.addWarning(`智能修复失败: ${errorMessage}`);
       return data; // 修复失败时返回原数据
     }
@@ -285,7 +317,10 @@ export class DataTransformationService {
     try {
       // 🔥 1. HTML片长解析 (TDD新增)
       // [CRITICAL-FIX-2025-09-04] 修复条件判断，支持null值和不存在的字段
-      if ((!repaired.duration || repaired.duration === null) && movieData.html) {
+      if (
+        (!repaired.duration || repaired.duration === null) &&
+        movieData.html
+      ) {
         const repairedDuration = await this.repairDurationField(movieData);
         if (repairedDuration) {
           repaired.duration = repairedDuration;
@@ -296,8 +331,12 @@ export class DataTransformationService {
 
       // 🔥 2. HTML上映日期解析 (TDD新增)
       // [CRITICAL-FIX-2025-09-04] 修复条件判断，支持null值和不存在的字段
-      if ((!repaired.releaseDate || repaired.releaseDate === null) && movieData.html) {
-        const repairedReleaseDate = await this.repairReleaseDateField(movieData);
+      if (
+        (!repaired.releaseDate || repaired.releaseDate === null) &&
+        movieData.html
+      ) {
+        const repairedReleaseDate =
+          await this.repairReleaseDateField(movieData);
         if (repairedReleaseDate) {
           repaired.releaseDate = repairedReleaseDate;
           repairedCount++;
@@ -308,7 +347,9 @@ export class DataTransformationService {
       // 🔥 3. HTML制片地区解析 (TDD新增)
       // [CRITICAL-FIX-2025-09-04] 修复条件判断，支持null值和不存在的字段
       if ((!repaired.country || repaired.country === null) && movieData.html) {
-        const countryMatch = movieData.html.match(/<span[^>]*class="pl"[^>]*>制片国家\/地区:<\/span>\s*([^<]+)/i);
+        const countryMatch = movieData.html.match(
+          /<span[^>]*class="pl"[^>]*>制片国家\/地区:<\/span>\s*([^<]+)/i,
+        );
         if (countryMatch) {
           repaired.country = countryMatch[1].trim();
           repairedCount++;
@@ -316,10 +357,15 @@ export class DataTransformationService {
         }
       }
 
-      // 🔥 4. HTML语言解析 (TDD新增) 
+      // 🔥 4. HTML语言解析 (TDD新增)
       // [CRITICAL-FIX-2025-09-04] 修复条件判断，支持null值和不存在的字段
-      if ((!repaired.language || repaired.language === null) && movieData.html) {
-        const languageMatch = movieData.html.match(/<span[^>]*class="pl"[^>]*>语言:<\/span>\s*([^<]+)/i);
+      if (
+        (!repaired.language || repaired.language === null) &&
+        movieData.html
+      ) {
+        const languageMatch = movieData.html.match(
+          /<span[^>]*class="pl"[^>]*>语言:<\/span>\s*([^<]+)/i,
+        );
         if (languageMatch) {
           repaired.language = languageMatch[1].trim();
           repairedCount++;
@@ -328,12 +374,13 @@ export class DataTransformationService {
       }
 
       // 更新修复统计
-      this.statistics.repairedFields = (this.statistics.repairedFields || 0) + repairedCount;
+      this.statistics.repairedFields =
+        (this.statistics.repairedFields || 0) + repairedCount;
 
       return repaired;
-
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       this.logger.error(`电影数据修复失败: ${errorMessage}`);
       return movieData; // 修复失败时返回原数据
     }
@@ -357,25 +404,38 @@ export class DataTransformationService {
         }
       }
 
-      // 🔥 2. 作者数组处理 (实现A核心逻辑)  
+      // 🔥 2. 作者数组处理 (实现A核心逻辑)
       // [CRITICAL-FIX-2025-09-04] 作者字段修复逻辑优化
       // 问题：智能修复会将已处理的字符串"曹雪芹 / 高鹗"转换回数组
       // 修复：只对原始HTML格式进行修复，避免覆盖通用转换的正确结果
-      if (repaired.author && typeof repaired.author === 'string' && 
-          repaired.author.includes('/') && 
-          !repaired.author.includes(' / ')) { // 只修复"作者1/作者2"格式，跳过"作者1 / 作者2"
+      if (
+        repaired.author &&
+        typeof repaired.author === 'string' &&
+        repaired.author.includes('/') &&
+        !repaired.author.includes(' / ')
+      ) {
+        // 只修复"作者1/作者2"格式，跳过"作者1 / 作者2"
         const repairedAuthor = this.repairAuthorField(repaired.author);
         // 保持与通用转换一致的字符串格式
-        const authorString = Array.isArray(repairedAuthor) ? repairedAuthor.join(' / ') : repairedAuthor;
+        const authorString = Array.isArray(repairedAuthor)
+          ? repairedAuthor.join(' / ')
+          : repairedAuthor;
         if (authorString !== repaired.author) {
           repaired.author = authorString;
           repairedCount++;
-          this.logger.debug(`修复字段: author -> ${JSON.stringify(authorString)}`);
+          this.logger.debug(
+            `修复字段: author -> ${JSON.stringify(authorString)}`,
+          );
         }
       }
 
       // 🔥 3. 评分嵌套提取 (实现A核心逻辑)
-      if (repaired.rating && typeof repaired.rating === 'object' && repaired.rating.average && !repaired.doubanRating) {
+      if (
+        repaired.rating &&
+        typeof repaired.rating === 'object' &&
+        repaired.rating.average &&
+        !repaired.doubanRating
+      ) {
         repaired.doubanRating = repaired.rating.average;
         repairedCount++;
         this.logger.debug(`修复字段: doubanRating -> ${repaired.doubanRating}`);
@@ -402,12 +462,13 @@ export class DataTransformationService {
       }
 
       // 更新修复统计
-      this.statistics.repairedFields = (this.statistics.repairedFields || 0) + repairedCount;
+      this.statistics.repairedFields =
+        (this.statistics.repairedFields || 0) + repairedCount;
 
       return repaired;
-
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       this.logger.error(`书籍数据修复失败: ${errorMessage}`);
       return bookData;
     }
@@ -424,7 +485,7 @@ export class DataTransformationService {
     }
 
     const dateStr = publishDate.trim();
-    
+
     // 🔥 实现A+C逻辑：复杂日期格式标准化
     // 格式0: TDD新增 "2019年1月1日" -> "2019-01-01"
     const chineseDateMatch = dateStr.match(/^(\d{4})年(\d{1,2})月(\d{1,2})日$/);
@@ -434,7 +495,7 @@ export class DataTransformationService {
       const day = chineseDateMatch[3].padStart(2, '0');
       return `${year}-${month}-${day}`;
     }
-    
+
     // 格式1: "1996年12月" -> "1996-12"
     const yearMonthMatch = dateStr.match(/^(\d{4})年(\d{1,2})月$/);
     if (yearMonthMatch) {
@@ -442,13 +503,13 @@ export class DataTransformationService {
       const month = yearMonthMatch[2].padStart(2, '0');
       return `${year}-${month}`;
     }
-    
+
     // 格式2: "1996年" -> "1996"
     const yearMatch = dateStr.match(/^(\d{4})年$/);
     if (yearMatch) {
       return yearMatch[1];
     }
-    
+
     // 格式3: "1996-12-01" -> "1996-12" (保留年月)
     const fullDateMatch = dateStr.match(/^(\d{4})-(\d{1,2})-\d{1,2}$/);
     if (fullDateMatch) {
@@ -456,7 +517,7 @@ export class DataTransformationService {
       const month = fullDateMatch[2].padStart(2, '0');
       return `${year}-${month}`;
     }
-    
+
     // 其他格式保持原样
     return publishDate;
   }
@@ -470,7 +531,10 @@ export class DataTransformationService {
     }
 
     // 🔥 智能分割：支持 ' / ' 分隔符
-    return author.split('/').map(name => name.trim()).filter(name => name.length > 0);
+    return author
+      .split('/')
+      .map((name) => name.trim())
+      .filter((name) => name.length > 0);
   }
 
   /**
@@ -482,22 +546,22 @@ export class DataTransformationService {
     }
 
     let cleaned = publisher.trim();
-    
+
     // 🔥 实现C逻辑：清理干扰信息
     // 1. 移除地区信息: "; 北京"
     cleaned = cleaned.replace(/;\s*[^/]+/g, '');
-    
+
     // 2. 标准化分隔符: 确保使用 " / " 格式
     cleaned = cleaned.replace(/\s*\/\s*/g, ' / ');
-    
+
     // 3. 清理多余空格
     cleaned = cleaned.replace(/\s+/g, ' ').trim();
-    
+
     return cleaned;
   }
 
   /**
-   * 🔥 修复ISBN信息 - 提取纯净号码 (实现C逻辑) 
+   * 🔥 修复ISBN信息 - 提取纯净号码 (实现C逻辑)
    */
   private repairIsbnField(isbn: string): string {
     if (!isbn || typeof isbn !== 'string') {
@@ -505,14 +569,14 @@ export class DataTransformationService {
     }
 
     const cleaned = isbn.trim();
-    
+
     // 🔥 实现C逻辑：提取纯净ISBN号码
     // 移除括号及其内容: "9787020002207 (平装)" -> "9787020002207"
     const isbnMatch = cleaned.match(/^(\d{10,13})/);
     if (isbnMatch) {
       return isbnMatch[1];
     }
-    
+
     // 如果没有找到标准格式，返回原值
     return isbn;
   }
@@ -522,7 +586,10 @@ export class DataTransformationService {
   /**
    * 🔥 严格验证转换后的数据 - 整合实现C的超详细验证逻辑
    */
-  private async validateTransformedData(data: any, dataType: DoubanDataType): Promise<any> {
+  private async validateTransformedData(
+    data: any,
+    dataType: DoubanDataType,
+  ): Promise<any> {
     const validated = { ...data };
     const fieldMappings = getVerifiedFieldMapping(dataType);
 
@@ -532,7 +599,11 @@ export class DataTransformationService {
       // 🔥 基于实现C的严格验证逻辑
       switch (config.fieldType) {
         case 'singleSelect':
-          validated[fieldName] = this.validateSelectField(value, fieldName, dataType);
+          validated[fieldName] = this.validateSelectField(
+            value,
+            fieldName,
+            dataType,
+          );
           break;
         case 'datetime':
           validated[fieldName] = this.validateDateTimeField(value);
@@ -559,17 +630,22 @@ export class DataTransformationService {
   /**
    * 🔥 选择字段验证 - 实现C核心逻辑
    */
-  private validateSelectField(value: any, fieldName: string, dataType: DoubanDataType): string | null {
+  private validateSelectField(
+    value: any,
+    fieldName: string,
+    dataType: DoubanDataType,
+  ): string | null {
     if (fieldName === 'myStatus') {
-      const validStatuses = dataType === 'books'
-        ? ['想读', '在读', '读过']
-        : ['想看', '看过'];
+      const validStatuses =
+        dataType === 'books' ? ['想读', '在读', '读过'] : ['想看', '看过'];
 
       if (validStatuses.includes(value)) {
         return value;
       }
 
-      this.addWarning(`Invalid status value: ${value}, expected one of: ${validStatuses.join(', ')}`);
+      this.addWarning(
+        `Invalid status value: ${value}, expected one of: ${validStatuses.join(', ')}`,
+      );
       return null;
     }
 
@@ -587,10 +663,12 @@ export class DataTransformationService {
 
     // 转换为数字
     const numValue = Number(value);
-    
+
     // 检查是否为有效数字
     if (isNaN(numValue)) {
-      this.addWarning(`Invalid rating value: ${value}, expected number between 1-5`);
+      this.addWarning(
+        `Invalid rating value: ${value}, expected number between 1-5`,
+      );
       return null;
     }
 
@@ -657,11 +735,11 @@ export class DataTransformationService {
     if (!duration) {
       return true; // null/undefined/empty 需要修复
     }
-    
+
     if (typeof duration !== 'string') {
       return false;
     }
-    
+
     // 如果已经是标准格式，不需要修复
     const standardFormat = /^\d+分钟$/.test(duration.trim());
     return !standardFormat;
@@ -678,43 +756,49 @@ export class DataTransformationService {
 
     // 🔥 实现D核心：从HTML解析片长
     // 1. 标准v:runtime属性解析：<span property="v:runtime">142</span>
-    const runtimeMatch = html.match(/<[^>]*property="v:runtime"[^>]*>(\d+)<\/[^>]*>/);
+    const runtimeMatch = html.match(
+      /<[^>]*property="v:runtime"[^>]*>(\d+)<\/[^>]*>/,
+    );
     if (runtimeMatch) {
       return `${runtimeMatch[1]}分钟`;
     }
-    
+
     // 2. 从"片长:"标签后解析：片长:</span> 142分钟 / 120分03秒(导演剪辑版) <br>
-    const durationLabelMatch = html.match(/片长:[\s\S]*?<\/span>\s*([^<]+)(?:<|$)/i);
+    const durationLabelMatch = html.match(
+      /片长:[\s\S]*?<\/span>\s*([^<]+)(?:<|$)/i,
+    );
     if (durationLabelMatch) {
       const durationText = durationLabelMatch[1].trim();
-      
+
       // 保持原始格式，支持复杂片长信息
       if (durationText && durationText !== '') {
         return durationText;
       }
     }
-    
+
     // 3. 从pl类标签解析：<span class="pl">片长:</span> 142分钟 <br>
-    const plLabelMatch = html.match(/<span[^>]*class="pl"[^>]*>片长:<\/span>\s*([^<]+)/i);
+    const plLabelMatch = html.match(
+      /<span[^>]*class="pl"[^>]*>片长:<\/span>\s*([^<]+)/i,
+    );
     if (plLabelMatch) {
       const durationText = plLabelMatch[1].trim();
       if (durationText && durationText !== '') {
         return durationText;
       }
     }
-    
+
     // 4. 通用数字+分钟格式提取
     const generalMatch = html.match(/(\d+(?:\.\d+)?)\s*分钟/);
     if (generalMatch) {
       return `${Math.round(parseFloat(generalMatch[1]))}分钟`;
     }
-    
+
     // 5. 分钟+秒格式：6分03秒
     const minuteSecondMatch = html.match(/(\d+)分(\d+)秒/);
     if (minuteSecondMatch) {
       return `${minuteSecondMatch[1]}分${minuteSecondMatch[2]}秒`;
     }
-    
+
     return null;
   }
 
@@ -727,12 +811,12 @@ export class DataTransformationService {
     }
 
     const durationText = duration.trim();
-    
+
     // 如果已经是标准格式，不需要修复
     if (/^\d+分钟$/.test(durationText)) {
       return duration;
     }
-    
+
     // 分钟+秒格式：6分03秒
     const minuteSecondMatch = durationText.match(/^(\d+)分(\d+)秒$/);
     if (minuteSecondMatch) {
@@ -741,19 +825,19 @@ export class DataTransformationService {
       const totalMinutes = Math.round(minutes + seconds / 60);
       return `${totalMinutes}分钟`;
     }
-    
+
     // 英文格式：142 min, 142mins
     const englishMatch = durationText.match(/^(\d+)\s*mins?$/i);
     if (englishMatch) {
       return `${englishMatch[1]}分钟`;
     }
-    
+
     // 提取数字格式：包含数字的任意格式
     const numberMatch = durationText.match(/(\d+)/);
     if (numberMatch) {
       return `${numberMatch[1]}分钟`;
     }
-    
+
     return duration;
   }
 
@@ -764,13 +848,17 @@ export class DataTransformationService {
     if (!releaseDate) {
       return true; // null/undefined/empty 需要修复
     }
-    
+
     if (typeof releaseDate !== 'string') {
       return false;
     }
-    
+
     // 如果包含多个日期或复杂格式，需要修复
-    return releaseDate.includes('/') || releaseDate.includes('(') || releaseDate.length > 15;
+    return (
+      releaseDate.includes('/') ||
+      releaseDate.includes('(') ||
+      releaseDate.length > 15
+    );
   }
 
   /**
@@ -785,58 +873,65 @@ export class DataTransformationService {
     // 🔥 实现D核心：从HTML解析上映日期
     // 1. 标准v:initialReleaseDate属性解析，支持多个日期
     const releaseDates: string[] = [];
-    const releaseDateRegex = /<[^>]*property="v:initialReleaseDate"[^>]*>([^<]+)<\/[^>]*>/g;
+    const releaseDateRegex =
+      /<[^>]*property="v:initialReleaseDate"[^>]*>([^<]+)<\/[^>]*>/g;
     let match;
-    
+
     while ((match = releaseDateRegex.exec(html)) !== null) {
       const dateText = match[1].trim();
       if (dateText) {
         releaseDates.push(dateText);
       }
     }
-    
+
     if (releaseDates.length > 0) {
       // 如果有多个日期，用 ' / ' 连接
       return releaseDates.join(' / ');
     }
-    
+
     // 2. 从"上映日期:"标签后解析
-    const releaseLabelMatch = html.match(/上映日期:[\s\S]*?<\/span>\s*([^<]+)(?:<|$)/i);
+    const releaseLabelMatch = html.match(
+      /上映日期:[\s\S]*?<\/span>\s*([^<]+)(?:<|$)/i,
+    );
     if (releaseLabelMatch) {
       const dateText = releaseLabelMatch[1].trim();
       if (dateText && dateText !== '') {
         return dateText;
       }
     }
-    
+
     // 3. 从pl类标签解析：<span class="pl">上映日期:</span> 1994-10-14 <br>
-    const plReleaseLabelMatch = html.match(/<span[^>]*class="pl"[^>]*>上映日期:<\/span>\s*([^<]+)/i);
+    const plReleaseLabelMatch = html.match(
+      /<span[^>]*class="pl"[^>]*>上映日期:<\/span>\s*([^<]+)/i,
+    );
     if (plReleaseLabelMatch) {
       const dateText = plReleaseLabelMatch[1].trim();
       if (dateText && dateText !== '') {
         return dateText;
       }
     }
-    
+
     // 4. 通用日期格式提取 YYYY-MM-DD
     const generalDateMatch = html.match(/(\d{4}-\d{1,2}-\d{1,2})/);
     if (generalDateMatch) {
       return generalDateMatch[1];
     }
-    
+
     return null;
   }
 
   /**
    * 🔥 修复上映日期字段文本 - 对已有日期文本进行格式修复
    */
-  private async repairReleaseDateFieldText(releaseDate: string): Promise<string> {
+  private async repairReleaseDateFieldText(
+    releaseDate: string,
+  ): Promise<string> {
     if (!releaseDate || typeof releaseDate !== 'string') {
       return releaseDate;
     }
 
     const dateStr = releaseDate.trim();
-    
+
     // 对于正常格式的日期，保持原样
     // 这里主要是为了演示，实际可以根据需要进行更复杂的格式化
     return dateStr;
@@ -849,9 +944,14 @@ export class DataTransformationService {
     if (!country || typeof country !== 'string') {
       return false;
     }
-    
+
     // 如果包含多个国家、英文、或额外信息(如语言信息)，需要清理
-    return country.includes('/') || country.includes('语言:') || country.length > 10 || /[a-zA-Z]/.test(country);
+    return (
+      country.includes('/') ||
+      country.includes('语言:') ||
+      country.length > 10 ||
+      /[a-zA-Z]/.test(country)
+    );
   }
 
   /**
@@ -863,57 +963,60 @@ export class DataTransformationService {
     }
 
     let countryStr = country.trim();
-    
+
     // 🔥 实现D核心：制片地区清理逻辑
     // 1. 优先处理：如果包含"语言:"，直接截取语言信息前的部分
     if (countryStr.includes('语言:')) {
       countryStr = countryStr.split('语言:')[0].trim();
     }
-    
+
     // 2. 清理其他干扰信息：移除上映日期、片长等非地区信息
     countryStr = countryStr.replace(/上映日期:[^/\s]*/g, '').trim();
     countryStr = countryStr.replace(/片长:[^/\s]*/g, '').trim();
     countryStr = countryStr.replace(/又名:[^/\s]*/g, '').trim();
     countryStr = countryStr.replace(/IMDb:[^/\s]*/g, '').trim();
-    
+
     // 2. 处理多地区信息，保持用 ' / ' 分隔
     if (countryStr.includes('/')) {
-      const countries = countryStr.split('/').map(c => c.trim()).filter(c => c.length > 0);
-      
+      const countries = countryStr
+        .split('/')
+        .map((c) => c.trim())
+        .filter((c) => c.length > 0);
+
       // 对每个地区名进行映射
-      const mappedCountries = countries.map(c => {
+      const mappedCountries = countries.map((c) => {
         // 常见英文地区名映射
         const countryMap: Record<string, string> = {
-          'USA': '美国',
+          USA: '美国',
           'United States': '美国',
-          'China': '中国',
-          'Japan': '日本',
-          'Korea': '韩国',
-          'France': '法国',
-          'Germany': '德国',
-          'UK': '英国',
-          'United Kingdom': '英国'
+          China: '中国',
+          Japan: '日本',
+          Korea: '韩国',
+          France: '法国',
+          Germany: '德国',
+          UK: '英国',
+          'United Kingdom': '英国',
         };
-        
+
         return countryMap[c] || c;
       });
-      
+
       return mappedCountries.join(' / ');
     }
-    
+
     // 3. 单个地区处理
     const countryMap: Record<string, string> = {
-      'USA': '美国',
+      USA: '美国',
       'United States': '美国',
-      'China': '中国',
-      'Japan': '日本',
-      'Korea': '韩国',
-      'France': '法国',
-      'Germany': '德国',
-      'UK': '英国',
-      'United Kingdom': '英国'
+      China: '中国',
+      Japan: '日本',
+      Korea: '韩国',
+      France: '法国',
+      Germany: '德国',
+      UK: '英国',
+      'United Kingdom': '英国',
     };
-    
+
     return countryMap[countryStr] || countryStr;
   }
 
@@ -924,9 +1027,14 @@ export class DataTransformationService {
     if (!language || typeof language !== 'string') {
       return false;
     }
-    
+
     // 如果包含多种语言、英文、或额外信息(如片长信息)，需要清理
-    return language.includes('/') || language.includes('片长:') || language.length > 10 || /[a-zA-Z]/.test(language);
+    return (
+      language.includes('/') ||
+      language.includes('片长:') ||
+      language.length > 10 ||
+      /[a-zA-Z]/.test(language)
+    );
   }
 
   /**
@@ -938,7 +1046,7 @@ export class DataTransformationService {
     }
 
     let languageStr = language.trim();
-    
+
     // 🔥 实现D核心：语言清理逻辑
     // 1. 清理干扰信息：移除上映日期、片长、又名等非语言信息
     languageStr = languageStr.replace(/上映日期:[^/\s]*/g, '').trim();
@@ -946,54 +1054,59 @@ export class DataTransformationService {
     languageStr = languageStr.replace(/又名:[^/\s]*$/g, '').trim();
     languageStr = languageStr.replace(/制片地区:[^/\s]*/g, '').trim();
     languageStr = languageStr.replace(/IMDb:[^/\s]*$/g, '').trim();
-    
+
     // 2. 处理复杂尾部信息：移除 "片长:xxx", "IMDb:xxx" 等
     languageStr = languageStr.replace(/片长:\d+分钟$/g, '').trim();
-    languageStr = languageStr.replace(/The\s+[^/\s]*$/g, '').trim();  // 移除英文标题
-    
+    languageStr = languageStr.replace(/The\s+[^/\s]*$/g, '').trim(); // 移除英文标题
+
     // 3. 特殊处理：移除复杂英文标题 (如："英语上映日期:xxx又名:The Shawshank Redemption" -> "英语")
     languageStr = languageStr.replace(/^([^上映]*?)上映日期:.*$/g, '$1').trim();
     languageStr = languageStr.replace(/\s+Shawshank\s+Redemption$/g, '').trim();
-    languageStr = languageStr.replace(/\s+[A-Z][a-z]+(\s+[A-Z][a-z]+)*$/g, '').trim();  // 移除英文单词序列
-    
+    languageStr = languageStr
+      .replace(/\s+[A-Z][a-z]+(\s+[A-Z][a-z]+)*$/g, '')
+      .trim(); // 移除英文单词序列
+
     // 2. 处理多语言信息，保持用 ' / ' 分隔
     if (languageStr.includes('/')) {
-      const languages = languageStr.split('/').map(l => l.trim()).filter(l => l.length > 0);
-      
+      const languages = languageStr
+        .split('/')
+        .map((l) => l.trim())
+        .filter((l) => l.length > 0);
+
       // 对每个语言名进行映射
-      const mappedLanguages = languages.map(l => {
+      const mappedLanguages = languages.map((l) => {
         // 常见英文语言名映射
         const languageMap: Record<string, string> = {
-          'English': '英语',
-          'Chinese': '中文',
-          'Mandarin': '普通话',
-          'Cantonese': '粤语',
-          'Japanese': '日语',
-          'Korean': '韩语',
-          'French': '法语',
-          'German': '德语',
-          'Spanish': '西班牙语'
+          English: '英语',
+          Chinese: '中文',
+          Mandarin: '普通话',
+          Cantonese: '粤语',
+          Japanese: '日语',
+          Korean: '韩语',
+          French: '法语',
+          German: '德语',
+          Spanish: '西班牙语',
         };
-        
+
         return languageMap[l] || l;
       });
-      
+
       return mappedLanguages.join(' / ');
     }
-    
+
     // 3. 单个语言处理
     const languageMap: Record<string, string> = {
-      'English': '英语',
-      'Chinese': '中文',
-      'Mandarin': '普通话',
-      'Cantonese': '粤语',
-      'Japanese': '日语',
-      'Korean': '韩语',
-      'French': '法语',
-      'German': '德语',
-      'Spanish': '西班牙语'
+      English: '英语',
+      Chinese: '中文',
+      Mandarin: '普通话',
+      Cantonese: '粤语',
+      Japanese: '日语',
+      Korean: '韩语',
+      French: '法语',
+      German: '德语',
+      Spanish: '西班牙语',
     };
-    
+
     return languageMap[languageStr] || languageStr;
   }
 
@@ -1002,11 +1115,13 @@ export class DataTransformationService {
   /**
    * 验证和处理转换选项
    */
-  private async validateAndProcessOptions(options?: TransformationOptions): Promise<TransformationOptions> {
+  private async validateAndProcessOptions(
+    options?: TransformationOptions,
+  ): Promise<TransformationOptions> {
     const defaultOptions: TransformationOptions = {
       enableIntelligentRepairs: true,
       strictValidation: true,
-      preserveRawData: false
+      preserveRawData: false,
     };
 
     if (!options) return defaultOptions;
@@ -1023,12 +1138,20 @@ export class DataTransformationService {
   /**
    * 构建空数据结果
    */
-  private buildEmptyResult(rawData: any, options: TransformationOptions): TransformationResult {
+  private buildEmptyResult(
+    rawData: any,
+    options: TransformationOptions,
+  ): TransformationResult {
     return {
       data: {},
-      statistics: { totalFields: 0, transformedFields: 0, repairedFields: 0, failedFields: 0 },
+      statistics: {
+        totalFields: 0,
+        transformedFields: 0,
+        repairedFields: 0,
+        failedFields: 0,
+      },
       warnings: this.warnings,
-      ...(options.preserveRawData && { rawData })
+      ...(options.preserveRawData && { rawData }),
     };
   }
 
@@ -1056,7 +1179,7 @@ export class DataTransformationService {
    */
   private getRepairStatistics(): { repairedFields: number } {
     return {
-      repairedFields: this.statistics.repairedFields || 0
+      repairedFields: this.statistics.repairedFields || 0,
     };
   }
 
@@ -1077,5 +1200,4 @@ export class DataTransformationService {
   }
 
   // =============== 阶段4.1: TDD增强完成 ===============
-
 }

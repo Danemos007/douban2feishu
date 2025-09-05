@@ -4,7 +4,7 @@ import * as crypto from 'crypto';
 
 /**
  * 加密服务 - 实现三层加密架构
- * 
+ *
  * 安全特性:
  * - AES-256-GCM 对称加密
  * - 每个用户独立的加密IV
@@ -17,7 +17,7 @@ export class CryptoService {
   private readonly logger = new Logger(CryptoService.name);
   private readonly algorithm = 'aes-256-gcm';
   private readonly keyLength = 32; // 256位密钥
-  private readonly ivLength = 16;  // 128位IV
+  private readonly ivLength = 16; // 128位IV
   private readonly tagLength = 16; // 128位认证标签
 
   constructor(private readonly configService: ConfigService) {}
@@ -46,13 +46,13 @@ export class CryptoService {
       userId,
       100000, // 迭代次数
       this.keyLength,
-      'sha256'
+      'sha256',
     );
   }
 
   /**
    * 加密敏感数据
-   * 
+   *
    * @param plaintext 明文数据
    * @param userId 用户ID
    * @param iv 初始化向量 (hex格式)
@@ -62,25 +62,25 @@ export class CryptoService {
     try {
       const key = this.deriveUserKey(userId);
       const ivBuffer = Buffer.from(iv, 'hex');
-      
+
       // 创建加密器 - 使用GCM模式
       const cipher = crypto.createCipheriv(this.algorithm, key, ivBuffer);
       cipher.setAutoPadding(true);
-      
+
       // 执行加密
       let encrypted = cipher.update(plaintext, 'utf8', 'hex');
       encrypted += cipher.final('hex');
-      
+
       // 获取认证标签
       const authTag = cipher.getAuthTag();
-      
+
       // 组合: IV + AuthTag + EncryptedData
       const combined = Buffer.concat([
         ivBuffer,
         authTag,
-        Buffer.from(encrypted, 'hex')
+        Buffer.from(encrypted, 'hex'),
       ]);
-      
+
       return combined.toString('base64');
     } catch (error) {
       this.logger.error(`Encryption failed for user ${userId}: ${error}`);
@@ -90,7 +90,7 @@ export class CryptoService {
 
   /**
    * 解密敏感数据
-   * 
+   *
    * @param encryptedData 加密数据 (base64格式)
    * @param userId 用户ID
    * @returns 解密后的明文
@@ -99,20 +99,23 @@ export class CryptoService {
     try {
       const key = this.deriveUserKey(userId);
       const combined = Buffer.from(encryptedData, 'base64');
-      
+
       // 分离: IV + AuthTag + EncryptedData
       const ivBuffer = combined.slice(0, this.ivLength);
-      const authTag = combined.slice(this.ivLength, this.ivLength + this.tagLength);
+      const authTag = combined.slice(
+        this.ivLength,
+        this.ivLength + this.tagLength,
+      );
       const encrypted = combined.slice(this.ivLength + this.tagLength);
-      
+
       // 创建解密器 - 使用GCM模式
       const decipher = crypto.createDecipheriv(this.algorithm, key, ivBuffer);
       decipher.setAuthTag(authTag);
-      
+
       // 执行解密
       let decrypted = decipher.update(encrypted, undefined, 'utf8');
       decrypted += decipher.final('utf8');
-      
+
       return decrypted;
     } catch (error) {
       this.logger.error(`Decryption failed for user ${userId}: ${error}`);
@@ -139,10 +142,7 @@ export class CryptoService {
    * 创建数据哈希 (用于完整性验证)
    */
   createHash(data: string): string {
-    return crypto
-      .createHash('sha256')
-      .update(data)
-      .digest('hex');
+    return crypto.createHash('sha256').update(data).digest('hex');
   }
 
   /**
@@ -152,7 +152,7 @@ export class CryptoService {
     const computedHash = this.createHash(data);
     return crypto.timingSafeEqual(
       Buffer.from(hash, 'hex'),
-      Buffer.from(computedHash, 'hex')
+      Buffer.from(computedHash, 'hex'),
     );
   }
 }

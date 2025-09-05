@@ -101,7 +101,9 @@ describe('FeishuController - SyncResult Type Export Issue', () => {
       };
 
       // Mock返回值
-      jest.spyOn(syncEngineService, 'performIncrementalSync').mockResolvedValue(mockSyncResult);
+      jest
+        .spyOn(syncEngineService, 'performIncrementalSync')
+        .mockResolvedValue(mockSyncResult);
 
       const mockUser = { id: 'test-user-id' };
       const mockBody = {
@@ -115,11 +117,14 @@ describe('FeishuController - SyncResult Type Export Issue', () => {
       };
 
       // [TDD-TEST] 调用方法并验证返回类型
-      const result = await controller.performIncrementalSync(mockUser as any, mockBody);
-      
+      const result = await controller.performIncrementalSync(
+        mockUser as any,
+        mockBody,
+      );
+
       // 类型验证：如果SyncResult没有正确导出，这里会编译失败
       const typedResult: SyncResult = result;
-      
+
       expect(typedResult.summary.total).toBe(10);
       expect(typedResult.summary.created).toBe(5);
     });

@@ -1,6 +1,6 @@
 /**
  * 豆瓣字段到中文名的标准映射配置
- * 
+ *
  * 说明：
  * - 豆瓣字段名 → 飞书表格中文字段名
  * - 首次同步时会精确匹配这些中文名
@@ -178,7 +178,8 @@ export const DOUBAN_MOVIES_FIELD_MAPPING = {
     chineseName: '上映日期',
     fieldType: 'text',
     required: false,
-    description: '上映日期，包含完整地区信息（如：2010-12-16(中国大陆) / 2010-12-18(美国)）',
+    description:
+      '上映日期，包含完整地区信息（如：2010-12-16(中国大陆) / 2010-12-18(美国)）',
   },
   duration: {
     chineseName: '片长',
@@ -223,7 +224,7 @@ export const DOUBAN_MOVIES_FIELD_MAPPING = {
     description: '观看状态：想看/看过',
     options: [
       { name: '想看', color: 5 },
-      { name: '看过', color: 0 }
+      { name: '看过', color: 0 },
     ],
   },
   myComment: {
@@ -294,7 +295,8 @@ export const DOUBAN_TV_FIELD_MAPPING = {
     chineseName: '首播日期',
     fieldType: 'text',
     required: false,
-    description: '首播日期，包含完整地区信息（如：2021-01-01(中国大陆) / 2021-01-15(美国)）',
+    description:
+      '首播日期，包含完整地区信息（如：2021-01-01(中国大陆) / 2021-01-15(美国)）',
   },
   duration: {
     chineseName: '单集片长',
@@ -367,18 +369,24 @@ export const DOUBAN_FIELD_MAPPINGS = {
 };
 
 // 获取字段映射配置的辅助函数
-export function getDoubanFieldMapping(dataType: 'books' | 'movies' | 'tv' | 'documentary') {
+export function getDoubanFieldMapping(
+  dataType: 'books' | 'movies' | 'tv' | 'documentary',
+) {
   return DOUBAN_FIELD_MAPPINGS[dataType] || DOUBAN_FIELD_MAPPINGS.books;
 }
 
 // 获取中文字段名列表
-export function getChineseFieldNames(dataType: 'books' | 'movies' | 'tv' | 'documentary'): string[] {
+export function getChineseFieldNames(
+  dataType: 'books' | 'movies' | 'tv' | 'documentary',
+): string[] {
   const mapping = getDoubanFieldMapping(dataType);
-  return Object.values(mapping).map(config => config.chineseName);
+  return Object.values(mapping).map((config) => config.chineseName);
 }
 
 // 获取必需字段列表
-export function getRequiredFields(dataType: 'books' | 'movies' | 'tv' | 'documentary'): string[] {
+export function getRequiredFields(
+  dataType: 'books' | 'movies' | 'tv' | 'documentary',
+): string[] {
   const mapping = getDoubanFieldMapping(dataType);
   return Object.entries(mapping)
     .filter(([_, config]) => config.required)
@@ -386,14 +394,22 @@ export function getRequiredFields(dataType: 'books' | 'movies' | 'tv' | 'documen
 }
 
 // 豆瓣字段名转中文名
-export function doubanFieldToChineseName(fieldName: string, dataType: 'books' | 'movies' | 'tv' | 'documentary'): string {
+export function doubanFieldToChineseName(
+  fieldName: string,
+  dataType: 'books' | 'movies' | 'tv' | 'documentary',
+): string {
   const mapping = getDoubanFieldMapping(dataType);
   return mapping[fieldName]?.chineseName || fieldName;
 }
 
 // 中文名转豆瓣字段名
-export function chineseNameToDoubanField(chineseName: string, dataType: 'books' | 'movies' | 'tv' | 'documentary'): string | null {
+export function chineseNameToDoubanField(
+  chineseName: string,
+  dataType: 'books' | 'movies' | 'tv' | 'documentary',
+): string | null {
   const mapping = getDoubanFieldMapping(dataType);
-  const entry = Object.entries(mapping).find(([_, config]) => config.chineseName === chineseName);
+  const entry = Object.entries(mapping).find(
+    ([_, config]) => config.chineseName === chineseName,
+  );
   return entry ? entry[0] : null;
 }

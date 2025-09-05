@@ -1,6 +1,6 @@
 /**
  * 飞书契约验证器服务
- * 
+ *
  * 核心功能：
  * 1. 双模式验证：开发环境严格验证，生产环境软验证
  * 2. 基于Zod Schema的运行时类型检查
@@ -13,17 +13,14 @@ import { z } from 'zod';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
-import { 
-  FeishuFieldsResponse, 
+import {
+  FeishuFieldsResponse,
   FeishuField,
   FeishuFieldsResponseSchema,
   isRatingField,
 } from './field.schema';
 
-import {
-  FeishuTokenResponse,
-  FeishuTokenResponseSchema,
-} from './auth.schema';
+import { FeishuTokenResponse, FeishuTokenResponseSchema } from './auth.schema';
 
 import {
   FeishuRecordsResponse,
@@ -52,7 +49,7 @@ interface ContractFailureLog {
 export class FeishuContractValidatorService {
   private readonly logger = new Logger(FeishuContractValidatorService.name);
   private readonly isProduction = process.env.NODE_ENV === 'production';
-  
+
   // 验证统计
   private stats: ValidationStats = {
     totalValidations: 0,
@@ -62,17 +59,20 @@ export class FeishuContractValidatorService {
 
   /**
    * 验证飞书字段查询响应
-   * 
+   *
    * @param data 原始API响应数据
    * @param endpoint API端点名称，用于错误记录
    * @returns 验证后的字段响应数据
    */
-  validateFieldsResponse(data: unknown, endpoint: string): FeishuFieldsResponse {
+  validateFieldsResponse(
+    data: unknown,
+    endpoint: string,
+  ): FeishuFieldsResponse {
     this.stats.totalValidations++;
-    
+
     // 动态检查环境，支持测试时临时修改
     const isCurrentlyProduction = process.env.NODE_ENV === 'production';
-    
+
     if (isCurrentlyProduction) {
       return this.safeValidate(FeishuFieldsResponseSchema, data, endpoint);
     } else {
@@ -97,17 +97,17 @@ export class FeishuContractValidatorService {
 
   /**
    * 验证飞书认证响应
-   * 
+   *
    * @param data 原始API响应数据
    * @param endpoint API端点名称，用于错误记录
    * @returns 验证后的认证响应数据
    */
   validateAuthResponse(data: unknown, endpoint: string): FeishuTokenResponse {
     this.stats.totalValidations++;
-    
+
     // 动态检查环境，支持测试时临时修改
     const isCurrentlyProduction = process.env.NODE_ENV === 'production';
-    
+
     if (isCurrentlyProduction) {
       return this.safeValidate(FeishuTokenResponseSchema, data, endpoint);
     } else {
@@ -132,17 +132,20 @@ export class FeishuContractValidatorService {
 
   /**
    * 验证飞书记录查询响应
-   * 
+   *
    * @param data 原始API响应数据
    * @param endpoint API端点名称，用于错误记录
    * @returns 验证后的记录响应数据
    */
-  validateRecordsResponse(data: unknown, endpoint: string): FeishuRecordsResponse {
+  validateRecordsResponse(
+    data: unknown,
+    endpoint: string,
+  ): FeishuRecordsResponse {
     this.stats.totalValidations++;
-    
+
     // 动态检查环境，支持测试时临时修改
     const isCurrentlyProduction = process.env.NODE_ENV === 'production';
-    
+
     if (isCurrentlyProduction) {
       return this.safeValidate(FeishuRecordsResponseSchema, data, endpoint);
     } else {
@@ -167,7 +170,7 @@ export class FeishuContractValidatorService {
 
   /**
    * 验证Rating字段 - 替代历史遗留的isRatingFieldType函数
-   * 
+   *
    * 基于真实API结构：type=2 + ui_type='Rating' + property.rating存在
    */
   isRatingFieldValidation(field: FeishuField): boolean {
@@ -194,12 +197,16 @@ export class FeishuContractValidatorService {
 
   /**
    * 生产环境软验证：记录错误但不抛出异常
-   * 
+   *
    * @private
    */
-  private safeValidate<T>(schema: z.ZodSchema<T>, data: unknown, endpoint: string): T {
+  private safeValidate<T>(
+    schema: z.ZodSchema<T>,
+    data: unknown,
+    endpoint: string,
+  ): T {
     const result = schema.safeParse(data);
-    
+
     if (result.success) {
       this.stats.successCount++;
       return result.data;
@@ -211,9 +218,9 @@ export class FeishuContractValidatorService {
         error: result.error.message,
         timestamp: new Date().toISOString(),
       };
-      
+
       this.logContractFailure(endpoint, result.error, data);
-      
+
       // 返回原始数据（类型断言，允许程序继续运行）
       return data as T;
     }
@@ -221,10 +228,14 @@ export class FeishuContractValidatorService {
 
   /**
    * 记录契约验证失败详情
-   * 
+   *
    * @private
    */
-  private logContractFailure(endpoint: string, error: z.ZodError, data: unknown): void {
+  private logContractFailure(
+    endpoint: string,
+    error: z.ZodError,
+    data: unknown,
+  ): void {
     const failureLog: ContractFailureLog = {
       timestamp: new Date().toISOString(),
       endpoint,
@@ -236,7 +247,7 @@ export class FeishuContractValidatorService {
     this.logger.error(`契约验证失败 - ${endpoint}`, failureLog);
 
     // 异步落盘到专用契约失败日志文件
-    this.persistContractFailure(failureLog).catch(err => {
+    this.persistContractFailure(failureLog).catch((err) => {
       this.logger.warn(`契约失败日志落盘失败: ${err.message}`);
     });
   }
@@ -244,10 +255,12 @@ export class FeishuContractValidatorService {
   /**
    * 持久化契约验证失败记录到文件
    * 按日期轮转，便于后续分析API变更趋势
-   * 
+   *
    * @private
    */
-  private async persistContractFailure(failureLog: ContractFailureLog): Promise<void> {
+  private async persistContractFailure(
+    failureLog: ContractFailureLog,
+  ): Promise<void> {
     try {
       // 生成按日期轮转的日志文件名
       const today = new Date().toISOString().split('T')[0]; // yyyy-MM-dd格式
@@ -265,7 +278,9 @@ export class FeishuContractValidatorService {
       this.logger.debug(`契约失败记录已落盘: ${logFilePath}`);
     } catch (error) {
       // 落盘失败不应影响主业务流程，仅记录警告
-      this.logger.warn(`契约失败记录落盘异常: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.warn(
+        `契约失败记录落盘异常: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 
@@ -287,17 +302,27 @@ export class FeishuContractValidatorService {
       try {
         await fs.access(logFilePath);
       } catch {
-        return { totalFailures: 0, affectedEndpoints: [], latestFailureTime: null };
+        return {
+          totalFailures: 0,
+          affectedEndpoints: [],
+          latestFailureTime: null,
+        };
       }
 
       // 读取并解析今日失败记录
       const content = await fs.readFile(logFilePath, 'utf8');
-      const lines = content.trim().split('\n').filter(line => line.length > 0);
-      
-      const failures: ContractFailureLog[] = lines.map(line => JSON.parse(line));
-      const endpoints = Array.from(new Set(failures.map(f => f.endpoint)));
-      const latestFailure = failures.sort((a, b) => 
-        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      const lines = content
+        .trim()
+        .split('\n')
+        .filter((line) => line.length > 0);
+
+      const failures: ContractFailureLog[] = lines.map((line) =>
+        JSON.parse(line),
+      );
+      const endpoints = Array.from(new Set(failures.map((f) => f.endpoint)));
+      const latestFailure = failures.sort(
+        (a, b) =>
+          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
       )[0];
 
       return {
@@ -306,7 +331,9 @@ export class FeishuContractValidatorService {
         latestFailureTime: latestFailure?.timestamp || null,
       };
     } catch (error) {
-      this.logger.warn(`获取今日失败统计异常: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.warn(
+        `获取今日失败统计异常: ${error instanceof Error ? error.message : String(error)}`,
+      );
       return null;
     }
   }
@@ -314,18 +341,21 @@ export class FeishuContractValidatorService {
   /**
    * 验证并提取字段类型分布 - 调试辅助功能
    */
-  validateAndAnalyzeFields(data: unknown, endpoint: string): {
+  validateAndAnalyzeFields(
+    data: unknown,
+    endpoint: string,
+  ): {
     response: FeishuFieldsResponse;
     typeDistribution: Record<number, string[]>;
     ratingFields: FeishuField[];
   } {
     const response = this.validateFieldsResponse(data, endpoint);
-    
+
     // 分析字段类型分布
     const typeDistribution: Record<number, string[]> = {};
     const ratingFields: FeishuField[] = [];
-    
-    response.data.items.forEach(field => {
+
+    response.data.items.forEach((field) => {
       // 统计type -> ui_type分布
       if (!typeDistribution[field.type]) {
         typeDistribution[field.type] = [];
@@ -333,13 +363,13 @@ export class FeishuContractValidatorService {
       if (!typeDistribution[field.type].includes(field.ui_type)) {
         typeDistribution[field.type].push(field.ui_type);
       }
-      
+
       // 收集Rating字段
       if (this.isRatingFieldValidation(field)) {
         ratingFields.push(field);
       }
     });
-    
+
     return {
       response,
       typeDistribution,

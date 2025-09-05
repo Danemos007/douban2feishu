@@ -3,15 +3,15 @@ import { Prisma } from '@prisma/client';
 
 import { PrismaService } from '../common/prisma/prisma.service';
 import { CryptoService } from '../common/crypto/crypto.service';
-import { 
-  UpdateDoubanConfigDto, 
-  UpdateFeishuConfigDto, 
-  UpdateSyncConfigDto 
+import {
+  UpdateDoubanConfigDto,
+  UpdateFeishuConfigDto,
+  UpdateSyncConfigDto,
 } from './dto/config.dto';
 
 /**
  * 配置服务 - 用户配置管理核心逻辑
- * 
+ *
  * 功能:
  * - 敏感信息加密存储
  * - 配置信息CRUD操作
@@ -58,12 +58,14 @@ export class ConfigService {
         appId: user.credentials?.feishuAppId,
         // 不返回实际Secret值
       },
-      sync: user.syncConfigs ? {
-        mappingType: user.syncConfigs.mappingType,
-        autoSyncEnabled: user.syncConfigs.autoSyncEnabled,
-        syncSchedule: user.syncConfigs.syncSchedule,
-        tableMappings: user.syncConfigs.tableMappings,
-      } : null,
+      sync: user.syncConfigs
+        ? {
+            mappingType: user.syncConfigs.mappingType,
+            autoSyncEnabled: user.syncConfigs.autoSyncEnabled,
+            syncSchedule: user.syncConfigs.syncSchedule,
+            tableMappings: user.syncConfigs.tableMappings,
+          }
+        : null,
     };
 
     return decryptedConfig;
@@ -218,7 +220,10 @@ export class ConfigService {
   /**
    * 删除用户配置
    */
-  async deleteUserConfig(userId: string, configType: 'douban' | 'feishu' | 'sync' | 'all') {
+  async deleteUserConfig(
+    userId: string,
+    configType: 'douban' | 'feishu' | 'sync' | 'all',
+  ) {
     switch (configType) {
       case 'douban':
         await this.prisma.userCredentials.update({
@@ -261,7 +266,7 @@ export class ConfigService {
    */
   async validateConfig(userId: string) {
     const config = await this.getUserConfig(userId);
-    
+
     const validation = {
       douban: {
         configured: config.douban.hasConfig,
@@ -278,9 +283,9 @@ export class ConfigService {
       overall: false,
     };
 
-    validation.overall = 
-      validation.douban.configured && 
-      validation.feishu.configured && 
+    validation.overall =
+      validation.douban.configured &&
+      validation.feishu.configured &&
       validation.sync.configured;
 
     return validation;
