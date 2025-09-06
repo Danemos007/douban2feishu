@@ -344,7 +344,7 @@ export class DataTransformationService {
         }
       }
 
-      // 🔥 3. HTML制片地区解析 (TDD新增)
+      // 🔥 3. 制片地区修复 (TDD新增) - 支持HTML解析和字段清理
       // [CRITICAL-FIX-2025-09-04] 修复条件判断，支持null值和不存在的字段
       if ((!repaired.country || repaired.country === null) && movieData.html) {
         const countryMatch = movieData.html.match(
@@ -356,8 +356,18 @@ export class DataTransformationService {
           this.logger.debug(`修复字段: country -> ${repaired.country}`);
         }
       }
+      
+      // 🔥 制片地区字段清理逻辑 (TDD新增)
+      if (repaired.country && typeof repaired.country === 'string') {
+        const cleanedCountry = this.repairCountryField(repaired.country);
+        if (cleanedCountry !== repaired.country) {
+          repaired.country = cleanedCountry;
+          repairedCount++;
+          this.logger.debug(`清理字段: country -> ${cleanedCountry}`);
+        }
+      }
 
-      // 🔥 4. HTML语言解析 (TDD新增)
+      // 🔥 4. 语言修复 (TDD新增) - 支持HTML解析和字段清理
       // [CRITICAL-FIX-2025-09-04] 修复条件判断，支持null值和不存在的字段
       if (
         (!repaired.language || repaired.language === null) &&
@@ -370,6 +380,16 @@ export class DataTransformationService {
           repaired.language = languageMatch[1].trim();
           repairedCount++;
           this.logger.debug(`修复字段: language -> ${repaired.language}`);
+        }
+      }
+      
+      // 🔥 语言字段清理逻辑 (TDD新增)
+      if (repaired.language && typeof repaired.language === 'string') {
+        const cleanedLanguage = this.repairLanguageField(repaired.language);
+        if (cleanedLanguage !== repaired.language) {
+          repaired.language = cleanedLanguage;
+          repairedCount++;
+          this.logger.debug(`清理字段: language -> ${cleanedLanguage}`);
         }
       }
 
@@ -405,26 +425,25 @@ export class DataTransformationService {
       }
 
       // 🔥 2. 作者数组处理 (实现A核心逻辑)
-      // [CRITICAL-FIX-2025-09-04] 作者字段修复逻辑优化
-      // 问题：智能修复会将已处理的字符串"曹雪芹 / 高鹗"转换回数组
-      // 修复：只对原始HTML格式进行修复，避免覆盖通用转换的正确结果
+      // [CRITICAL-FIX-2025-09-06] 保持数据流一致性
+      // 问题：智能修复不应该改变通用转换已确定的数据格式
+      // 修复：智能修复只优化字符串格式，不改变数据类型
       if (
         repaired.author &&
         typeof repaired.author === 'string' &&
         repaired.author.includes('/') &&
         !repaired.author.includes(' / ')
       ) {
-        // 只修复"作者1/作者2"格式，跳过"作者1 / 作者2"
+        // 只优化分隔符格式，保持字符串类型
         const repairedAuthor = this.repairAuthorField(repaired.author);
-        // 保持与通用转换一致的字符串格式
         const authorString = Array.isArray(repairedAuthor)
-          ? repairedAuthor.join(' / ')
+          ? repairedAuthor.join(' / ')  // 保持与通用转换一致的字符串格式
           : repairedAuthor;
         if (authorString !== repaired.author) {
           repaired.author = authorString;
           repairedCount++;
           this.logger.debug(
-            `修复字段: author -> ${JSON.stringify(authorString)}`,
+            `修复字段: author -> ${authorString}`,
           );
         }
       }
@@ -971,10 +990,11 @@ export class DataTransformationService {
     }
 
     // 2. 清理其他干扰信息：移除上映日期、片长等非地区信息
-    countryStr = countryStr.replace(/上映日期:[^/\s]*/g, '').trim();
-    countryStr = countryStr.replace(/片长:[^/\s]*/g, '').trim();
-    countryStr = countryStr.replace(/又名:[^/\s]*/g, '').trim();
-    countryStr = countryStr.replace(/IMDb:[^/\s]*/g, '').trim();
+    // [CRITICAL-FIX-2025-09-06] 修复正则表达式，正确处理包含空格的标签内容
+    countryStr = countryStr.replace(/上映日期:[^]*?(?=\s*(?:语言:|片长:|又名:|IMDb:|$))/g, '').trim();
+    countryStr = countryStr.replace(/片长:[^]*?(?=\s*(?:语言:|上映日期:|又名:|IMDb:|$))/g, '').trim();
+    countryStr = countryStr.replace(/又名:[^]*?(?=\s*(?:语言:|片长:|上映日期:|IMDb:|$))/g, '').trim();
+    countryStr = countryStr.replace(/IMDb:[^]*?$/g, '').trim();
 
     // 2. 处理多地区信息，保持用 ' / ' 分隔
     if (countryStr.includes('/')) {
@@ -1049,11 +1069,12 @@ export class DataTransformationService {
 
     // 🔥 实现D核心：语言清理逻辑
     // 1. 清理干扰信息：移除上映日期、片长、又名等非语言信息
-    languageStr = languageStr.replace(/上映日期:[^/\s]*/g, '').trim();
-    languageStr = languageStr.replace(/片长:[^/\s]*/g, '').trim();
-    languageStr = languageStr.replace(/又名:[^/\s]*$/g, '').trim();
-    languageStr = languageStr.replace(/制片地区:[^/\s]*/g, '').trim();
-    languageStr = languageStr.replace(/IMDb:[^/\s]*$/g, '').trim();
+    // [CRITICAL-FIX-2025-09-06] 修复正则表达式，正确处理包含空格的标签内容
+    languageStr = languageStr.replace(/上映日期:[^]*?(?=\s*(?:片长:|又名:|制片地区:|IMDb:|$))/g, '').trim();
+    languageStr = languageStr.replace(/片长:[^]*?(?=\s*(?:上映日期:|又名:|制片地区:|IMDb:|$))/g, '').trim();
+    languageStr = languageStr.replace(/又名:[^]*?(?=\s*(?:上映日期:|片长:|制片地区:|IMDb:|$))/g, '').trim();
+    languageStr = languageStr.replace(/制片地区:[^]*?(?=\s*(?:上映日期:|片长:|又名:|IMDb:|$))/g, '').trim();
+    languageStr = languageStr.replace(/IMDb:[^]*?$/g, '').trim();
 
     // 2. 处理复杂尾部信息：移除 "片长:xxx", "IMDb:xxx" 等
     languageStr = languageStr.replace(/片长:\d+分钟$/g, '').trim();
