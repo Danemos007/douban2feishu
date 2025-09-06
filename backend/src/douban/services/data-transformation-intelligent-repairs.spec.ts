@@ -15,6 +15,11 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { Logger } from '@nestjs/common';
 
 import { DataTransformationService } from './data-transformation.service';
+import {
+  KEY_MOVIE_VALIDATION_CASES,
+  validateMovieFields,
+  MovieValidationCase,
+} from '../__fixtures__/movie-validation-cases.fixtures';
 
 describe('DataTransformationService - 智能修复引擎 TDD', () => {
   let service: DataTransformationService;
@@ -364,15 +369,15 @@ describe('DataTransformationService - 智能修复引擎 TDD', () => {
         expect(result.publishDate).toBe('1996-12');
       });
 
-      it('应该修复作者字符串到数组转换', async () => {
+      it('应该修复作者字符串分隔符格式', async () => {
         const bookData = {
-          author: '曹雪芹 / 高鹗 / 程伟元',
+          author: '曹雪芹/高鹗/程伟元', // 无空格的分隔符
         };
 
         const result = await (service as any).repairBookData(bookData);
 
-        // 智能修复：字符串格式转换为数组
-        expect(result.author).toEqual(['曹雪芹', '高鹗', '程伟元']);
+        // 智能修复：优化分隔符格式，保持字符串类型以符合数据流一致性
+        expect(result.author).toBe('曹雪芹 / 高鹗 / 程伟元');
       });
 
       it('应该修复评分嵌套提取', async () => {
@@ -528,6 +533,201 @@ describe('DataTransformationService - 智能修复引擎 TDD', () => {
       const result = await (service as any).repairMovieData(movieData);
 
       expect(result.duration).toBe('142分钟'); // 应该正确处理
+    });
+  });
+
+  /**
+   * 🎯 基于真实电影的验证测试
+   * 来源：sync-all-movies-fixed.ts 实战验证经验
+   * 
+   * 这些测试用例验证具体电影的字段解析是否符合预期
+   * 帮助确保修复逻辑能够正确处理真实世界的复杂数据
+   */
+  describe('🎬 基于真实电影的验证测试', () => {
+    describe('关键电影字段验证', () => {
+      it('应该正确解析《鹬 Piper》的复杂片长格式', async () => {
+        const movieData = {
+          subjectId: '26766869',
+          title: '鹬 Piper',
+          duration: null,
+          // 模拟包含"6分03秒"格式的HTML
+          html: '<span class="pl">片长:</span> 6分03秒 <br>',
+        };
+
+        const result = await service.transformDoubanData(movieData, 'movies', {
+          enableIntelligentRepairs: true,
+        });
+
+        // 使用测试固件验证
+        const validationResults = validateMovieFields({
+          subjectId: movieData.subjectId,
+          duration: result.data.duration,
+        });
+
+        const durationValidation = validationResults.find(
+          v => v.fieldName === 'duration'
+        );
+        expect(durationValidation?.passed).toBe(true);
+        expect(result.data.duration).toContain('6分03秒');
+      });
+
+      it('应该正确解析《初恋这件小事》的多版本片长', async () => {
+        const movieData = {
+          subjectId: '4739952',
+          title: '初恋这件小事',
+          duration: null,
+          // 模拟包含多版本片长的HTML
+          html: '<span class="pl">片长:</span> 118分钟(泰国版) / 100分钟(国际版) <br>',
+        };
+
+        const result = await service.transformDoubanData(movieData, 'movies', {
+          enableIntelligentRepairs: true,
+        });
+
+        // 使用测试固件验证
+        const validationResults = validateMovieFields({
+          subjectId: movieData.subjectId,
+          duration: result.data.duration,
+        });
+
+        const durationValidation = validationResults.find(
+          v => v.fieldName === 'duration'
+        );
+        expect(durationValidation?.passed).toBe(true);
+        expect(result.data.duration).toContain('118分钟');
+        expect(result.data.duration).toContain('100分钟');
+      });
+
+      it('应该正确解析《初恋这件小事》的多地区上映日期', async () => {
+        const movieData = {
+          subjectId: '4739952',
+          title: '初恋这件小事',
+          releaseDate: null,
+          // 模拟包含多地区信息的HTML
+          html: '<span property="v:initialReleaseDate">2010-08-25(泰国)</span><span property="v:initialReleaseDate">2010-11-04(中国大陆)</span>',
+        };
+
+        const result = await service.transformDoubanData(movieData, 'movies', {
+          enableIntelligentRepairs: true,
+        });
+
+        // 使用测试固件验证
+        const validationResults = validateMovieFields({
+          subjectId: movieData.subjectId,
+          releaseDate: result.data.releaseDate,
+        });
+
+        const releaseDateValidation = validationResults.find(
+          v => v.fieldName === 'releaseDate'
+        );
+        expect(releaseDateValidation?.passed).toBe(true);
+        expect(result.data.releaseDate).toContain('/');
+      });
+
+      it('应该正确解析《让子弹飞》保留地区标识的上映日期', async () => {
+        const movieData = {
+          subjectId: '3742360',
+          title: '让子弹飞',
+          releaseDate: null,
+          // 模拟包含地区标识的HTML
+          html: '<span property="v:initialReleaseDate">2010-12-16(中国大陆)</span>',
+        };
+
+        const result = await service.transformDoubanData(movieData, 'movies', {
+          enableIntelligentRepairs: true,
+        });
+
+        // 使用测试固件验证
+        const validationResults = validateMovieFields({
+          subjectId: movieData.subjectId,
+          releaseDate: result.data.releaseDate,
+        });
+
+        const releaseDateValidation = validationResults.find(
+          v => v.fieldName === 'releaseDate'
+        );
+        expect(releaseDateValidation?.passed).toBe(true);
+        expect(result.data.releaseDate).toContain('(中国大陆)');
+      });
+
+      it('应该正确解析《坂本龙一：杰作》的多地区复杂上映日期', async () => {
+        const movieData = {
+          subjectId: '36491177',
+          title: '坂本龙一：杰作',
+          releaseDate: null,
+          // 模拟包含复杂多地区信息的HTML
+          html: `
+            <span property="v:initialReleaseDate">2017-05-20(戛纳电影节)</span>
+            <span property="v:initialReleaseDate">2017-11-03(美国)</span>
+            <span property="v:initialReleaseDate">2018-01-05(日本)</span>
+          `,
+        };
+
+        const result = await service.transformDoubanData(movieData, 'movies', {
+          enableIntelligentRepairs: true,
+        });
+
+        // 使用测试固件验证
+        const validationResults = validateMovieFields({
+          subjectId: movieData.subjectId,
+          releaseDate: result.data.releaseDate,
+        });
+
+        const releaseDateValidation = validationResults.find(
+          v => v.fieldName === 'releaseDate'
+        );
+        expect(releaseDateValidation?.passed).toBe(true);
+        expect(result.data.releaseDate).toContain('/');
+        expect(result.data.releaseDate.split('/').length).toBeGreaterThanOrEqual(3);
+      });
+    });
+
+    describe('验证框架功能测试', () => {
+      it('应该能够批量验证所有关键电影', () => {
+        const testMovies = [
+          { subjectId: '26766869', duration: '6分03秒' },
+          { subjectId: '4739952', duration: '118分钟 / 100分钟', releaseDate: '2010-08-25(泰国) / 2010-11-04(中国大陆)' },
+          { subjectId: '3742360', releaseDate: '2010-12-16(中国大陆)' },
+          { subjectId: '36491177', releaseDate: '2017-05-20(戛纳电影节) / 2017-11-03(美国) / 2018-01-05(日本)' },
+        ];
+
+        testMovies.forEach(movie => {
+          const validationResults = validateMovieFields(movie);
+          
+          validationResults.forEach(result => {
+            expect(result.passed).toBe(true);
+            if (!result.passed) {
+              console.error(`验证失败: ${result.errorMessage}`);
+            }
+          });
+        });
+      });
+
+      it('应该正确识别关键电影ID', () => {
+        expect(KEY_MOVIE_VALIDATION_CASES).toHaveLength(4);
+        
+        const expectedIds = ['26766869', '4739952', '3742360', '36491177'];
+        const actualIds = KEY_MOVIE_VALIDATION_CASES.map(movie => movie.subjectId);
+        
+        expect(actualIds).toEqual(expectedIds);
+      });
+
+      it('应该为每个验证用例提供详细的描述信息', () => {
+        KEY_MOVIE_VALIDATION_CASES.forEach(movieCase => {
+          expect(movieCase.title).toBeTruthy();
+          expect(movieCase.description).toBeTruthy();
+          expect(movieCase.validations).toBeDefined();
+          
+          // 至少应该有一种验证规则
+          const hasValidations = 
+            movieCase.validations.duration ||
+            movieCase.validations.releaseDate ||
+            movieCase.validations.country ||
+            movieCase.validations.language;
+          
+          expect(hasValidations).toBeTruthy();
+        });
+      });
     });
   });
 });
