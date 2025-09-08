@@ -15,13 +15,13 @@ import { Logger } from '@nestjs/common';
 
 import { FieldMappingService } from './field-mapping.service';
 import { FeishuTableService } from './feishu-table.service';
-import { FieldAutoCreationServiceV2 } from './field-auto-creation-v2.service';
+import { FieldAutoCreationServiceV2 } from './field-auto-creation.service';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import {
   VERIFIED_FIELD_MAPPINGS,
   getVerifiedFieldMapping,
   VerifiedFieldMappingConfig,
-} from '../config/douban-field-mapping-verified.config';
+} from '../config/douban-field-mapping.config';
 
 describe('FieldMappingService - Phase 2 TDD Enhancement', () => {
   let service: FieldMappingService;

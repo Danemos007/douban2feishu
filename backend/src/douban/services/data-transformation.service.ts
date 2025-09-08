@@ -30,7 +30,7 @@ import {
 import {
   getVerifiedFieldMapping,
   VerifiedFieldMappingConfig,
-} from '../../feishu/config/douban-field-mapping-verified.config';
+} from '../../feishu/config/douban-field-mapping.config';
 
 @Injectable()
 export class DataTransformationService {

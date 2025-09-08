@@ -20,7 +20,7 @@ import { getRedisToken } from '@liaoliaots/nestjs-redis';
 import Redis from 'ioredis';
 
 import { FieldMappingService } from './field-mapping.service';
-import { FieldAutoCreationServiceV2 } from './field-auto-creation-v2.service';
+import { FieldAutoCreationServiceV2 } from './field-auto-creation.service';
 import { FeishuTableService } from './feishu-table.service';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { FeishuFieldType } from '../contract/field.schema';

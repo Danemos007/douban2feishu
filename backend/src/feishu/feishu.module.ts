@@ -7,7 +7,7 @@ import { FeishuController } from './feishu.controller';
 import { FeishuAuthService } from './services/feishu-auth.service';
 import { FeishuTableService } from './services/feishu-table.service';
 import { FieldMappingService } from './services/field-mapping.service';
-import { FieldAutoCreationServiceV2 } from './services/field-auto-creation-v2.service'; // 🆕 新服务
+import { FieldAutoCreationServiceV2 } from './services/field-auto-creation.service'; // 🆕 新服务
 import { FieldCreationConfigManager } from './services/field-creation-config'; // 🆕 配置管理器
 import { SyncEngineService } from './services/sync-engine.service';
 import { FeishuContractValidatorService } from './contract/validator.service';

@@ -3,7 +3,7 @@ import { InjectRedis } from '@liaoliaots/nestjs-redis';
 import Redis from 'ioredis';
 
 import { FeishuTableService } from './feishu-table.service';
-import { FieldAutoCreationServiceV2 } from './field-auto-creation-v2.service'; // 🆕 新服务导入
+import { FieldAutoCreationServiceV2 } from './field-auto-creation.service'; // 🆕 新服务导入
 import { FeishuFieldType } from '../contract/field.schema'; // 🔧 使用统一的字段类型定义
 import { FeishuField } from '../interfaces/feishu.interface';
 import { PrismaService } from '../../common/prisma/prisma.service';
@@ -13,7 +13,7 @@ import {
   getVerifiedFieldMapping,
   VerifiedFieldMappingConfig,
   FIELD_TYPE_MAPPING,
-} from '../config/douban-field-mapping-verified.config';
+} from '../config/douban-field-mapping.config';
 import {
   FieldCreationRequest,
   ContentType,
