@@ -8,7 +8,7 @@
       "msg": "ok",
       "tenant_access_token": "t-g10492fjZOL3REROWRR4PTVA54XOEE3FKHAEOOG3"
     },
-    "timestamp": "2025-09-02T07:19:54.771Z"
+    "timestamp": "2025-09-08T02:00:00.000Z"
   },
   {
     "endpoint": "GET /open-apis/bitable/v1/apps/.../tables/.../fields",
@@ -194,7 +194,7 @@
       },
       "msg": "success"
     },
-    "timestamp": "2025-09-02T07:19:55.304Z"
+    "timestamp": "2025-09-08T02:00:00.304Z"
   },
   {
     "endpoint": "POST /open-apis/bitable/v1/apps/.../tables/.../records/search",
@@ -345,6 +345,6 @@
       },
       "msg": "success"
     },
-    "timestamp": "2025-09-02T07:19:55.901Z"
+    "timestamp": "2025-09-08T02:00:00.901Z"
   }
 ]

@@ -13,6 +13,18 @@
 
 import { FeishuFieldType } from '../interfaces/api.interface';
 
+// 字段类型映射
+export const FIELD_TYPE_MAPPING = {
+  text: FeishuFieldType.Text,
+  number: FeishuFieldType.Number,
+  rating: FeishuFieldType.Rating,
+  multiSelect: FeishuFieldType.MultiSelect,
+  singleSelect: FeishuFieldType.SingleSelect,
+  datetime: FeishuFieldType.DateTime,
+  url: FeishuFieldType.URL,
+  checkbox: FeishuFieldType.Checkbox,
+};
+
 /**
  * 字段映射配置接口 - 增强版
  */

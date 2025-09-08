@@ -324,7 +324,7 @@ describe('field-type.util', () => {
 
     /**
      * 实际使用场景验证
-     * 基于douban-field-mapping.config.ts中的实际配置进行验证
+     * 基于douban-field-mapping-verified.config.ts中的实际配置进行验证
      */
     describe('实际配置场景验证', () => {
       it('应该正确处理豆瓣书籍配置中的myRating字段', () => {
