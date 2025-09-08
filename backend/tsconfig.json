@@ -15,6 +15,7 @@
     "baseUrl": "./",
     "incremental": true,
     "skipLibCheck": true,
+    "allowImportingTsExtensions": false,
     "strict": true,
     "strictNullChecks": true,
     "noImplicitAny": false,
