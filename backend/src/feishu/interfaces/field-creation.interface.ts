@@ -21,7 +21,7 @@ import {
   ContentType,
   ContentTypeConfig,
   FieldCreationStats,
-} from '../contract/field-creation.schema';
+} from '../schemas/field-creation.schema';
 
 // 🔥 新增：统一字段操作相关类型
 import {
@@ -33,7 +33,7 @@ import {
   FieldOperationStrategy,
   ConflictResolution,
   ConfigurationChange,
-} from '../contract/field-operations.schema';
+} from '../schemas/field-operations.schema';
 
 // 🔥 新增：统一字段操作接口
 import {

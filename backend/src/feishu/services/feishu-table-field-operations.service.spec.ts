@@ -27,10 +27,10 @@ import {
   FieldOperationError,
   FieldConfigurationMismatchError,
   FieldNotFoundError,
-} from '../contract/field-operations.schema';
+} from '../schemas/field-operations.schema';
 
-import { FieldCreationConfig } from '../contract/field-creation.schema';
-import { FeishuField, FeishuFieldType } from '../contract/field.schema';
+import { FieldCreationConfig } from '../schemas/field-creation.schema';
+import { FeishuField, FeishuFieldType } from '../schemas/field.schema';
 import { FeishuTableService } from './feishu-table.service';
 import { FeishuAuthService } from './feishu-auth.service';
 import { FeishuContractValidatorService } from '../contract/validator.service';

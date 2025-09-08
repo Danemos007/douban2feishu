@@ -19,12 +19,12 @@ import { FieldMappingService } from './field-mapping.service';
 import { FieldAutoCreationServiceV2 } from './field-auto-creation.service';
 import { FeishuTableService } from './feishu-table.service';
 import { PrismaService } from '../../common/prisma/prisma.service';
-import { FeishuFieldType } from '../contract/field.schema';
+import { FeishuFieldType } from '../schemas/field.schema';
 import {
   FieldCreationRequest,
   ContentType,
   BatchFieldCreationResult,
-} from '../contract/field-creation.schema';
+} from '../schemas/field-creation.schema';
 
 describe('FieldMappingService - Enhanced Integration', () => {
   let service: FieldMappingService;

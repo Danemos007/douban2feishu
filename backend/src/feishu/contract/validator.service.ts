@@ -18,14 +18,14 @@ import {
   FeishuField,
   FeishuFieldsResponseSchema,
   isRatingField,
-} from './field.schema';
+} from '../schemas/field.schema';
 
-import { FeishuTokenResponse, FeishuTokenResponseSchema } from './auth.schema';
+import { FeishuTokenResponse, FeishuTokenResponseSchema } from '../schemas/auth.schema';
 
 import {
   FeishuRecordsResponse,
   FeishuRecordsResponseSchema,
-} from './record.schema';
+} from '../schemas/record.schema';
 
 export interface ValidationStats {
   totalValidations: number;

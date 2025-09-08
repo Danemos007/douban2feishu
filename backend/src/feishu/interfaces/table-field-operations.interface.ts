@@ -16,9 +16,9 @@ import {
   FieldOperationResult,
   BatchFieldOperationResult,
   FieldMatchAnalysis,
-} from '../contract/field-operations.schema';
-import { FieldCreationConfig } from '../contract/field-creation.schema';
-import { FeishuField } from '../contract/field.schema';
+} from '../schemas/field-operations.schema';
+import { FieldCreationConfig } from '../schemas/field-creation.schema';
+import { FeishuField } from '../schemas/field.schema';
 
 /**
  * 🚀 统一字段操作接口 - 革命性设计
@@ -272,4 +272,4 @@ export {
   FieldOperationResult,
   BatchFieldOperationResult,
   FieldMatchAnalysis,
-} from '../contract/field-operations.schema';
+} from '../schemas/field-operations.schema';

@@ -8,7 +8,7 @@ import { CryptoService } from '../../common/crypto/crypto.service';
 import { ExtendedAxiosRequestConfig } from '../../common/interfaces/http.interface';
 import { FeishuErrorResponse } from '../interfaces/api.interface';
 import { FeishuContractValidatorService } from '../contract/validator.service';
-import { FeishuTokenResponse } from '../contract';
+import { FeishuTokenResponse } from '../schemas';
 
 /**
  * Token统计信息接口

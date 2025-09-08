@@ -10,12 +10,12 @@ import {
   FeishuFieldSchema,
   extractFieldTypeMapping,
   isRatingField,
-} from './field.schema';
+} from '../schemas/field.schema';
 import {
   FeishuTokenResponseSchema,
   calculateTokenExpiry,
   isTokenExpiringSoon,
-} from './auth.schema';
+} from '../schemas/auth.schema';
 
 // 导入真实fixtures
 const fieldsFixture = require('./__fixtures__/fields-response.json');

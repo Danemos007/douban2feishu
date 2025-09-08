@@ -31,7 +31,7 @@ import {
   FeishuRecord,
   FeishuRecordCreateRequest,
   isRatingField,
-} from '../contract';
+} from '../schemas';
 
 // 🚀 新增：统一字段操作相关导入
 import {
@@ -44,9 +44,9 @@ import {
   FieldOperationError,
   FieldConfigurationMismatchError,
   FieldNotFoundError,
-} from '../contract/field-operations.schema';
+} from '../schemas/field-operations.schema';
 
-import { FieldCreationConfig } from '../contract/field-creation.schema';
+import { FieldCreationConfig } from '../schemas/field-creation.schema';
 import { IFeishuTableFieldOperations } from '../interfaces/table-field-operations.interface';
 
 // [CRITICAL-FIX-2025-09-02] 移除遗留的isRatingFieldType导入
