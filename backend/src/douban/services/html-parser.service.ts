@@ -1,6 +1,41 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as cheerio from 'cheerio';
+import {
+  // HTML Response Schemas
+  DoubanHtmlBase,
+  DoubanItemHtml,
+  DoubanBookHtml,
+  DoubanMovieHtml,
+  DoubanTvHtml,
+  DoubanCollectionHtml,
+  
+  // Validation Functions
+  validateDoubanHtml,
+  isValidDoubanHtml,
+  
+  // Parsed Result Schemas
+  DoubanItem,
+  DoubanBook,
+  DoubanMovie,
+  DoubanTvSeries,
+  DoubanDocumentary,
+  validateDoubanItem,
+  validateDoubanItemByType,
+  inferDoubanItemType,
+  
+  // Field Schemas
+  validateBookComplete,
+  validateMovieComplete,
+  validateTvSeriesComplete,
+  validateDocumentaryComplete,
+} from '../schemas';
 
+// ===== 向后兼容的接口定义 =====
+
+/**
+ * 向后兼容的用户状态接口
+ * @deprecated 建议使用新的parseDoubanItem方法
+ */
 export interface ParsedUserState {
   rating?: number;
   tags?: string[];
@@ -9,6 +44,10 @@ export interface ParsedUserState {
   markDate?: Date;
 }
 
+/**
+ * 向后兼容的列表项接口
+ * @deprecated 建议使用新的parseCollectionPage方法
+ */
 export interface ParsedListItem {
   id: string;
   url: string;
@@ -16,28 +55,439 @@ export interface ParsedListItem {
   updateDate?: Date;
 }
 
+/**
+ * 向后兼容的列表页接口
+ * @deprecated 建议使用新的parseCollectionPage方法
+ */
 export interface ParsedListPage {
   items: ParsedListItem[];
   total: number;
   hasMore: boolean;
 }
 
+// ===== 新的类型定义 =====
+
 /**
- * HTML解析服务 - 基于obsidian-douban的解析策略
+ * 解析结果类型定义
+ * 基于Zod Schema的类型安全结构
+ */
+export interface ParseResult<T = DoubanItem> {
+  success: boolean;
+  data?: T;
+  errors: string[];
+  warnings: string[];
+  parsingStrategy: 'json-ld' | 'html-selectors' | 'mixed';
+  performance?: {
+    startTime: Date;
+    endTime: Date;
+    durationMs: number;
+  };
+}
+
+/**
+ * HTML解析上下文
+ */
+export interface ParseContext {
+  url: string;
+  pageType: 'detail' | 'collection' | 'unknown';
+  itemType?: 'books' | 'movies' | 'tv' | 'documentary' | 'music';
+  htmlContent: string;
+  $: cheerio.Root;
+}
+
+/**
+ * HTML解析服务 - 基于Zod Schema的类型安全解析
  *
  * 解析优先级:
- * 1. JSON-LD结构化数据
- * 2. Meta标签
- * 3. DOM选择器
+ * 1. JSON-LD结构化数据 (优先)
+ * 2. Meta标签 (备选)
+ * 3. DOM选择器 (兜底)
+ * 
+ * 新增特性:
+ * - 完整的运行时类型验证
+ * - 智能的数据类型推断
+ * - 详细的错误和警告信息
+ * - 性能监控和统计
  */
 @Injectable()
 export class HtmlParserService {
   private readonly logger = new Logger(HtmlParserService.name);
 
   /**
+   * 主要解析入口 - 解析豆瓣条目详情页
+   */
+  async parseDoubanItem(
+    htmlContent: string,
+    url: string,
+    expectedType?: 'books' | 'movies' | 'tv' | 'documentary' | 'music'
+  ): Promise<ParseResult<DoubanItem>> {
+    const startTime = new Date();
+    const errors: string[] = [];
+    const warnings: string[] = [];
+    let parsingStrategy: 'json-ld' | 'html-selectors' | 'mixed' = 'html-selectors';
+
+    try {
+      // 创建解析上下文
+      const $ = cheerio.load(htmlContent);
+      const context: ParseContext = {
+        url,
+        pageType: 'detail',
+        itemType: expectedType,
+        htmlContent,
+        $,
+      };
+
+      // 第一步：尝试JSON-LD解析
+      const structuredData = this.parseStructuredData($);
+      let parsedData: Partial<DoubanItem> = {};
+
+      if (structuredData) {
+        this.logger.debug('Using JSON-LD structured data parsing');
+        parsingStrategy = 'json-ld';
+        parsedData = this.convertStructuredDataToItem(structuredData, context);
+      } else {
+        this.logger.debug('Falling back to HTML selector parsing');
+        parsingStrategy = 'html-selectors';
+        parsedData = this.parseFromHtmlSelectors(context);
+      }
+
+      // 如果两种方式都有数据，则混合使用
+      if (structuredData && Object.keys(parsedData).length > 0) {
+        parsingStrategy = 'mixed';
+        const htmlParsed = this.parseFromHtmlSelectors(context);
+        parsedData = this.mergeParsingResults(parsedData, htmlParsed);
+      }
+
+      // 智能推断数据类型
+      const inferredType = expectedType || inferDoubanItemType(parsedData);
+      if (inferredType === 'unknown') {
+        warnings.push('无法确定条目类型，请检查URL或数据完整性');
+      } else {
+        parsedData.category = inferredType as any;
+      }
+
+      // 类型安全验证
+      const validationResult = this.validateParsedData(parsedData, inferredType);
+      if (!validationResult.success) {
+        errors.push(...validationResult.errors);
+        if (validationResult.data) {
+          warnings.push('数据验证存在警告，但解析继续进行');
+        }
+      }
+
+      const endTime = new Date();
+      const durationMs = endTime.getTime() - startTime.getTime();
+
+      return {
+        success: validationResult.success && errors.length === 0,
+        data: validationResult.success ? validationResult.data : undefined,
+        errors,
+        warnings,
+        parsingStrategy,
+        performance: {
+          startTime,
+          endTime,
+          durationMs,
+        },
+      };
+    } catch (error) {
+      const endTime = new Date();
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      errors.push(`解析失败: ${errorMessage}`);
+      
+      this.logger.error('Failed to parse Douban item', { url, error });
+      
+      return {
+        success: false,
+        errors,
+        warnings,
+        parsingStrategy,
+        performance: {
+          startTime,
+          endTime,
+          durationMs: endTime.getTime() - startTime.getTime(),
+        },
+      };
+    }
+  }
+
+  /**
+   * 解析豆瓣收藏列表页
+   */
+  async parseCollectionPage(
+    htmlContent: string,
+    url: string,
+    itemType: 'books' | 'movies' | 'tv' | 'documentary' | 'music'
+  ): Promise<ParseResult<DoubanCollectionHtml>> {
+    const startTime = new Date();
+    const errors: string[] = [];
+    const warnings: string[] = [];
+
+    try {
+      const $ = cheerio.load(htmlContent);
+      
+      // 使用现有的列表解析逻辑，但包装在Schema验证中
+      const listPage = this.parseListPage($);
+      
+      const collectionData: Partial<DoubanCollectionHtml> = {
+        title: $('title').text().trim(),
+        url,
+        statusCode: 200,
+        collectionType: itemType as 'books' | 'movies' | 'tv' | 'music',
+        collectionStatus: 'collect', // 默认，需要从URL推断
+        pagination: {
+          currentPage: 1, // 需要从URL参数提取
+          totalPages: Math.ceil(listPage.total / 15),
+          totalItems: listPage.total,
+          itemsPerPage: 15,
+          hasNextPage: listPage.hasMore,
+          hasPrevPage: false,
+        },
+        items: listPage.items.map(item => ({
+          subjectId: item.id,
+          title: item.title,
+          url: item.url,
+          quickInfo: {
+            genres: [], // 必需字段
+          },
+          userTags: [],
+        })),
+      };
+
+      // 验证收藏页数据
+      const validationResult = validateDoubanHtml(collectionData, 'collection');
+      if (!validationResult.success) {
+        errors.push((validationResult as any).error || '收藏页验证失败');
+      }
+
+      const endTime = new Date();
+
+      return {
+        success: validationResult.success,
+        data: validationResult.success ? validationResult.data : undefined,
+        errors,
+        warnings,
+        parsingStrategy: 'html-selectors',
+        performance: {
+          startTime,
+          endTime,
+          durationMs: endTime.getTime() - startTime.getTime(),
+        },
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      errors.push(`收藏页解析失败: ${errorMessage}`);
+      
+      const endTime = new Date();
+      return {
+        success: false,
+        errors,
+        warnings,
+        parsingStrategy: 'html-selectors',
+        performance: {
+          startTime,
+          endTime,
+          durationMs: endTime.getTime() - startTime.getTime(),
+        },
+      };
+    }
+  }
+
+  /**
+   * 从结构化数据转换为条目数据
+   */
+  private convertStructuredDataToItem(
+    structuredData: any,
+    context: ParseContext
+  ): Partial<DoubanItem> {
+    const item: Partial<DoubanItem> = {};
+
+    if (structuredData.name) {
+      item.title = structuredData.name;
+    }
+    
+    if (structuredData.alternateName) {
+      item.originalTitle = structuredData.alternateName;
+    }
+
+    if (structuredData.aggregateRating) {
+      item.rating = {
+        average: structuredData.aggregateRating.ratingValue || 0,
+        numRaters: structuredData.aggregateRating.ratingCount || 0,
+      };
+    }
+
+    if (structuredData.genre && Array.isArray(structuredData.genre)) {
+      item.genres = structuredData.genre;
+    }
+
+    if (structuredData.description) {
+      item.summary = structuredData.description;
+    }
+
+    if (structuredData.image) {
+      item.coverUrl = structuredData.image;
+    }
+
+    if (structuredData.author && Array.isArray(structuredData.author)) {
+      item.authors = structuredData.author.map((a: any) => a.name || a);
+    }
+
+    if (structuredData.director && Array.isArray(structuredData.director)) {
+      item.directors = structuredData.director.map((d: any) => d.name || d);
+    }
+
+    if (structuredData.actor && Array.isArray(structuredData.actor)) {
+      item.cast = structuredData.actor.map((a: any) => a.name || a);
+    }
+
+    // URL处理
+    item.doubanUrl = context.url;
+
+    // 从URL提取subjectId
+    const idMatch = context.url.match(/(\d){5,10}/);
+    if (idMatch) {
+      item.subjectId = idMatch[0];
+    }
+
+    return item;
+  }
+
+  /**
+   * 从HTML选择器解析条目数据
+   */
+  private parseFromHtmlSelectors(context: ParseContext): Partial<DoubanItem> {
+    const { $ } = context;
+    const item: Partial<DoubanItem> = {};
+
+    // 基本信息
+    const basicInfo = this.parseBasicInfo($);
+    if (basicInfo.score) {
+      item.rating = {
+        average: basicInfo.score,
+        numRaters: 0, // 需要从其他地方获取
+      };
+    }
+    if (basicInfo.desc) {
+      item.summary = basicInfo.desc;
+    }
+    if (basicInfo.image) {
+      item.coverUrl = basicInfo.image;
+    }
+
+    // 详细信息
+    const infoSection = this.parseInfoSection($);
+    Object.assign(item, infoSection);
+
+    // 用户状态
+    const userState = this.parseUserState($);
+    if (userState.rating) {
+      item.userRating = userState.rating;
+    }
+    if (userState.tags) {
+      item.userTags = userState.tags;
+    }
+    if (userState.comment) {
+      item.userComment = userState.comment;
+    }
+    if (userState.markDate) {
+      item.readDate = userState.markDate;
+    }
+
+    // URL和ID
+    item.doubanUrl = context.url;
+    const idMatch = context.url.match(/(\d){5,10}/);
+    if (idMatch) {
+      item.subjectId = idMatch[0];
+    }
+
+    return item;
+  }
+
+  /**
+   * 合并不同解析策略的结果
+   */
+  private mergeParsingResults(
+    jsonLdData: Partial<DoubanItem>,
+    htmlData: Partial<DoubanItem>
+  ): Partial<DoubanItem> {
+    // JSON-LD数据优先，但HTML数据可以填补空缺
+    const merged = { ...jsonLdData };
+
+    // 用户相关数据只能从HTML获取
+    if (htmlData.userRating) merged.userRating = htmlData.userRating;
+    if (htmlData.userTags) merged.userTags = htmlData.userTags;
+    if (htmlData.userComment) merged.userComment = htmlData.userComment;
+    if (htmlData.readDate) merged.readDate = htmlData.readDate;
+
+    // 其他字段如果JSON-LD缺失，则使用HTML数据
+    Object.keys(htmlData).forEach(key => {
+      if (!merged[key] && htmlData[key]) {
+        merged[key] = htmlData[key];
+      }
+    });
+
+    return merged;
+  }
+
+  /**
+   * 验证解析的数据
+   */
+  private validateParsedData(
+    data: Partial<DoubanItem>,
+    itemType: string
+  ): { success: boolean; data?: DoubanItem; errors: string[] } {
+    const errors: string[] = [];
+
+    // 必需字段检查
+    if (!data.subjectId) {
+      errors.push('缺少必需字段: subjectId');
+    }
+    if (!data.title) {
+      errors.push('缺少必需字段: title');
+    }
+    if (!data.doubanUrl) {
+      errors.push('缺少必需字段: doubanUrl');
+    }
+
+    // 根据类型进行专门验证
+    let validationResult;
+    switch (itemType) {
+      case 'books':
+        validationResult = validateBookComplete(data);
+        break;
+      case 'movies':
+        validationResult = validateMovieComplete(data);
+        break;
+      case 'tv':
+        validationResult = validateTvSeriesComplete(data);
+        break;
+      case 'documentary':
+        validationResult = validateDocumentaryComplete(data);
+        break;
+      default:
+        // 通用验证
+        validationResult = validateDoubanItem(data);
+    }
+
+    if (!validationResult.success) {
+      errors.push(validationResult.error);
+      return { success: false, errors };
+    }
+
+    return {
+      success: true,
+      data: validationResult.data,
+      errors: [],
+    };
+  }
+
+  // ===== 以下是保留的原有方法 =====
+
+  /**
    * 解析JSON-LD结构化数据
    */
-  parseStructuredData($: cheerio.CheerioAPI): any {
+  parseStructuredData($: cheerio.Root): any {
     try {
       const scripts = $('script[type="application/ld+json"]');
       if (scripts.length === 0) {
@@ -66,7 +516,7 @@ export class HtmlParserService {
   /**
    * 解析Meta标签信息
    */
-  parseMetaTags($: cheerio.CheerioAPI): {
+  parseMetaTags($: cheerio.Root): {
     image?: string;
     description?: string;
     title?: string;
@@ -97,7 +547,7 @@ export class HtmlParserService {
   /**
    * 解析用户状态 - 基于obsidian-douban的用户状态解析
    */
-  parseUserState($: cheerio.CheerioAPI): ParsedUserState {
+  parseUserState($: cheerio.Root): ParsedUserState {
     const userState: ParsedUserState = {};
 
     try {
@@ -170,7 +620,7 @@ export class HtmlParserService {
   /**
    * 解析用户评论 - 多选择器策略
    */
-  private parseUserComment($: cheerio.CheerioAPI): string | undefined {
+  private parseUserComment($: cheerio.Root): string | undefined {
     // 尝试多个选择器，基于obsidian-douban的策略
     const selectors = [
       '#interest_sect_level > div > span:nth-child(7)',
@@ -273,7 +723,7 @@ export class HtmlParserService {
   /**
    * 解析列表页 - 基于obsidian-douban的列表解析
    */
-  parseListPage($: cheerio.CheerioAPI): ParsedListPage {
+  parseListPage($: cheerio.Root): ParsedListPage {
     const items: ParsedListItem[] = [];
 
     try {
@@ -347,7 +797,7 @@ export class HtmlParserService {
   /**
    * 解析详情页的基本信息
    */
-  parseBasicInfo($: cheerio.CheerioAPI): {
+  parseBasicInfo($: cheerio.Root): {
     score?: number;
     desc?: string;
     image?: string;
@@ -391,7 +841,7 @@ export class HtmlParserService {
   /**
    * 解析#info区域的详细信息
    */
-  parseInfoSection($: cheerio.CheerioAPI): Record<string, any> {
+  parseInfoSection($: cheerio.Root): Record<string, any> {
     const infoMap = new Map<string, any>();
 
     try {
