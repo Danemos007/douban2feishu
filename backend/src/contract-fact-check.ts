@@ -20,8 +20,13 @@ const TEST_CONFIG = {
 };
 
 // 验证必需的环境变量
-const requiredEnvVars = ['FEISHU_APP_ID', 'FEISHU_APP_SECRET', 'FEISHU_APP_TOKEN', 'FEISHU_BOOKS_TABLE_ID'];
-const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
+const requiredEnvVars = [
+  'FEISHU_APP_ID',
+  'FEISHU_APP_SECRET',
+  'FEISHU_APP_TOKEN',
+  'FEISHU_BOOKS_TABLE_ID',
+];
+const missingVars = requiredEnvVars.filter((varName) => !process.env[varName]);
 
 if (missingVars.length > 0) {
   console.error('❌ 缺少必需的环境变量:', missingVars.join(', '));

@@ -107,7 +107,7 @@ export class FieldMappingService {
       const fieldsToCreate: Array<{
         doubanField: string;
         chineseName: string;
-        fieldType: typeof FeishuFieldType[keyof typeof FeishuFieldType];
+        fieldType: (typeof FeishuFieldType)[keyof typeof FeishuFieldType];
         description: string;
       }> = [];
       const errors: Array<{
@@ -813,7 +813,7 @@ export class FieldMappingService {
 
   /**
    * 🔥 增强版字段映射配置 - 使用新的字段创建系统V2
-   * 
+   *
    * 革命性升级：
    * - 使用FieldAutoCreationServiceV2替代老旧的batchCreateFields
    * - 获得ensureFieldConfiguration的所有企业级特性
@@ -879,7 +879,7 @@ export class FieldMappingService {
       const fieldsToCreate: Array<{
         doubanField: string;
         chineseName: string;
-        fieldType: typeof FeishuFieldType[keyof typeof FeishuFieldType];
+        fieldType: (typeof FeishuFieldType)[keyof typeof FeishuFieldType];
         description: string;
       }> = [];
       const errors: Array<{
@@ -925,30 +925,37 @@ export class FieldMappingService {
       let batchResult: BatchFieldCreationResult | null = null;
 
       if (fieldsToCreate.length > 0) {
-        this.logger.log(`🚀 Creating ${fieldsToCreate.length} missing fields using V2 architecture...`);
+        this.logger.log(
+          `🚀 Creating ${fieldsToCreate.length} missing fields using V2 architecture...`,
+        );
 
         try {
           // 🎯 构建FieldCreationRequest数组
-          const creationRequests: FieldCreationRequest[] = fieldsToCreate.map(config => ({
-            fieldName: config.chineseName,
-            contentType: dataType as ContentType,
-            fieldType: config.fieldType as typeof FeishuFieldType[keyof typeof FeishuFieldType],
-            description: config.description,
-          }));
+          const creationRequests: FieldCreationRequest[] = fieldsToCreate.map(
+            (config) => ({
+              fieldName: config.chineseName,
+              contentType: dataType,
+              fieldType: config.fieldType,
+              description: config.description,
+            }),
+          );
 
           // 🚀 使用新服务V2进行批量创建！
-          batchResult = await this.fieldAutoCreation.batchCreateFieldsWithSmartDelay(
-            appId,
-            appSecret,
-            appToken,
-            tableId,
-            creationRequests,
-          );
+          batchResult =
+            await this.fieldAutoCreation.batchCreateFieldsWithSmartDelay(
+              appId,
+              appSecret,
+              appToken,
+              tableId,
+              creationRequests,
+            );
 
           // 映射创建成功的字段
           batchResult.success.forEach((field, index) => {
             // 根据字段名匹配回原始配置
-            const fieldConfig = fieldsToCreate.find(config => config.chineseName === field.field_name);
+            const fieldConfig = fieldsToCreate.find(
+              (config) => config.chineseName === field.field_name,
+            );
             if (fieldConfig) {
               mappings[fieldConfig.doubanField] = field.field_id;
               created.push({
@@ -965,8 +972,8 @@ export class FieldMappingService {
 
           // 处理创建失败的字段
           batchResult.failed.forEach((failure) => {
-            const fieldConfig = fieldsToCreate.find(config => 
-              config.chineseName === failure.request.fieldName
+            const fieldConfig = fieldsToCreate.find(
+              (config) => config.chineseName === failure.request.fieldName,
             );
             if (fieldConfig) {
               errors.push({
@@ -976,11 +983,11 @@ export class FieldMappingService {
               });
             }
           });
-
         } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : String(error);
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
           this.logger.error('🚨 Enhanced field creation failed:', errorMessage);
-          
+
           // 将所有待创建字段标记为错误
           fieldsToCreate.forEach((config) => {
             errors.push({
@@ -1007,26 +1014,28 @@ export class FieldMappingService {
       // 8. 🚀 构建增强结果（包含性能指标）
       const totalFields = Object.keys(doubanFieldConfig).length;
       const successfulFields = matched.length + created.length;
-      const performanceMetrics = batchResult ? {
-        processingTime: batchResult.summary.processingTime,
-        successRate: totalFields > 0 ? successfulFields / totalFields : 1,
-        totalFields,
-        enhancedFeatures: [
-          '🎯 智能字段配置 (ensureFieldConfiguration)',
-          '🔄 自动重试机制',
-          '⚡ 智能缓存优化', 
-          '📊 完整性能监控',
-          '🛡️ 企业级错误隔离',
-          '⏱️ 智能延迟控制',
-        ],
-      } : undefined;
+      const performanceMetrics = batchResult
+        ? {
+            processingTime: batchResult.summary.processingTime,
+            successRate: totalFields > 0 ? successfulFields / totalFields : 1,
+            totalFields,
+            enhancedFeatures: [
+              '🎯 智能字段配置 (ensureFieldConfiguration)',
+              '🔄 自动重试机制',
+              '⚡ 智能缓存优化',
+              '📊 完整性能监控',
+              '🛡️ 企业级错误隔离',
+              '⏱️ 智能延迟控制',
+            ],
+          }
+        : undefined;
 
-      const result = { 
-        mappings, 
-        matched, 
-        created, 
-        errors, 
-        performanceMetrics 
+      const result = {
+        mappings,
+        matched,
+        created,
+        errors,
+        performanceMetrics,
       };
 
       this.logger.log(`🎉 Enhanced field mapping configuration completed:`, {
@@ -1040,8 +1049,12 @@ export class FieldMappingService {
 
       return result;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      this.logger.error('🚨 Enhanced auto-configure field mappings failed:', errorMessage);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      this.logger.error(
+        '🚨 Enhanced auto-configure field mappings failed:',
+        errorMessage,
+      );
       throw error instanceof Error ? error : new Error(String(error));
     }
   }

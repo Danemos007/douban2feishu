@@ -162,7 +162,7 @@ describe('FeishuTableService - 革命性统一字段操作', () => {
       it('should create new SingleSelect field with correct options', async () => {
         // Mock: 字段不存在
         jest.spyOn(service, 'findFieldByName').mockResolvedValue(null);
-        
+
         // Mock: 配置分析返回无匹配 (用于字段不存在的情况)
         jest.spyOn(service, 'analyzeFieldConfiguration').mockResolvedValue({
           isFullMatch: false,
@@ -176,9 +176,11 @@ describe('FeishuTableService - 革命性统一字段操作', () => {
         jest
           .spyOn(service as any, 'createFieldInternal')
           .mockResolvedValue(mockCreatedField);
-          
+
         // Mock: 缓存清理
-        jest.spyOn(service as any, 'clearFieldCache').mockResolvedValue(undefined);
+        jest
+          .spyOn(service as any, 'clearFieldCache')
+          .mockResolvedValue(undefined);
 
         const result = await service.ensureFieldConfiguration(
           mockCredentials,
@@ -496,12 +498,14 @@ describe('FeishuTableService - 革命性统一字段操作', () => {
       it('should have cache management capabilities', async () => {
         // 验证服务具备缓存管理方法
         expect(typeof (service as any).clearFieldCache).toBe('function');
-        
+
         // 验证缓存清理方法可以被调用且不抛出错误
-        await expect((service as any).clearFieldCache(
-          mockCredentials.appToken,
-          mockTableId
-        )).resolves.not.toThrow();
+        await expect(
+          (service as any).clearFieldCache(
+            mockCredentials.appToken,
+            mockTableId,
+          ),
+        ).resolves.not.toThrow();
       });
 
       it('should skip cache when skipCache option is true', async () => {
