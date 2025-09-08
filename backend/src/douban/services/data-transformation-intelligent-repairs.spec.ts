@@ -539,7 +539,7 @@ describe('DataTransformationService - 智能修复引擎 TDD', () => {
   /**
    * 🎯 基于真实电影的验证测试
    * 来源：sync-all-movies-fixed.ts 实战验证经验
-   * 
+   *
    * 这些测试用例验证具体电影的字段解析是否符合预期
    * 帮助确保修复逻辑能够正确处理真实世界的复杂数据
    */
@@ -565,7 +565,7 @@ describe('DataTransformationService - 智能修复引擎 TDD', () => {
         });
 
         const durationValidation = validationResults.find(
-          v => v.fieldName === 'duration'
+          (v) => v.fieldName === 'duration',
         );
         expect(durationValidation?.passed).toBe(true);
         expect(result.data.duration).toContain('6分03秒');
@@ -591,7 +591,7 @@ describe('DataTransformationService - 智能修复引擎 TDD', () => {
         });
 
         const durationValidation = validationResults.find(
-          v => v.fieldName === 'duration'
+          (v) => v.fieldName === 'duration',
         );
         expect(durationValidation?.passed).toBe(true);
         expect(result.data.duration).toContain('118分钟');
@@ -618,7 +618,7 @@ describe('DataTransformationService - 智能修复引擎 TDD', () => {
         });
 
         const releaseDateValidation = validationResults.find(
-          v => v.fieldName === 'releaseDate'
+          (v) => v.fieldName === 'releaseDate',
         );
         expect(releaseDateValidation?.passed).toBe(true);
         expect(result.data.releaseDate).toContain('/');
@@ -644,7 +644,7 @@ describe('DataTransformationService - 智能修复引擎 TDD', () => {
         });
 
         const releaseDateValidation = validationResults.find(
-          v => v.fieldName === 'releaseDate'
+          (v) => v.fieldName === 'releaseDate',
         );
         expect(releaseDateValidation?.passed).toBe(true);
         expect(result.data.releaseDate).toContain('(中国大陆)');
@@ -674,11 +674,13 @@ describe('DataTransformationService - 智能修复引擎 TDD', () => {
         });
 
         const releaseDateValidation = validationResults.find(
-          v => v.fieldName === 'releaseDate'
+          (v) => v.fieldName === 'releaseDate',
         );
         expect(releaseDateValidation?.passed).toBe(true);
         expect(result.data.releaseDate).toContain('/');
-        expect(result.data.releaseDate.split('/').length).toBeGreaterThanOrEqual(3);
+        expect(
+          result.data.releaseDate.split('/').length,
+        ).toBeGreaterThanOrEqual(3);
       });
     });
 
@@ -686,15 +688,23 @@ describe('DataTransformationService - 智能修复引擎 TDD', () => {
       it('应该能够批量验证所有关键电影', () => {
         const testMovies = [
           { subjectId: '26766869', duration: '6分03秒' },
-          { subjectId: '4739952', duration: '118分钟 / 100分钟', releaseDate: '2010-08-25(泰国) / 2010-11-04(中国大陆)' },
+          {
+            subjectId: '4739952',
+            duration: '118分钟 / 100分钟',
+            releaseDate: '2010-08-25(泰国) / 2010-11-04(中国大陆)',
+          },
           { subjectId: '3742360', releaseDate: '2010-12-16(中国大陆)' },
-          { subjectId: '36491177', releaseDate: '2017-05-20(戛纳电影节) / 2017-11-03(美国) / 2018-01-05(日本)' },
+          {
+            subjectId: '36491177',
+            releaseDate:
+              '2017-05-20(戛纳电影节) / 2017-11-03(美国) / 2018-01-05(日本)',
+          },
         ];
 
-        testMovies.forEach(movie => {
+        testMovies.forEach((movie) => {
           const validationResults = validateMovieFields(movie);
-          
-          validationResults.forEach(result => {
+
+          validationResults.forEach((result) => {
             expect(result.passed).toBe(true);
             if (!result.passed) {
               console.error(`验证失败: ${result.errorMessage}`);
@@ -705,26 +715,28 @@ describe('DataTransformationService - 智能修复引擎 TDD', () => {
 
       it('应该正确识别关键电影ID', () => {
         expect(KEY_MOVIE_VALIDATION_CASES).toHaveLength(4);
-        
+
         const expectedIds = ['26766869', '4739952', '3742360', '36491177'];
-        const actualIds = KEY_MOVIE_VALIDATION_CASES.map(movie => movie.subjectId);
-        
+        const actualIds = KEY_MOVIE_VALIDATION_CASES.map(
+          (movie) => movie.subjectId,
+        );
+
         expect(actualIds).toEqual(expectedIds);
       });
 
       it('应该为每个验证用例提供详细的描述信息', () => {
-        KEY_MOVIE_VALIDATION_CASES.forEach(movieCase => {
+        KEY_MOVIE_VALIDATION_CASES.forEach((movieCase) => {
           expect(movieCase.title).toBeTruthy();
           expect(movieCase.description).toBeTruthy();
           expect(movieCase.validations).toBeDefined();
-          
+
           // 至少应该有一种验证规则
-          const hasValidations = 
+          const hasValidations =
             movieCase.validations.duration ||
             movieCase.validations.releaseDate ||
             movieCase.validations.country ||
             movieCase.validations.language;
-          
+
           expect(hasValidations).toBeTruthy();
         });
       });

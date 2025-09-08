@@ -1,6 +1,6 @@
 /**
  * 电影字段验证测试固件
- * 
+ *
  * 基于 sync-all-movies-fixed.ts 实战验证经验提取
  * 用于自动化测试关键电影的字段解析正确性
  */
@@ -62,9 +62,10 @@ export const KEY_MOVIE_VALIDATION_CASES: MovieValidationCase[] = [
       duration: {
         shouldContain: ['6分03秒'],
         format: 'complex',
-        validator: (duration: string) => !!(duration && duration.includes('6分03秒'))
-      }
-    }
+        validator: (duration: string) =>
+          !!(duration && duration.includes('6分03秒')),
+      },
+    },
   },
   {
     subjectId: '4739952',
@@ -74,17 +75,19 @@ export const KEY_MOVIE_VALIDATION_CASES: MovieValidationCase[] = [
       duration: {
         shouldContain: ['118分钟', '100分钟'],
         format: 'multi-version',
-        validator: (duration: string) => 
-          !!(duration && 
-          duration.includes('118分钟') && 
-          duration.includes('100分钟'))
+        validator: (duration: string) =>
+          !!(
+            duration &&
+            duration.includes('118分钟') &&
+            duration.includes('100分钟')
+          ),
       },
       releaseDate: {
         shouldHaveMultipleRegions: true,
-        validator: (releaseDate: string) => 
-          !!(releaseDate && releaseDate.includes('/'))
-      }
-    }
+        validator: (releaseDate: string) =>
+          !!(releaseDate && releaseDate.includes('/')),
+      },
+    },
   },
   {
     subjectId: '3742360',
@@ -93,10 +96,10 @@ export const KEY_MOVIE_VALIDATION_CASES: MovieValidationCase[] = [
     validations: {
       releaseDate: {
         shouldContain: ['(中国大陆)'],
-        validator: (releaseDate: string) => 
-          !!(releaseDate && releaseDate.includes('(中国大陆)'))
-      }
-    }
+        validator: (releaseDate: string) =>
+          !!(releaseDate && releaseDate.includes('(中国大陆)')),
+      },
+    },
   },
   {
     subjectId: '36491177',
@@ -105,26 +108,34 @@ export const KEY_MOVIE_VALIDATION_CASES: MovieValidationCase[] = [
     validations: {
       releaseDate: {
         shouldHaveMultipleRegions: true,
-        validator: (releaseDate: string) => 
-          !!(releaseDate && 
-          releaseDate.includes('/') && 
-          releaseDate.split('/').length >= 3)
-      }
-    }
-  }
+        validator: (releaseDate: string) =>
+          !!(
+            releaseDate &&
+            releaseDate.includes('/') &&
+            releaseDate.split('/').length >= 3
+          ),
+      },
+    },
+  },
 ];
 
 /**
  * 🎯 关键电影ID列表
  * 用于选择性处理的电影ID集合
  */
-export const KEY_MOVIE_IDS = KEY_MOVIE_VALIDATION_CASES.map(movie => movie.subjectId);
+export const KEY_MOVIE_IDS = KEY_MOVIE_VALIDATION_CASES.map(
+  (movie) => movie.subjectId,
+);
 
 /**
  * 根据电影ID获取验证用例
  */
-export function getValidationCaseBySubjectId(subjectId: string): MovieValidationCase | undefined {
-  return KEY_MOVIE_VALIDATION_CASES.find(movie => movie.subjectId === subjectId);
+export function getValidationCaseBySubjectId(
+  subjectId: string,
+): MovieValidationCase | undefined {
+  return KEY_MOVIE_VALIDATION_CASES.find(
+    (movie) => movie.subjectId === subjectId,
+  );
 }
 
 /**
@@ -159,65 +170,79 @@ export function validateMovieFields(movie: any): FieldValidationResult[] {
   // 验证片长
   if (validationCase.validations.duration) {
     const durationValidation = validationCase.validations.duration;
-    const passed = durationValidation.validator 
+    const passed = durationValidation.validator
       ? durationValidation.validator(movie.duration)
       : true;
-    
+
     results.push({
       fieldName: 'duration',
       passed,
       actualValue: movie.duration || 'null',
-      expectedCriteria: durationValidation.shouldContain?.join(' & ') || 'custom validator',
-      errorMessage: passed ? undefined : `Duration validation failed for ${validationCase.title}`
+      expectedCriteria:
+        durationValidation.shouldContain?.join(' & ') || 'custom validator',
+      errorMessage: passed
+        ? undefined
+        : `Duration validation failed for ${validationCase.title}`,
     });
   }
 
   // 验证上映日期
   if (validationCase.validations.releaseDate) {
     const releaseDateValidation = validationCase.validations.releaseDate;
-    const passed = releaseDateValidation.validator 
+    const passed = releaseDateValidation.validator
       ? releaseDateValidation.validator(movie.releaseDate)
       : true;
-    
+
     results.push({
       fieldName: 'releaseDate',
       passed,
       actualValue: movie.releaseDate || 'null',
-      expectedCriteria: releaseDateValidation.shouldContain?.join(' & ') || 
-        (releaseDateValidation.shouldHaveMultipleRegions ? 'multiple regions' : 'custom validator'),
-      errorMessage: passed ? undefined : `ReleaseDate validation failed for ${validationCase.title}`
+      expectedCriteria:
+        releaseDateValidation.shouldContain?.join(' & ') ||
+        (releaseDateValidation.shouldHaveMultipleRegions
+          ? 'multiple regions'
+          : 'custom validator'),
+      errorMessage: passed
+        ? undefined
+        : `ReleaseDate validation failed for ${validationCase.title}`,
     });
   }
 
   // 验证制片地区
   if (validationCase.validations.country) {
     const countryValidation = validationCase.validations.country;
-    const passed = countryValidation.validator 
+    const passed = countryValidation.validator
       ? countryValidation.validator(movie.country)
       : true;
-    
+
     results.push({
       fieldName: 'country',
       passed,
       actualValue: movie.country || 'null',
-      expectedCriteria: countryValidation.shouldContain?.join(' & ') || 'custom validator',
-      errorMessage: passed ? undefined : `Country validation failed for ${validationCase.title}`
+      expectedCriteria:
+        countryValidation.shouldContain?.join(' & ') || 'custom validator',
+      errorMessage: passed
+        ? undefined
+        : `Country validation failed for ${validationCase.title}`,
     });
   }
 
   // 验证语言
   if (validationCase.validations.language) {
     const languageValidation = validationCase.validations.language;
-    const passed = languageValidation.validator 
+    const passed = languageValidation.validator
       ? languageValidation.validator(movie.language)
       : true;
-    
+
     results.push({
       fieldName: 'language',
       passed,
       actualValue: movie.language || 'null',
-      expectedCriteria: languageValidation.shouldContain?.join(' & ') || 'custom validator',
-      errorMessage: passed ? undefined : `Language validation failed for ${validationCase.title}`
+      expectedCriteria:
+        languageValidation.shouldContain?.join(' & ') || 'custom validator',
+      errorMessage: passed
+        ? undefined
+        : `Language validation failed for ${validationCase.title}`,
     });
   }
 

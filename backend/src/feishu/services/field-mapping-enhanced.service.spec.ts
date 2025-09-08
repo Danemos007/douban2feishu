@@ -1,8 +1,8 @@
 /**
  * FieldMappingService集成增强测试
- * 
+ *
  * 🚀 Phase A2: 集成测试 - TDD红阶段
- * 
+ *
  * 测试目标：
  * 1. FieldMappingService成功集成FieldAutoCreationServiceV2
  * 2. autoConfigureFieldMappingsEnhanced方法使用新架构
@@ -90,7 +90,9 @@ describe('FieldMappingService - Enhanced Integration', () => {
     }).compile();
 
     service = module.get<FieldMappingService>(FieldMappingService);
-    fieldAutoCreationV2 = module.get<FieldAutoCreationServiceV2>(FieldAutoCreationServiceV2);
+    fieldAutoCreationV2 = module.get<FieldAutoCreationServiceV2>(
+      FieldAutoCreationServiceV2,
+    );
     feishuTableService = module.get<FeishuTableService>(FeishuTableService);
     prismaService = module.get<PrismaService>(PrismaService);
     redis = module.get<Redis>(getRedisToken('default'));
@@ -101,14 +103,18 @@ describe('FieldMappingService - Enhanced Integration', () => {
       // 验证依赖注入成功
       expect(service).toBeDefined();
       expect(fieldAutoCreationV2).toBeDefined();
-      
+
       // 验证新服务具备关键方法
-      expect(typeof fieldAutoCreationV2.batchCreateFieldsWithSmartDelay).toBe('function');
+      expect(typeof fieldAutoCreationV2.batchCreateFieldsWithSmartDelay).toBe(
+        'function',
+      );
     });
 
     it('should have autoConfigureFieldMappingsEnhanced method', () => {
       // 验证增强方法存在
-      expect(typeof (service as any).autoConfigureFieldMappingsEnhanced).toBe('function');
+      expect(typeof (service as any).autoConfigureFieldMappingsEnhanced).toBe(
+        'function',
+      );
     });
   });
 
@@ -122,7 +128,7 @@ describe('FieldMappingService - Enhanced Integration', () => {
         is_primary: false,
       },
       {
-        field_id: 'fld_existing_002', 
+        field_id: 'fld_existing_002',
         field_name: '书名',
         type: FeishuFieldType.Text,
         ui_type: 'Text',
@@ -132,11 +138,13 @@ describe('FieldMappingService - Enhanced Integration', () => {
 
     beforeEach(() => {
       // Mock getTableFields - 返回现有字段
-      (feishuTableService.getTableFields as jest.Mock).mockResolvedValue(mockExistingFields);
-      
+      (feishuTableService.getTableFields as jest.Mock).mockResolvedValue(
+        mockExistingFields,
+      );
+
       // Mock Prisma操作
       (prismaService.syncConfig.upsert as jest.Mock).mockResolvedValue({});
-      
+
       // Mock Redis缓存
       (redis.setex as jest.Mock).mockResolvedValue('OK');
     });
@@ -161,19 +169,20 @@ describe('FieldMappingService - Enhanced Integration', () => {
             ui_type: 'Rating',
             is_primary: false,
             description: '个人评分',
-          }
+          },
         ],
         failed: [],
         summary: {
           total: 2,
-          successCount: 2, 
+          successCount: 2,
           failedCount: 0,
           processingTime: 1500,
         },
       };
 
-      (fieldAutoCreationV2.batchCreateFieldsWithSmartDelay as jest.Mock)
-        .mockResolvedValue(mockBatchResult);
+      (
+        fieldAutoCreationV2.batchCreateFieldsWithSmartDelay as jest.Mock
+      ).mockResolvedValue(mockBatchResult);
 
       // 执行增强方法
       const result = await (service as any).autoConfigureFieldMappingsEnhanced(
@@ -182,12 +191,14 @@ describe('FieldMappingService - Enhanced Integration', () => {
         mockCredentials.appSecret,
         mockCredentials.appToken,
         mockCredentials.tableId,
-        'books' as ContentType
+        'books' as ContentType,
       );
 
       // 验证使用了新服务
-      expect(fieldAutoCreationV2.batchCreateFieldsWithSmartDelay).toHaveBeenCalled();
-      
+      expect(
+        fieldAutoCreationV2.batchCreateFieldsWithSmartDelay,
+      ).toHaveBeenCalled();
+
       // 验证旧方法没有被调用
       expect(feishuTableService.batchCreateFields).not.toHaveBeenCalled();
 
@@ -196,7 +207,7 @@ describe('FieldMappingService - Enhanced Integration', () => {
       expect(result).toHaveProperty('matched');
       expect(result).toHaveProperty('created');
       expect(result).toHaveProperty('errors');
-      
+
       // 验证创建的字段被正确映射
       expect(result.created).toHaveLength(2);
       expect(result.created[0].fieldId).toBe('fld_created_001');
@@ -214,7 +225,7 @@ describe('FieldMappingService - Enhanced Integration', () => {
             ui_type: 'SingleSelect',
             is_primary: false,
             description: '阅读状态',
-          }
+          },
         ],
         failed: [
           {
@@ -224,18 +235,19 @@ describe('FieldMappingService - Enhanced Integration', () => {
               fieldType: FeishuFieldType.Number, // Rating是Number的UI变体
             } as FieldCreationRequest,
             error: '字段创建失败：重复字段名',
-          }
+          },
         ],
         summary: {
           total: 2,
           successCount: 1,
-          failedCount: 1, 
+          failedCount: 1,
           processingTime: 2000,
         },
       };
 
-      (fieldAutoCreationV2.batchCreateFieldsWithSmartDelay as jest.Mock)
-        .mockResolvedValue(mockBatchResultWithFailures);
+      (
+        fieldAutoCreationV2.batchCreateFieldsWithSmartDelay as jest.Mock
+      ).mockResolvedValue(mockBatchResultWithFailures);
 
       const result = await (service as any).autoConfigureFieldMappingsEnhanced(
         mockCredentials.userId,
@@ -243,7 +255,7 @@ describe('FieldMappingService - Enhanced Integration', () => {
         mockCredentials.appSecret,
         mockCredentials.appToken,
         mockCredentials.tableId,
-        'books' as ContentType
+        'books' as ContentType,
       );
 
       // 验证错误处理
@@ -254,7 +266,12 @@ describe('FieldMappingService - Enhanced Integration', () => {
   });
 
   describe('🔄 4种内容类型完整流程测试', () => {
-    const contentTypes: ContentType[] = ['books', 'movies', 'tv', 'documentary'];
+    const contentTypes: ContentType[] = [
+      'books',
+      'movies',
+      'tv',
+      'documentary',
+    ];
 
     contentTypes.forEach((contentType) => {
       it(`should handle ${contentType} content type correctly`, async () => {
@@ -273,7 +290,7 @@ describe('FieldMappingService - Enhanced Integration', () => {
               ui_type: 'Text',
               is_primary: false,
               description: `${contentType}测试字段`,
-            }
+            },
           ],
           failed: [],
           summary: {
@@ -284,22 +301,27 @@ describe('FieldMappingService - Enhanced Integration', () => {
           },
         };
 
-        (fieldAutoCreationV2.batchCreateFieldsWithSmartDelay as jest.Mock)
-          .mockResolvedValue(mockBatchResult);
+        (
+          fieldAutoCreationV2.batchCreateFieldsWithSmartDelay as jest.Mock
+        ).mockResolvedValue(mockBatchResult);
 
         // 执行测试
-        const result = await (service as any).autoConfigureFieldMappingsEnhanced(
+        const result = await (
+          service as any
+        ).autoConfigureFieldMappingsEnhanced(
           mockCredentials.userId,
           mockCredentials.appId,
           mockCredentials.appSecret,
           mockCredentials.appToken,
           mockCredentials.tableId,
-          contentType
+          contentType,
         );
 
         // 验证内容类型被正确处理
         expect(result).toBeDefined();
-        expect(fieldAutoCreationV2.batchCreateFieldsWithSmartDelay).toHaveBeenCalledWith(
+        expect(
+          fieldAutoCreationV2.batchCreateFieldsWithSmartDelay,
+        ).toHaveBeenCalledWith(
           mockCredentials.appId,
           mockCredentials.appSecret,
           mockCredentials.appToken,
@@ -307,8 +329,8 @@ describe('FieldMappingService - Enhanced Integration', () => {
           expect.arrayContaining([
             expect.objectContaining({
               contentType: contentType,
-            })
-          ])
+            }),
+          ]),
         );
       });
     });
@@ -318,7 +340,7 @@ describe('FieldMappingService - Enhanced Integration', () => {
     it('should maintain existing autoConfigureFieldMappings API', async () => {
       // 确保原有方法仍然存在和工作
       expect(typeof service.autoConfigureFieldMappings).toBe('function');
-      
+
       // Mock基础依赖
       (feishuTableService.getTableFields as jest.Mock).mockResolvedValue([]);
       (feishuTableService.batchCreateFields as jest.Mock).mockResolvedValue([]);
@@ -326,14 +348,16 @@ describe('FieldMappingService - Enhanced Integration', () => {
       (redis.setex as jest.Mock).mockResolvedValue('OK');
 
       // 验证原方法仍然可以调用
-      await expect(service.autoConfigureFieldMappings(
-        mockCredentials.userId,
-        mockCredentials.appId,
-        mockCredentials.appSecret,
-        mockCredentials.appToken,
-        mockCredentials.tableId,
-        'books'
-      )).resolves.not.toThrow();
+      await expect(
+        service.autoConfigureFieldMappings(
+          mockCredentials.userId,
+          mockCredentials.appId,
+          mockCredentials.appSecret,
+          mockCredentials.appToken,
+          mockCredentials.tableId,
+          'books',
+        ),
+      ).resolves.not.toThrow();
     });
 
     it('should maintain all existing public methods', () => {
@@ -351,7 +375,7 @@ describe('FieldMappingService - Enhanced Integration', () => {
       // 执行缓存清理
       await service.clearMappingsCache(
         mockCredentials.appToken,
-        mockCredentials.tableId
+        mockCredentials.tableId,
       );
 
       // 验证Redis del被调用，且使用正确的缓存键格式
@@ -362,11 +386,16 @@ describe('FieldMappingService - Enhanced Integration', () => {
 
     it('should handle cache clearing errors gracefully', async () => {
       // Mock Redis错误
-      (redis.del as jest.Mock).mockRejectedValue(new Error('Redis connection failed'));
+      (redis.del as jest.Mock).mockRejectedValue(
+        new Error('Redis connection failed'),
+      );
 
       // 验证错误处理不会抛出异常
       await expect(
-        service.clearMappingsCache(mockCredentials.appToken, mockCredentials.tableId)
+        service.clearMappingsCache(
+          mockCredentials.appToken,
+          mockCredentials.tableId,
+        ),
       ).resolves.not.toThrow();
 
       // 验证Redis del仍然被尝试调用
@@ -377,22 +406,30 @@ describe('FieldMappingService - Enhanced Integration', () => {
       // Mock基础设置
       (feishuTableService.getTableFields as jest.Mock).mockResolvedValue([]);
       (prismaService.syncConfig.upsert as jest.Mock).mockResolvedValue({});
-      
+
       const mockBatchResult: BatchFieldCreationResult = {
-        success: [{
-          field_id: 'fld_test_001',
-          field_name: '测试字段',
-          type: FeishuFieldType.Text,
-          ui_type: 'Text',
-          is_primary: false,
-          description: '测试字段',
-        }],
+        success: [
+          {
+            field_id: 'fld_test_001',
+            field_name: '测试字段',
+            type: FeishuFieldType.Text,
+            ui_type: 'Text',
+            is_primary: false,
+            description: '测试字段',
+          },
+        ],
         failed: [],
-        summary: { total: 1, successCount: 1, failedCount: 0, processingTime: 1000 },
+        summary: {
+          total: 1,
+          successCount: 1,
+          failedCount: 0,
+          processingTime: 1000,
+        },
       };
-      
-      (fieldAutoCreationV2.batchCreateFieldsWithSmartDelay as jest.Mock)
-        .mockResolvedValue(mockBatchResult);
+
+      (
+        fieldAutoCreationV2.batchCreateFieldsWithSmartDelay as jest.Mock
+      ).mockResolvedValue(mockBatchResult);
 
       // 执行增强配置方法（应该触发缓存更新）
       await (service as any).autoConfigureFieldMappingsEnhanced(
@@ -401,12 +438,12 @@ describe('FieldMappingService - Enhanced Integration', () => {
         mockCredentials.appSecret,
         mockCredentials.appToken,
         mockCredentials.tableId,
-        'books' as ContentType
+        'books' as ContentType,
       );
 
       // 验证缓存被设置（映射结果缓存）
       expect(redis.setex).toHaveBeenCalled();
-      
+
       // 验证缓存键格式包含正确的前缀和参数
       const setexCalls = (redis.setex as jest.Mock).mock.calls;
       const cacheKey = setexCalls[0][0];
@@ -426,7 +463,7 @@ describe('FieldMappingService - Enhanced Integration', () => {
           type: FeishuFieldType.Text,
           ui_type: 'Text',
           is_primary: false,
-        }
+        },
         // 缺少其他字段，将触发字段创建
       ];
 
@@ -439,7 +476,7 @@ describe('FieldMappingService - Enhanced Integration', () => {
             ui_type: 'SingleSelect',
             is_primary: false,
             description: '状态字段',
-          }
+          },
         ],
         failed: [],
         summary: {
@@ -450,9 +487,12 @@ describe('FieldMappingService - Enhanced Integration', () => {
         },
       };
 
-      (feishuTableService.getTableFields as jest.Mock).mockResolvedValue(mockExistingFieldsPartial);
-      (fieldAutoCreationV2.batchCreateFieldsWithSmartDelay as jest.Mock)
-        .mockResolvedValue(mockBatchResult);
+      (feishuTableService.getTableFields as jest.Mock).mockResolvedValue(
+        mockExistingFieldsPartial,
+      );
+      (
+        fieldAutoCreationV2.batchCreateFieldsWithSmartDelay as jest.Mock
+      ).mockResolvedValue(mockBatchResult);
       (prismaService.syncConfig.upsert as jest.Mock).mockResolvedValue({});
 
       const result = await (service as any).autoConfigureFieldMappingsEnhanced(
@@ -461,7 +501,7 @@ describe('FieldMappingService - Enhanced Integration', () => {
         mockCredentials.appSecret,
         mockCredentials.appToken,
         mockCredentials.tableId,
-        'books' as ContentType
+        'books' as ContentType,
       );
 
       // 验证性能指标被传递

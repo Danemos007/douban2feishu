@@ -356,7 +356,7 @@ export class DataTransformationService {
           this.logger.debug(`修复字段: country -> ${repaired.country}`);
         }
       }
-      
+
       // 🔥 制片地区字段清理逻辑 (TDD新增)
       if (repaired.country && typeof repaired.country === 'string') {
         const cleanedCountry = this.repairCountryField(repaired.country);
@@ -382,7 +382,7 @@ export class DataTransformationService {
           this.logger.debug(`修复字段: language -> ${repaired.language}`);
         }
       }
-      
+
       // 🔥 语言字段清理逻辑 (TDD新增)
       if (repaired.language && typeof repaired.language === 'string') {
         const cleanedLanguage = this.repairLanguageField(repaired.language);
@@ -437,14 +437,12 @@ export class DataTransformationService {
         // 只优化分隔符格式，保持字符串类型
         const repairedAuthor = this.repairAuthorField(repaired.author);
         const authorString = Array.isArray(repairedAuthor)
-          ? repairedAuthor.join(' / ')  // 保持与通用转换一致的字符串格式
+          ? repairedAuthor.join(' / ') // 保持与通用转换一致的字符串格式
           : repairedAuthor;
         if (authorString !== repaired.author) {
           repaired.author = authorString;
           repairedCount++;
-          this.logger.debug(
-            `修复字段: author -> ${authorString}`,
-          );
+          this.logger.debug(`修复字段: author -> ${authorString}`);
         }
       }
 
@@ -991,9 +989,15 @@ export class DataTransformationService {
 
     // 2. 清理其他干扰信息：移除上映日期、片长等非地区信息
     // [CRITICAL-FIX-2025-09-06] 修复正则表达式，正确处理包含空格的标签内容
-    countryStr = countryStr.replace(/上映日期:[^]*?(?=\s*(?:语言:|片长:|又名:|IMDb:|$))/g, '').trim();
-    countryStr = countryStr.replace(/片长:[^]*?(?=\s*(?:语言:|上映日期:|又名:|IMDb:|$))/g, '').trim();
-    countryStr = countryStr.replace(/又名:[^]*?(?=\s*(?:语言:|片长:|上映日期:|IMDb:|$))/g, '').trim();
+    countryStr = countryStr
+      .replace(/上映日期:[^]*?(?=\s*(?:语言:|片长:|又名:|IMDb:|$))/g, '')
+      .trim();
+    countryStr = countryStr
+      .replace(/片长:[^]*?(?=\s*(?:语言:|上映日期:|又名:|IMDb:|$))/g, '')
+      .trim();
+    countryStr = countryStr
+      .replace(/又名:[^]*?(?=\s*(?:语言:|片长:|上映日期:|IMDb:|$))/g, '')
+      .trim();
     countryStr = countryStr.replace(/IMDb:[^]*?$/g, '').trim();
 
     // 2. 处理多地区信息，保持用 ' / ' 分隔
@@ -1070,10 +1074,18 @@ export class DataTransformationService {
     // 🔥 实现D核心：语言清理逻辑
     // 1. 清理干扰信息：移除上映日期、片长、又名等非语言信息
     // [CRITICAL-FIX-2025-09-06] 修复正则表达式，正确处理包含空格的标签内容
-    languageStr = languageStr.replace(/上映日期:[^]*?(?=\s*(?:片长:|又名:|制片地区:|IMDb:|$))/g, '').trim();
-    languageStr = languageStr.replace(/片长:[^]*?(?=\s*(?:上映日期:|又名:|制片地区:|IMDb:|$))/g, '').trim();
-    languageStr = languageStr.replace(/又名:[^]*?(?=\s*(?:上映日期:|片长:|制片地区:|IMDb:|$))/g, '').trim();
-    languageStr = languageStr.replace(/制片地区:[^]*?(?=\s*(?:上映日期:|片长:|又名:|IMDb:|$))/g, '').trim();
+    languageStr = languageStr
+      .replace(/上映日期:[^]*?(?=\s*(?:片长:|又名:|制片地区:|IMDb:|$))/g, '')
+      .trim();
+    languageStr = languageStr
+      .replace(/片长:[^]*?(?=\s*(?:上映日期:|又名:|制片地区:|IMDb:|$))/g, '')
+      .trim();
+    languageStr = languageStr
+      .replace(/又名:[^]*?(?=\s*(?:上映日期:|片长:|制片地区:|IMDb:|$))/g, '')
+      .trim();
+    languageStr = languageStr
+      .replace(/制片地区:[^]*?(?=\s*(?:上映日期:|片长:|又名:|IMDb:|$))/g, '')
+      .trim();
     languageStr = languageStr.replace(/IMDb:[^]*?$/g, '').trim();
 
     // 2. 处理复杂尾部信息：移除 "片长:xxx", "IMDb:xxx" 等

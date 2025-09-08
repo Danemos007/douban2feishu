@@ -1,12 +1,12 @@
 /**
  * FieldMappingService性能基准测试
- * 
+ *
  * 🎯 测试目标：
  * 1. 批量字段创建性能（500+字段场景）
  * 2. 高并发映射查询性能
  * 3. 缓存命中率验证
  * 4. 内存使用情况监控
- * 
+ *
  * 📊 基准目标：
  * - autoConfigureFieldMappingsEnhanced: < 5秒
  * - 批量字段创建: < 10秒 (20字段)
@@ -50,7 +50,7 @@ describe('FieldMappingService - Performance Benchmarks', () => {
   }
 
   function measureExecutionTime<T>(
-    operation: () => Promise<T>
+    operation: () => Promise<T>,
   ): Promise<{ result: T; executionTime: number }> {
     return new Promise(async (resolve) => {
       const startTime = performance.now();
@@ -112,7 +112,9 @@ describe('FieldMappingService - Performance Benchmarks', () => {
     }).compile();
 
     service = module.get<FieldMappingService>(FieldMappingService);
-    fieldAutoCreationV2 = module.get<FieldAutoCreationServiceV2>(FieldAutoCreationServiceV2);
+    fieldAutoCreationV2 = module.get<FieldAutoCreationServiceV2>(
+      FieldAutoCreationServiceV2,
+    );
     feishuTableService = module.get<FeishuTableService>(FeishuTableService);
     prismaService = module.get<PrismaService>(PrismaService);
     redis = module.get<Redis>(getRedisToken('default'));
@@ -127,9 +129,22 @@ describe('FieldMappingService - Performance Benchmarks', () => {
 
       // 🔧 修复：使用真实的豆瓣字段配置中的中文字段名
       const realBookFieldNames = [
-        'Subject ID', '书名', '副标题', '作者', '译者', '出版社', '出版年份',
-        '豆瓣评分', '我的评分', '我的标签', '我的状态', '我的备注', 
-        '内容简介', '封面图', '原作名', '标记日期'
+        'Subject ID',
+        '书名',
+        '副标题',
+        '作者',
+        '译者',
+        '出版社',
+        '出版年份',
+        '豆瓣评分',
+        '我的评分',
+        '我的标签',
+        '我的状态',
+        '我的备注',
+        '内容简介',
+        '封面图',
+        '原作名',
+        '标记日期',
       ];
 
       // Mock批量创建结果 - 使用真实字段名确保映射成功
@@ -151,12 +166,13 @@ describe('FieldMappingService - Performance Benchmarks', () => {
         },
       };
 
-      (fieldAutoCreationV2.batchCreateFieldsWithSmartDelay as jest.Mock)
-        .mockResolvedValue(mockBatchResult);
+      (
+        fieldAutoCreationV2.batchCreateFieldsWithSmartDelay as jest.Mock
+      ).mockResolvedValue(mockBatchResult);
 
       // 性能测试执行
       const memoryBefore = getMemoryUsage();
-      
+
       const { result, executionTime } = await measureExecutionTime(async () => {
         return await (service as any).autoConfigureFieldMappingsEnhanced(
           mockCredentials.userId,
@@ -164,7 +180,7 @@ describe('FieldMappingService - Performance Benchmarks', () => {
           mockCredentials.appSecret,
           mockCredentials.appToken,
           mockCredentials.tableId,
-          'books' as ContentType
+          'books' as ContentType,
         );
       });
 
@@ -200,7 +216,7 @@ describe('FieldMappingService - Performance Benchmarks', () => {
             ui_type: 'Text',
             is_primary: false,
             description: '书籍标题字段',
-          }
+          },
         ],
         failed: [],
         summary: {
@@ -211,8 +227,9 @@ describe('FieldMappingService - Performance Benchmarks', () => {
         },
       };
 
-      (fieldAutoCreationV2.batchCreateFieldsWithSmartDelay as jest.Mock)
-        .mockResolvedValue(mockBatchResult);
+      (
+        fieldAutoCreationV2.batchCreateFieldsWithSmartDelay as jest.Mock
+      ).mockResolvedValue(mockBatchResult);
 
       // 并发执行5个配置任务
       const concurrentRequests = Array.from({ length: 5 }, (_, index) =>
@@ -222,8 +239,8 @@ describe('FieldMappingService - Performance Benchmarks', () => {
           mockCredentials.appSecret,
           mockCredentials.appToken,
           mockCredentials.tableId,
-          'books' as ContentType
-        )
+          'books' as ContentType,
+        ),
       );
 
       const startTime = performance.now();
@@ -231,12 +248,14 @@ describe('FieldMappingService - Performance Benchmarks', () => {
       const totalTime = performance.now() - startTime;
 
       console.log(`⚡ 并发执行时间: ${totalTime.toFixed(2)}ms`);
-      console.log(`📊 并发成功数: ${results.filter(r => r.created.length > 0).length}/5`);
+      console.log(
+        `📊 并发成功数: ${results.filter((r) => r.created.length > 0).length}/5`,
+      );
 
       // 并发性能基准
       expect(totalTime).toBeLessThan(8000); // 并发情况下8秒内完成
       expect(results).toHaveLength(5);
-      results.forEach(result => {
+      results.forEach((result) => {
         expect(result.created).toHaveLength(1);
       });
     }, 15000);
@@ -249,12 +268,15 @@ describe('FieldMappingService - Performance Benchmarks', () => {
 
       // Mock Redis行为 - 模拟缓存命中率
       (redis.get as jest.Mock).mockImplementation((key: string) => {
-        if (Math.random() > 0.1) { // 90%命中率
+        if (Math.random() > 0.1) {
+          // 90%命中率
           cacheHits++;
-          return Promise.resolve(JSON.stringify({
-            mappings: { title: 'fld_cached_001' },
-            timestamp: Date.now(),
-          }));
+          return Promise.resolve(
+            JSON.stringify({
+              mappings: { title: 'fld_cached_001' },
+              timestamp: Date.now(),
+            }),
+          );
         } else {
           cacheMisses++;
           return Promise.resolve(null);
@@ -264,22 +286,25 @@ describe('FieldMappingService - Performance Benchmarks', () => {
       (redis.setex as jest.Mock).mockResolvedValue('OK');
 
       // 执行100次映射查询
-      const cacheTestPromises = Array.from({ length: 100 }, async (_, index) => {
-        const cacheKey = `test_cache_key_${index}`;
-        const cachedValue = await redis.get(cacheKey);
-        
-        if (!cachedValue) {
-          // 缓存miss，设置新值
-          await redis.setex(cacheKey, 1800, JSON.stringify({ test: 'data' }));
-        }
-        
-        return cachedValue !== null;
-      });
+      const cacheTestPromises = Array.from(
+        { length: 100 },
+        async (_, index) => {
+          const cacheKey = `test_cache_key_${index}`;
+          const cachedValue = await redis.get(cacheKey);
+
+          if (!cachedValue) {
+            // 缓存miss，设置新值
+            await redis.setex(cacheKey, 1800, JSON.stringify({ test: 'data' }));
+          }
+
+          return cachedValue !== null;
+        },
+      );
 
       await Promise.all(cacheTestPromises);
 
-      const hitRate = cacheHits / (cacheHits + cacheMisses) * 100;
-      
+      const hitRate = (cacheHits / (cacheHits + cacheMisses)) * 100;
+
       console.log(`📊 缓存命中数: ${cacheHits}`);
       console.log(`📊 缓存未命中数: ${cacheMisses}`);
       console.log(`🎯 缓存命中率: ${hitRate.toFixed(2)}%`);
@@ -297,8 +322,8 @@ describe('FieldMappingService - Performance Benchmarks', () => {
         const clearPromises = Array.from({ length: 100 }, (_, index) =>
           service.clearMappingsCache(
             mockCredentials.appToken,
-            `${mockCredentials.tableId}_${index}`
-          )
+            `${mockCredentials.tableId}_${index}`,
+          ),
         );
         await Promise.all(clearPromises);
       });
@@ -316,7 +341,7 @@ describe('FieldMappingService - Performance Benchmarks', () => {
     it('should maintain stable memory usage during intensive operations', async () => {
       // 记录初始内存状态
       const initialMemory = getMemoryUsage();
-      
+
       // Mock设置
       (feishuTableService.getTableFields as jest.Mock).mockResolvedValue([]);
       (prismaService.syncConfig.upsert as jest.Mock).mockResolvedValue({});
@@ -331,7 +356,7 @@ describe('FieldMappingService - Performance Benchmarks', () => {
             ui_type: 'Text',
             is_primary: false,
             description: '内存测试',
-          }
+          },
         ],
         failed: [],
         summary: {
@@ -342,12 +367,13 @@ describe('FieldMappingService - Performance Benchmarks', () => {
         },
       };
 
-      (fieldAutoCreationV2.batchCreateFieldsWithSmartDelay as jest.Mock)
-        .mockResolvedValue(mockBatchResult);
+      (
+        fieldAutoCreationV2.batchCreateFieldsWithSmartDelay as jest.Mock
+      ).mockResolvedValue(mockBatchResult);
 
       // 执行50次密集操作
       const memorySnapshots: number[] = [];
-      
+
       for (let i = 0; i < 50; i++) {
         await (service as any).autoConfigureFieldMappingsEnhanced(
           `${mockCredentials.userId}_mem_${i}`,
@@ -355,9 +381,9 @@ describe('FieldMappingService - Performance Benchmarks', () => {
           mockCredentials.appSecret,
           mockCredentials.appToken,
           mockCredentials.tableId,
-          'books' as ContentType
+          'books' as ContentType,
         );
-        
+
         // 记录内存快照
         const currentMemory = getMemoryUsage();
         memorySnapshots.push(currentMemory.heapUsed);
@@ -365,22 +391,36 @@ describe('FieldMappingService - Performance Benchmarks', () => {
 
       const finalMemory = getMemoryUsage();
       const totalMemoryGrowth = finalMemory.heapUsed - initialMemory.heapUsed;
-      const avgMemoryUsage = memorySnapshots.reduce((sum, mem) => sum + mem, 0) / memorySnapshots.length;
+      const avgMemoryUsage =
+        memorySnapshots.reduce((sum, mem) => sum + mem, 0) /
+        memorySnapshots.length;
 
-      console.log(`💾 初始内存: ${(initialMemory.heapUsed / 1024 / 1024).toFixed(2)}MB`);
-      console.log(`💾 最终内存: ${(finalMemory.heapUsed / 1024 / 1024).toFixed(2)}MB`);
-      console.log(`📈 总内存增长: ${(totalMemoryGrowth / 1024 / 1024).toFixed(2)}MB`);
-      console.log(`📊 平均内存使用: ${(avgMemoryUsage / 1024 / 1024).toFixed(2)}MB`);
+      console.log(
+        `💾 初始内存: ${(initialMemory.heapUsed / 1024 / 1024).toFixed(2)}MB`,
+      );
+      console.log(
+        `💾 最终内存: ${(finalMemory.heapUsed / 1024 / 1024).toFixed(2)}MB`,
+      );
+      console.log(
+        `📈 总内存增长: ${(totalMemoryGrowth / 1024 / 1024).toFixed(2)}MB`,
+      );
+      console.log(
+        `📊 平均内存使用: ${(avgMemoryUsage / 1024 / 1024).toFixed(2)}MB`,
+      );
 
       // 内存使用基准
       expect(totalMemoryGrowth).toBeLessThan(50 * 1024 * 1024); // < 50MB增长
-      
+
       // 检查是否存在内存泄漏趋势
-      const memoryTrend = memorySnapshots.slice(-10).reduce((sum, mem) => sum + mem, 0) / 10;
-      const earlyMemoryAvg = memorySnapshots.slice(0, 10).reduce((sum, mem) => sum + mem, 0) / 10;
+      const memoryTrend =
+        memorySnapshots.slice(-10).reduce((sum, mem) => sum + mem, 0) / 10;
+      const earlyMemoryAvg =
+        memorySnapshots.slice(0, 10).reduce((sum, mem) => sum + mem, 0) / 10;
       const memoryTrendGrowth = memoryTrend - earlyMemoryAvg;
-      
-      console.log(`🔍 内存趋势增长: ${(memoryTrendGrowth / 1024 / 1024).toFixed(2)}MB`);
+
+      console.log(
+        `🔍 内存趋势增长: ${(memoryTrendGrowth / 1024 / 1024).toFixed(2)}MB`,
+      );
       expect(memoryTrendGrowth).toBeLessThan(20 * 1024 * 1024); // 趋势增长 < 20MB
     });
   });
@@ -389,41 +429,41 @@ describe('FieldMappingService - Performance Benchmarks', () => {
     it('should document performance benchmarks for monitoring', () => {
       const performanceBenchmarks = {
         coreAPI: {
-          'autoConfigureFieldMappingsEnhanced': {
+          autoConfigureFieldMappingsEnhanced: {
             target: '< 5秒',
             description: '20字段批量创建配置',
           },
-          'concurrentOperations': {
+          concurrentOperations: {
             target: '< 8秒',
             description: '5个并发配置任务',
           },
         },
         cache: {
-          'hitRate': {
+          hitRate: {
             target: '> 85%',
             description: '缓存命中率',
           },
-          'clearOperations': {
+          clearOperations: {
             target: '< 10ms',
             description: '单次缓存清理平均时间',
           },
         },
         memory: {
-          'growthLimit': {
+          growthLimit: {
             target: '< 50MB',
             description: '50次操作后的内存增长上限',
           },
-          'trendGrowth': {
+          trendGrowth: {
             target: '< 20MB',
             description: '内存泄漏趋势检测阈值',
           },
         },
         businessMetrics: {
-          'successRate': {
+          successRate: {
             target: '> 95%',
             description: '字段创建成功率',
           },
-          'processingTime': {
+          processingTime: {
             target: '< 5秒',
             description: 'V2服务处理时间',
           },
