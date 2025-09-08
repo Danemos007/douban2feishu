@@ -15,6 +15,7 @@ import { Logger } from '@nestjs/common';
 
 import { FieldMappingService } from './field-mapping.service';
 import { FeishuTableService } from './feishu-table.service';
+import { FieldAutoCreationServiceV2 } from './field-auto-creation-v2.service';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import {
   VERIFIED_FIELD_MAPPINGS,
@@ -25,6 +26,7 @@ import {
 describe('FieldMappingService - Phase 2 TDD Enhancement', () => {
   let service: FieldMappingService;
   let mockTableService: jest.Mocked<FeishuTableService>;
+  let mockFieldAutoCreationService: jest.Mocked<FieldAutoCreationServiceV2>;
   let mockPrismaService: jest.Mocked<PrismaService>;
   let mockRedis: any;
 
@@ -32,6 +34,11 @@ describe('FieldMappingService - Phase 2 TDD Enhancement', () => {
     // Mock dependencies
     const mockTableServiceObj = {
       getTableFields: jest.fn(),
+      batchCreateFields: jest.fn(),
+    };
+
+    const mockFieldAutoCreationServiceObj = {
+      createFieldCreator: jest.fn(),
       batchCreateFields: jest.fn(),
     };
 
@@ -56,6 +63,10 @@ describe('FieldMappingService - Phase 2 TDD Enhancement', () => {
           useValue: mockTableServiceObj,
         },
         {
+          provide: FieldAutoCreationServiceV2,
+          useValue: mockFieldAutoCreationServiceObj,
+        },
+        {
           provide: PrismaService,
           useValue: mockPrismaServiceObj,
         },
@@ -68,6 +79,7 @@ describe('FieldMappingService - Phase 2 TDD Enhancement', () => {
 
     service = module.get<FieldMappingService>(FieldMappingService);
     mockTableService = module.get(FeishuTableService);
+    mockFieldAutoCreationService = module.get(FieldAutoCreationServiceV2);
     mockPrismaService = module.get(PrismaService);
     mockRedis = module.get(getRedisToken('default'));
 

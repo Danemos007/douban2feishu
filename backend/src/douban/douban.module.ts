@@ -9,6 +9,7 @@ import { AntiSpiderService } from './services/anti-spider.service';
 import { HtmlParserService } from './services/html-parser.service';
 import { BookScraperService } from './services/book-scraper.service';
 import { MovieScraperService } from './services/movie-scraper.service';
+import { DataTransformationService } from './services/data-transformation.service';
 
 /**
  * 豆瓣模块 - 豆瓣数据抓取
@@ -28,6 +29,7 @@ import { MovieScraperService } from './services/movie-scraper.service';
     HtmlParserService,
     BookScraperService,
     MovieScraperService,
+    DataTransformationService,
   ],
   controllers: [DoubanController],
   exports: [
@@ -37,6 +39,7 @@ import { MovieScraperService } from './services/movie-scraper.service';
     HtmlParserService,
     BookScraperService,
     MovieScraperService,
+    DataTransformationService,
   ],
 })
 export class DoubanModule {}

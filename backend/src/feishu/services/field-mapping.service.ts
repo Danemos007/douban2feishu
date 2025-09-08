@@ -7,16 +7,12 @@ import { FieldAutoCreationServiceV2 } from './field-auto-creation-v2.service'; /
 import { FeishuFieldType } from '../contract/field.schema'; // 🔧 使用统一的字段类型定义
 import { FeishuField } from '../interfaces/feishu.interface';
 import { PrismaService } from '../../common/prisma/prisma.service';
-import {
-  DOUBAN_FIELD_MAPPINGS,
-  FIELD_TYPE_MAPPING,
-  getDoubanFieldMapping,
-  doubanFieldToChineseName,
-} from '../config/douban-field-mapping.config';
+// 已迁移到verified版本，移除旧配置引用
 import {
   VERIFIED_FIELD_MAPPINGS,
   getVerifiedFieldMapping,
   VerifiedFieldMappingConfig,
+  FIELD_TYPE_MAPPING,
 } from '../config/douban-field-mapping-verified.config';
 import {
   FieldCreationRequest,
@@ -81,7 +77,7 @@ export class FieldMappingService {
       );
 
       // 1. 获取豆瓣字段标准配置
-      const doubanFieldConfig = getDoubanFieldMapping(dataType);
+      const doubanFieldConfig = getVerifiedFieldMapping(dataType);
 
       // 2. 获取飞书表格现有字段
       const existingFields = await this.tableService.getTableFields(
@@ -349,7 +345,7 @@ export class FieldMappingService {
   }> {
     try {
       // 1. 获取豆瓣字段标准配置
-      const doubanFieldConfig = getDoubanFieldMapping(dataType);
+      const doubanFieldConfig = getVerifiedFieldMapping(dataType);
 
       // 2. 获取飞书表格现有字段
       const existingFields = await this.tableService.getTableFields(
@@ -712,7 +708,7 @@ export class FieldMappingService {
     mappings: Record<string, string>,
     dataType: 'books' | 'movies' | 'tv' | 'documentary',
   ): Promise<void> {
-    const doubanFieldConfig = getDoubanFieldMapping(dataType);
+    const doubanFieldConfig = getVerifiedFieldMapping(dataType);
     const requiredFields = Object.entries(doubanFieldConfig)
       .filter(([_, config]) => config.required)
       .map(([field, _]) => field);
@@ -853,7 +849,7 @@ export class FieldMappingService {
       );
 
       // 1. 获取豆瓣字段标准配置
-      const doubanFieldConfig = getDoubanFieldMapping(dataType);
+      const doubanFieldConfig = getVerifiedFieldMapping(dataType);
 
       // 2. 获取飞书表格现有字段
       const existingFields = await this.tableService.getTableFields(

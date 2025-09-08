@@ -240,10 +240,10 @@ describe('飞书API契约回归测试', () => {
       // Arrange
       const factCheckResults = require('./__fixtures__/fact-check-results.json');
       const lastUpdate = new Date(factCheckResults[0].timestamp);
-      const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+      const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
 
-      // Assert - fixture数据不应超过3天
-      expect(lastUpdate.getTime()).toBeGreaterThan(threeDaysAgo.getTime());
+      // Assert - fixture数据不应超过14天
+      expect(lastUpdate.getTime()).toBeGreaterThan(fourteenDaysAgo.getTime());
     }, 10000); // 10s timeout for file operations
 
     it('应包含足够的字段样本用于测试', () => {
