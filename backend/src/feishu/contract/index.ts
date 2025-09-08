@@ -10,7 +10,7 @@
  * 4. Rating字段正确识别 (修复历史遗留的isRatingFieldType问题)
  */
 
-// Schema定义
+// Schema定义 - 重新导出从 schemas 目录迁移的文件
 export {
   FeishuFieldsResponseSchema,
   FeishuFieldSchema,
@@ -20,7 +20,7 @@ export {
   extractFieldTypeMapping,
   FeishuFieldType,
   FeishuUiType,
-} from './field.schema';
+} from '../schemas/field.schema';
 
 export {
   FeishuAuthRequestSchema,
@@ -28,7 +28,7 @@ export {
   TokenCacheInfoSchema,
   calculateTokenExpiry,
   isTokenExpiringSoon,
-} from './auth.schema';
+} from '../schemas/auth.schema';
 
 export {
   FeishuRecordSchema,
@@ -36,7 +36,7 @@ export {
   FeishuRecordCreateRequestSchema,
   FeishuSearchRecordRequestSchema,
   FeishuRecordFieldValueSchema,
-} from './record.schema';
+} from '../schemas/record.schema';
 
 // 🚀 新增：统一字段操作Schema
 export {
@@ -52,7 +52,7 @@ export {
   FieldOperationError,
   FieldConfigurationMismatchError,
   FieldNotFoundError,
-} from './field-operations.schema';
+} from '../schemas/field-operations.schema';
 
 // 类型定义 (从Schema生成，确保类型唯一性)
 export type {
@@ -60,13 +60,13 @@ export type {
   FeishuFieldsResponse,
   FeishuFieldProperty,
   RatingField,
-} from './field.schema';
+} from '../schemas/field.schema';
 
 export type {
   FeishuAuthRequest,
   FeishuTokenResponse,
   TokenCacheInfo,
-} from './auth.schema';
+} from '../schemas/auth.schema';
 
 export type {
   FeishuRecord,
@@ -74,7 +74,7 @@ export type {
   FeishuRecordCreateRequest,
   FeishuSearchRecordRequest,
   FeishuRecordFieldValue,
-} from './record.schema';
+} from '../schemas/record.schema';
 
 // 🚀 新增：统一字段操作类型
 export type {
@@ -87,7 +87,7 @@ export type {
   BatchOperationSummary,
   BatchFieldOperationResult,
   FieldMatchAnalysis,
-} from './field-operations.schema';
+} from '../schemas/field-operations.schema';
 
 // 验证服务
 export {

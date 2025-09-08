@@ -4,7 +4,7 @@ import Redis from 'ioredis';
 
 import { FeishuTableService } from './feishu-table.service';
 import { FieldAutoCreationServiceV2 } from './field-auto-creation.service'; // 🆕 新服务导入
-import { FeishuFieldType } from '../contract/field.schema'; // 🔧 使用统一的字段类型定义
+import { FeishuFieldType } from '../schemas/field.schema'; // 🔧 使用统一的字段类型定义
 import { FeishuField } from '../interfaces/feishu.interface';
 import { PrismaService } from '../../common/prisma/prisma.service';
 // 已迁移到verified版本，移除旧配置引用
@@ -18,7 +18,7 @@ import {
   FieldCreationRequest,
   ContentType,
   BatchFieldCreationResult,
-} from '../contract/field-creation.schema'; // 🆕 新schema导入
+} from '../schemas/field-creation.schema'; // 🆕 新schema导入
 
 /**
  * 字段映射管理服务 V2 - 精确匹配 + 自动创建策略

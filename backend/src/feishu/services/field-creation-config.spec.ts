@@ -12,8 +12,8 @@ import {
   FieldTemplateBuilder,
 } from './field-creation-config';
 
-import { FeishuFieldType } from '../contract/field.schema';
-import { ContentType } from '../contract/field-creation.schema';
+import { FeishuFieldType } from '../schemas/field.schema';
+import { ContentType } from '../schemas/field-creation.schema';
 
 describe('FieldCreationConfigManager', () => {
   let configManager: FieldCreationConfigManager;

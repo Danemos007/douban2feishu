@@ -13,7 +13,7 @@ import {
   FieldCreationResponse,
   BatchFieldCreationResult,
   FieldCreationStats,
-} from '../contract/field-creation.schema';
+} from '../schemas/field-creation.schema';
 
 /**
  * 🎯 极简字段自动创建服务接口 V2.0
@@ -225,11 +225,11 @@ export {
   FieldCreationResponse,
   BatchFieldCreationResult,
   FieldCreationStats,
-} from '../contract/field-creation.schema';
+} from '../schemas/field-creation.schema';
 
 export {
   FeishuCredentials,
   FieldOperationOptions,
   FieldOperationResult,
   BatchFieldOperationResult,
-} from '../contract/field-operations.schema';
+} from '../schemas/field-operations.schema';

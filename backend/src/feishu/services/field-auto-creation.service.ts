@@ -27,12 +27,12 @@ import {
   FieldCreationStats,
   ContentType,
   FieldCreationConfig,
-} from '../contract/field-creation.schema';
+} from '../schemas/field-creation.schema';
 import {
   FeishuCredentials,
   FieldOperationOptions,
-} from '../contract/field-operations.schema';
-import { FeishuFieldType } from '../contract/field.schema';
+} from '../schemas/field-operations.schema';
+import { FeishuFieldType } from '../schemas/field.schema';
 import { IFieldAutoCreationService } from '../interfaces/field-creation.interface';
 
 @Injectable()

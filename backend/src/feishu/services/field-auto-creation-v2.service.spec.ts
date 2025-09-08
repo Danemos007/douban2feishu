@@ -18,12 +18,12 @@ import {
   FieldCreationResponse,
   BatchFieldCreationResult,
   ContentType,
-} from '../contract/field-creation.schema';
-import { FeishuFieldType } from '../contract/field.schema';
+} from '../schemas/field-creation.schema';
+import { FeishuFieldType } from '../schemas/field.schema';
 import {
   FieldOperationResult,
   BatchFieldOperationResult,
-} from '../contract/field-operations.schema';
+} from '../schemas/field-operations.schema';
 
 describe('FieldAutoCreationServiceV2 - 极简重构版', () => {
   let service: FieldAutoCreationServiceV2;

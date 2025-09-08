@@ -8,8 +8,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { Logger } from '@nestjs/common';
 import { FeishuContractValidatorService } from './validator.service';
-import { FeishuFieldsResponse } from './field.schema';
-import { FeishuTokenResponse } from './auth.schema';
+import { FeishuFieldsResponse } from '../schemas/field.schema';
+import { FeishuTokenResponse } from '../schemas/auth.schema';
 
 // 导入真实fixtures
 const fieldsFixture = require('./__fixtures__/fields-response.json');

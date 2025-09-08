@@ -34,9 +34,9 @@ import {
   FieldOperationError,
   FieldConfigurationMismatchError,
   FieldNotFoundError,
-} from '../contract/field-operations.schema';
-import { FieldCreationConfig } from '../contract/field-creation.schema';
-import { FeishuField, FeishuFieldType } from '../contract/field.schema';
+} from '../schemas/field-operations.schema';
+import { FieldCreationConfig } from '../schemas/field-creation.schema';
+import { FeishuField, FeishuFieldType } from '../schemas/field.schema';
 
 describe('FeishuTableService - 革命性统一字段操作', () => {
   let service: FeishuTableService;

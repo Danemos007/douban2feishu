@@ -14,13 +14,13 @@
  */
 
 import { Injectable, Logger } from '@nestjs/common';
-import { FeishuFieldType } from '../contract/field.schema';
+import { FeishuFieldType } from '../schemas/field.schema';
 import {
   ContentType,
   ContentTypeConfig,
   FieldCreationConfig,
   StatusOption,
-} from '../contract/field-creation.schema';
+} from '../schemas/field-creation.schema';
 import { IFieldCreationConfigManager } from '../interfaces/field-creation.interface';
 
 /**
