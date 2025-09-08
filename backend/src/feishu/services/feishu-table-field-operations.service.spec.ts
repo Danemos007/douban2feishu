@@ -150,7 +150,7 @@ describe('FeishuTableService - 统一字段操作接口', () => {
     // 设置测试所需的方法mocks
     jest.spyOn(service, 'getTableFields').mockImplementation();
     jest.spyOn(service, 'createTableField').mockImplementation();
-    
+
     // Mock私有方法
     jest.spyOn(service as any, 'updateFieldInternal').mockImplementation();
     jest.spyOn(service as any, 'clearFieldCache').mockImplementation();
@@ -368,7 +368,9 @@ describe('FeishuTableService - 统一字段操作接口', () => {
 
         // ✅ 验证跳过更新
         expect(result.operation).toBe('unchanged');
-        expect(result.warnings).toEqual(expect.arrayContaining([expect.stringContaining('字段配置不匹配')]));
+        expect(result.warnings).toEqual(
+          expect.arrayContaining([expect.stringContaining('字段配置不匹配')]),
+        );
         expect(service['updateFieldInternal']).not.toHaveBeenCalled();
       });
     });
