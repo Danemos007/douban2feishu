@@ -17,7 +17,7 @@ import {
   VERIFIED_FIELD_MAPPINGS,
   getVerifiedFieldMapping,
   VerifiedFieldMappingConfig,
-} from '../../feishu/config/douban-field-mapping-verified.config';
+} from '../../feishu/config/douban-field-mapping.config';
 
 // 定义期望的类型 - 基于我们的设计
 interface TransformationResult<T = any> {

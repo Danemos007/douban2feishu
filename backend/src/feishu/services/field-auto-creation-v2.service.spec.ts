@@ -10,7 +10,7 @@
 
 import { Test, TestingModule } from '@nestjs/testing';
 import { Logger } from '@nestjs/common';
-import { FieldAutoCreationServiceV2 } from './field-auto-creation-v2.service';
+import { FieldAutoCreationServiceV2 } from './field-auto-creation.service';
 import { FieldCreationConfigManager } from './field-creation-config';
 import { FeishuTableService } from './feishu-table.service';
 import {

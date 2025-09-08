@@ -15,7 +15,7 @@ import {
   verifiedDoubanFieldToChineseName,
   getVerificationStats,
   VerifiedFieldMappingConfig,
-} from './douban-field-mapping-verified.config';
+} from './douban-field-mapping.config';
 
 describe('豆瓣字段映射配置验证测试', () => {
   describe('电影字段映射配置', () => {
