@@ -6,6 +6,12 @@ import {
   ParsedUserState,
   ParsedListPage,
 } from './html-parser.service';
+import {
+  BookCompleteSchema,
+  validateBookComplete,
+  type BookComplete,
+  type UserStatus,
+} from '../schemas';
 
 export interface BookData {
   // 基础字段
@@ -370,9 +376,31 @@ export class BookScraperService {
   }
 
   /**
-   * 验证书籍数据完整性
+   * 验证书籍数据完整性 - 类型安全版本
    */
-  private validateBookData(book: BookData): boolean {
+  validateBookData(data: unknown): { success: boolean; data?: BookComplete; errors: string[] } {
+    const result = validateBookComplete(data);
+    
+    if (result.success) {
+      return {
+        success: true,
+        data: result.data,
+        errors: [],
+      };
+    } else {
+      this.logger.warn('Book data validation failed:', result.error);
+      return {
+        success: false,
+        errors: [result.error],
+      };
+    }
+  }
+
+  /**
+   * 验证书籍数据完整性 - 向后兼容版本
+   * @deprecated 请使用 validateBookData(data: unknown)，此方法仅用于兼容现有代码
+   */
+  private validateBookDataLegacy(book: BookData): boolean {
     const required = ['subjectId', 'title'];
 
     for (const field of required) {
@@ -390,5 +418,48 @@ export class BookScraperService {
    */
   getScrapingStats() {
     return this.antiSpider.getRequestStats();
+  }
+
+  /**
+   * 批量验证书籍数据
+   */
+  batchValidateBooks(books: unknown[]): {
+    valid: BookComplete[];
+    invalid: Array<{ index: number; data: unknown; errors: string[] }>;
+    summary: {
+      total: number;
+      valid: number;
+      invalid: number;
+      successRate: number;
+    };
+  } {
+    const valid: BookComplete[] = [];
+    const invalid: Array<{ index: number; data: unknown; errors: string[] }> = [];
+
+    books.forEach((book, index) => {
+      const validation = this.validateBookData(book);
+      if (validation.success && validation.data) {
+        valid.push(validation.data);
+      } else {
+        invalid.push({
+          index,
+          data: book,
+          errors: validation.errors,
+        });
+      }
+    });
+
+    const summary = {
+      total: books.length,
+      valid: valid.length,
+      invalid: invalid.length,
+      successRate: books.length > 0 ? (valid.length / books.length) * 100 : 0,
+    };
+
+    this.logger.log(
+      `Batch validation: ${summary.valid}/${summary.total} valid (${summary.successRate.toFixed(1)}%)`,
+    );
+
+    return { valid, invalid, summary };
   }
 }
