@@ -19,7 +19,22 @@ import { AuthService } from './auth.service';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { LoginDto, RegisterDto, RefreshTokenDto } from './dto/auth.dto';
-import { TokenResponse } from './interfaces/auth.interface';
+import { TokenResponse, AuthenticatedUser } from './interfaces/auth.interface';
+
+/**
+ * 认证请求接口 - 定义请求对象中的用户类型
+ */
+interface AuthenticatedRequest {
+  user: AuthenticatedUser;
+}
+
+/**
+ * 用户信息响应接口
+ */
+interface ProfileResponse {
+  user: AuthenticatedUser;
+  timestamp: string;
+}
 
 /**
  * 认证控制器 - RESTful API端点
@@ -86,7 +101,7 @@ export class AuthController {
     status: 400,
     description: '请求参数无效',
   })
-  async login(@Request() req: any): Promise<TokenResponse> {
+  async login(@Request() req: AuthenticatedRequest): Promise<TokenResponse> {
     return this.authService.login(req.user);
   }
 
@@ -134,7 +149,7 @@ export class AuthController {
     status: 401,
     description: '未授权访问',
   })
-  async getProfile(@Request() req: any) {
+  getProfile(@Request() req: AuthenticatedRequest): ProfileResponse {
     return {
       user: req.user,
       timestamp: new Date().toISOString(),

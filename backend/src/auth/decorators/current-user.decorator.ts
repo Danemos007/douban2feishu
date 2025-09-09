@@ -19,15 +19,26 @@ import { AuthenticatedUser } from '../interfaces/auth.interface';
  * - 简化控制器中的用户信息访问
  * - 支持可选的数据字段提取
  */
+interface RequestWithUser {
+  user: AuthenticatedUser;
+}
+
 export const CurrentUser = createParamDecorator(
   (
     data: keyof AuthenticatedUser | undefined,
     ctx: ExecutionContext,
-  ): AuthenticatedUser | any => {
-    const request = ctx.switchToHttp().getRequest();
-    const user = request.user as AuthenticatedUser;
+  ): AuthenticatedUser | AuthenticatedUser[keyof AuthenticatedUser] => {
+    const request = ctx.switchToHttp().getRequest<RequestWithUser>();
+    const user = request.user;
+
+    // 类型安全检查
+    if (!user) {
+      throw new Error(
+        'User not found in request. Make sure to use proper auth guard.',
+      );
+    }
 
     // 如果指定了特定字段，返回该字段的值
-    return data ? user?.[data] : user;
+    return data ? user[data] : user;
   },
 );

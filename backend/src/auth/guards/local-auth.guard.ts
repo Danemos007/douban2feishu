@@ -1,6 +1,15 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 
+import { AuthenticatedUser } from '../interfaces/auth.interface';
+
+/**
+ * 错误信息类型定义
+ */
+interface AuthError {
+  message?: string;
+}
+
 /**
  * 本地认证守卫 - 用于登录接口
  *
@@ -15,7 +24,13 @@ export class LocalAuthGuard extends AuthGuard('local') {
   /**
    * 处理认证失败情况
    */
-  override handleRequest<TUser = any>(err: any, user: any, info: any): TUser {
+  override handleRequest<TUser = AuthenticatedUser>(
+    err: AuthError | null,
+    user: AuthenticatedUser | false,
+    info: AuthError | undefined,
+    context?: any,
+    status?: any,
+  ): TUser {
     if (err || !user) {
       let message = 'Authentication failed';
 
@@ -31,6 +46,6 @@ export class LocalAuthGuard extends AuthGuard('local') {
       throw new UnauthorizedException(message);
     }
 
-    return user;
+    return user as TUser;
   }
 }

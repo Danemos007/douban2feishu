@@ -48,7 +48,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
 
       // 返回用户信息，会被附加到req.user
       return user;
-    } catch (error) {
+    } catch {
       throw new UnauthorizedException('Invalid or expired token');
     }
   }

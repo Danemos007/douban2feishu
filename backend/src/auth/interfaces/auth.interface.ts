@@ -1,13 +1,26 @@
 import { ApiProperty } from '@nestjs/swagger';
+import type {
+  User,
+  UserCredentials,
+  SyncConfig,
+} from '../../../generated/prisma';
 
 /**
- * JWT载荷接口
+ * JWT载荷接口 - 严格类型定义
  */
 export interface JwtPayload {
-  sub: string; // 用户ID
+  sub: string; // 用户ID (UUID)
   email: string; // 用户邮箱
-  iat: number; // 签发时间
+  iat: number; // 签发时间 (Unix timestamp)
 }
+
+/**
+ * 完整用户类型 - 包含关联数据
+ */
+export type UserWithRelations = User & {
+  credentials?: UserCredentials | null;
+  syncConfigs?: SyncConfig | null;
+};
 
 /**
  * 认证用户信息接口

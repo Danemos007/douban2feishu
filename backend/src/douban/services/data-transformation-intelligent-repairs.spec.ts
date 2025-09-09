@@ -679,7 +679,7 @@ describe('DataTransformationService - 智能修复引擎 TDD', () => {
         expect(releaseDateValidation?.passed).toBe(true);
         expect(result.data.releaseDate).toContain('/');
         expect(
-          result.data.releaseDate.split('/').length,
+          (result.data.releaseDate as string).split('/').length,
         ).toBeGreaterThanOrEqual(3);
       });
     });
