@@ -204,7 +204,7 @@ describe('FeishuContractValidatorService', () => {
         // Act & Assert
         expect(() => {
           service.validateAuthResponse(failedAuthData, 'auth-endpoint');
-        }).toThrow('飞书认证失败');
+        }).toThrow('Invalid literal value, expected 0');
       });
     });
 

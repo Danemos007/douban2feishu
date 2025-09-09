@@ -109,7 +109,7 @@ const FeishuFieldSchema = z
 const FeishuFieldsResponseSchema = z
   .object({
     // API状态：严格验证
-    code: z.number().refine((val) => val === 0, { message: '飞书API调用失败' }),
+    code: z.literal(0),
     msg: z.string(),
 
     data: z.object({

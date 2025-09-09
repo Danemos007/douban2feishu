@@ -14,7 +14,6 @@
     "outDir": "./dist",
     "baseUrl": "./",
     "incremental": true,
-    "skipLibCheck": true,
     "allowImportingTsExtensions": false,
     "strict": true,
     "strictNullChecks": true,

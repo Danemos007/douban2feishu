@@ -1361,7 +1361,11 @@ export class FeishuTableService implements IFeishuTableFieldOperations {
           tableId,
           existingField.field_id,
           fieldConfig,
-          analysis.differences,
+          analysis.differences.map(diff => ({
+            property: diff.property,
+            from: diff.from ?? 'undefined',
+            to: diff.to ?? 'undefined'
+          })),
         );
 
         return {
