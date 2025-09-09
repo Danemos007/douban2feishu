@@ -24,37 +24,43 @@ model User {
   syncHistory SyncHistory[]
 
   @@map("users")
+  @@index([email])
+  @@index([createdAt])
 }
 
 // 用户凭证表 - 加密存储敏感信息
 model UserCredentials {
-  userId                   String  @id @map("user_id") @db.Uuid
-  doubanCookieEncrypted    String? @map("douban_cookie_encrypted") @db.Text
-  feishuAppId             String? @map("feishu_app_id") @db.VarChar(100)
-  feishuAppSecretEncrypted String? @map("feishu_app_secret_encrypted") @db.Text
-  encryptionIv            String  @map("encryption_iv") @db.VarChar(32)
+  userId                   String   @id @map("user_id") @db.Uuid
+  doubanCookieEncrypted    String?  @map("douban_cookie_encrypted") @db.Text
+  feishuAppId             String?  @map("feishu_app_id") @db.VarChar(100)
+  feishuAppSecretEncrypted String?  @map("feishu_app_secret_encrypted") @db.Text
+  encryptionIv            String   @map("encryption_iv") @db.VarChar(32)
   updatedAt               DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamp(3)
+  createdAt               DateTime @default(now()) @map("created_at") @db.Timestamp(3)
 
   // 外键关系
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("user_credentials")
+  @@index([updatedAt])
 }
 
 // 同步配置表 - 用户同步偏好设置
 model SyncConfig {
-  userId           String           @id @map("user_id") @db.Uuid
-  mappingType      MappingType      @default(THREE_TABLES) @map("mapping_type")
-  autoSyncEnabled  Boolean          @default(false) @map("auto_sync_enabled")
-  syncSchedule     Json?            @map("sync_schedule")
-  tableMappings    Json?            @map("table_mappings")
-  createdAt        DateTime         @default(now()) @map("created_at") @db.Timestamp(3)
-  updatedAt        DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamp(3)
+  userId           String      @id @map("user_id") @db.Uuid
+  mappingType      MappingType @default(THREE_TABLES) @map("mapping_type")
+  autoSyncEnabled  Boolean     @default(false) @map("auto_sync_enabled")
+  syncSchedule     Json?       @map("sync_schedule") @db.JsonB
+  tableMappings    Json?       @map("table_mappings") @db.JsonB
+  createdAt        DateTime    @default(now()) @map("created_at") @db.Timestamp(3)
+  updatedAt        DateTime    @default(now()) @updatedAt @map("updated_at") @db.Timestamp(3)
 
   // 外键关系
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("sync_configs")
+  @@index([mappingType])
+  @@index([autoSyncEnabled])
 }
 
 // 同步历史表 - 记录每次同步操作
@@ -65,9 +71,10 @@ model SyncHistory {
   status       SyncStatus  @default(PENDING)
   startedAt    DateTime    @default(now()) @map("started_at") @db.Timestamp(3)
   completedAt  DateTime?   @map("completed_at") @db.Timestamp(3)
-  itemsSynced  Int?        @default(0) @map("items_synced")
+  itemsSynced  Int         @default(0) @map("items_synced")
   errorMessage String?     @map("error_message") @db.Text
-  metadata     Json?       // 额外的同步元数据
+  metadata     Json?       @db.JsonB
+  duration     Int?        @map("duration_ms") // 同步耗时(毫秒)
 
   // 外键关系
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -75,6 +82,8 @@ model SyncHistory {
   @@map("sync_history")
   @@index([userId, startedAt])
   @@index([status])
+  @@index([triggerType])
+  @@index([completedAt])
 }
 
 // 枚举类型定义
