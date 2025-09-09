@@ -45,7 +45,6 @@
     "docker:run": "docker run -p 3001:3001 --env-file .env d2f-backend"
   },
   "dependencies": {
-    "@liaoliaots/nestjs-redis": "^9.0.5",
     "@nestjs/bull": "^11.0.3",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",

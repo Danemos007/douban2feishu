@@ -19,8 +19,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { getRedisToken } from '@liaoliaots/nestjs-redis';
-import Redis from 'ioredis';
+import { RedisService } from '../../redis';
 
 import { FeishuTableService } from './feishu-table.service';
 import { FeishuAuthService } from './feishu-auth.service';
@@ -42,7 +41,7 @@ describe('FeishuTableService - 革命性统一字段操作', () => {
   let service: FeishuTableService;
   let authService: FeishuAuthService;
   let contractValidator: FeishuContractValidatorService;
-  let redis: Redis;
+  let redis: RedisService;
 
   // 🧪 统一测试数据和Mock配置
   const mockCredentials: FeishuCredentials = {
@@ -136,7 +135,7 @@ describe('FeishuTableService - 革命性统一字段操作', () => {
           useValue: mockContractValidator,
         },
         {
-          provide: getRedisToken('default'),
+          provide: RedisService,
           useValue: mockRedis,
         },
       ],
@@ -147,7 +146,7 @@ describe('FeishuTableService - 革命性统一字段操作', () => {
     contractValidator = module.get<FeishuContractValidatorService>(
       FeishuContractValidatorService,
     );
-    redis = module.get<Redis>(getRedisToken('default'));
+    redis = module.get<RedisService>(RedisService);
 
     // Mock HTTP客户端方法
     jest.spyOn(service as any, 'httpClient').mockImplementation();

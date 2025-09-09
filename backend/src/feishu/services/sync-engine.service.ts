@@ -1,6 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { InjectRedis } from '@liaoliaots/nestjs-redis';
-import Redis from 'ioredis';
+import { RedisService } from '../../redis';
 import { createHash } from 'crypto';
 
 import { FeishuTableService } from './feishu-table.service';
@@ -43,7 +42,7 @@ export class SyncEngineService {
     private readonly tableService: FeishuTableService,
     private readonly fieldMappingService: FieldMappingService,
     private readonly prisma: PrismaService,
-    @InjectRedis() private readonly redis: Redis,
+    private readonly redis: RedisService,
   ) {}
 
   /**

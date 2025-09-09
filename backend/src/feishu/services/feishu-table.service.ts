@@ -1,7 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { InjectRedis } from '@liaoliaots/nestjs-redis';
-import Redis from 'ioredis';
+import { RedisService } from '../../redis';
 import axios, { AxiosRequestConfig, AxiosError } from 'axios';
 
 import { ExtendedAxiosRequestConfig } from '../../common/interfaces/http.interface';
@@ -102,7 +101,7 @@ export class FeishuTableService implements IFeishuTableFieldOperations {
     private readonly configService: ConfigService,
     private readonly authService: FeishuAuthService,
     private readonly contractValidator: FeishuContractValidatorService,
-    @InjectRedis() private readonly redis: Redis,
+    private readonly redis: RedisService,
   ) {
     this.httpClient = this.createHttpClient();
   }

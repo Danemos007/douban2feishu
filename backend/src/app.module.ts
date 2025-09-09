@@ -17,6 +17,7 @@ import { FeishuModule } from './feishu/feishu.module';
 // 公共模块
 import { PrismaModule } from './common/prisma/prisma.module';
 import { CryptoModule } from './common/crypto/crypto.module';
+import { RedisModule } from './redis';
 
 // 守卫和拦截器
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
@@ -57,6 +58,7 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
     // 核心模块
     PrismaModule,
     CryptoModule,
+    RedisModule,
 
     // 业务模块
     AuthModule,

@@ -1,6 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { InjectRedis } from '@liaoliaots/nestjs-redis';
-import Redis from 'ioredis';
+import { RedisService } from '../../redis';
 
 import { FeishuTableService } from './feishu-table.service';
 import { FieldAutoCreationServiceV2 } from './field-auto-creation.service'; // 🆕 新服务导入
@@ -44,7 +43,7 @@ export class FieldMappingService {
     private readonly tableService: FeishuTableService,
     private readonly fieldAutoCreation: FieldAutoCreationServiceV2, // 🆕 注入新服务
     private readonly prisma: PrismaService,
-    @InjectRedis() private readonly redis: Redis,
+    private readonly redis: RedisService,
   ) {}
 
   /**

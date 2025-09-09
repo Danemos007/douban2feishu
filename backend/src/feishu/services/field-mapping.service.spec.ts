@@ -10,7 +10,7 @@
  */
 
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRedisToken } from '@liaoliaots/nestjs-redis';
+import { RedisService } from '../../redis';
 import { Logger } from '@nestjs/common';
 
 import { FieldMappingService } from './field-mapping.service';
@@ -71,7 +71,7 @@ describe('FieldMappingService - Phase 2 TDD Enhancement', () => {
           useValue: mockPrismaServiceObj,
         },
         {
-          provide: getRedisToken('default'),
+          provide: RedisService,
           useValue: mockRedisObj,
         },
       ],
@@ -81,7 +81,7 @@ describe('FieldMappingService - Phase 2 TDD Enhancement', () => {
     mockTableService = module.get(FeishuTableService);
     mockFieldAutoCreationService = module.get(FieldAutoCreationServiceV2);
     mockPrismaService = module.get(PrismaService);
-    mockRedis = module.get(getRedisToken('default'));
+    mockRedis = module.get(RedisService);
 
     // 禁用日志输出
     jest.spyOn(Logger.prototype, 'log').mockImplementation();
