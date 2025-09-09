@@ -14,8 +14,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { getRedisToken } from '@liaoliaots/nestjs-redis';
-import Redis from 'ioredis';
+import { RedisService } from '../../redis';
 
 // 引入统一接口和新类型
 import {
@@ -39,7 +38,7 @@ describe('FeishuTableService - 统一字段操作接口', () => {
   let service: FeishuTableService;
   let authService: FeishuAuthService;
   let contractValidator: FeishuContractValidatorService;
-  let redis: Redis;
+  let redis: RedisService;
 
   // 🧪 测试数据和Mock
   const mockCredentials: FeishuCredentials = {
@@ -134,7 +133,7 @@ describe('FeishuTableService - 统一字段操作接口', () => {
           useValue: mockContractValidator,
         },
         {
-          provide: getRedisToken('default'),
+          provide: RedisService,
           useValue: mockRedis,
         },
       ],
@@ -145,7 +144,7 @@ describe('FeishuTableService - 统一字段操作接口', () => {
     contractValidator = module.get<FeishuContractValidatorService>(
       FeishuContractValidatorService,
     );
-    redis = module.get<Redis>(getRedisToken('default'));
+    redis = module.get<RedisService>(RedisService);
 
     // 设置测试所需的方法mocks
     jest.spyOn(service, 'getTableFields').mockImplementation();

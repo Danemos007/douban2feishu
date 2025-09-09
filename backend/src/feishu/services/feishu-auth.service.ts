@@ -1,8 +1,8 @@
 import { Injectable, Logger, OnModuleDestroy, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios, { AxiosInstance, AxiosError, AxiosRequestConfig } from 'axios';
-import { InjectRedis } from '@liaoliaots/nestjs-redis';
 import Redis from 'ioredis';
+import { RedisService } from '../../redis';
 
 import { CryptoService } from '../../common/crypto/crypto.service';
 import { ExtendedAxiosRequestConfig } from '../../common/interfaces/http.interface';
@@ -57,11 +57,11 @@ export class FeishuAuthService implements OnModuleDestroy {
     private readonly configService: ConfigService,
     private readonly cryptoService: CryptoService,
     private readonly contractValidator: FeishuContractValidatorService,
-    @Optional() @InjectRedis() private readonly redis: Redis,
+    @Optional() private readonly redisService: RedisService,
   ) {
     this.httpClient = this.createHttpClient();
 
-    if (!this.redis) {
+    if (!this.redisService) {
       this.logger.warn(
         'Redis not available, using in-memory cache fallback for tokens',
       );
@@ -162,9 +162,9 @@ export class FeishuAuthService implements OnModuleDestroy {
    */
   private async getCachedToken(cacheKey: string): Promise<string | null> {
     // 尝试Redis缓存
-    if (this.redis) {
+    if (this.redisService) {
       try {
-        const tokenData = await this.redis.hgetall(cacheKey);
+        const tokenData = await this.redisService.hgetall(cacheKey);
 
         if (!tokenData.token || !tokenData.expiresAt) {
           return null;
@@ -201,7 +201,7 @@ export class FeishuAuthService implements OnModuleDestroy {
               : String(validationError),
           );
           // 清理无效缓存数据
-          await this.redis.del(cacheKey);
+          await this.redisService.del(cacheKey);
           return null;
         }
       } catch (error) {
@@ -284,9 +284,9 @@ export class FeishuAuthService implements OnModuleDestroy {
       (this.authConfig.tokenTtl - this.authConfig.tokenRefreshBuffer) * 1000;
 
     // 尝试Redis缓存
-    if (this.redis) {
+    if (this.redisService) {
       try {
-        await this.redis
+        await this.redisService
           .pipeline()
           .hset(cacheKey, {
             token,
@@ -318,12 +318,12 @@ export class FeishuAuthService implements OnModuleDestroy {
     const windowSize = 60; // 1分钟窗口
     const maxRequests = 20; // 每分钟最多20次认证请求
 
-    if (this.redis) {
+    if (this.redisService) {
       try {
-        const current = await this.redis.incr(rateLimitKey);
+        const current = await this.redisService.incr(rateLimitKey);
 
         if (current === 1) {
-          await this.redis.expire(rateLimitKey, windowSize);
+          await this.redisService.expire(rateLimitKey, windowSize);
         }
 
         if (current > maxRequests) {
@@ -485,8 +485,8 @@ export class FeishuAuthService implements OnModuleDestroy {
     const cacheKey = `${this.tokenKeyPrefix}${appId}`;
 
     // Redis缓存清理
-    if (this.redis) {
-      await this.redis.del(cacheKey);
+    if (this.redisService) {
+      await this.redisService.del(cacheKey);
     }
 
     // 内存缓存清理
@@ -499,14 +499,14 @@ export class FeishuAuthService implements OnModuleDestroy {
    * 获取token统计信息 - 使用Schema验证返回数据
    */
   async getTokenStats(): Promise<TokenStats | null> {
-    if (!this.redis) {
+    if (!this.redisService) {
       this.logger.warn('Redis not available for token stats');
       return null;
     }
 
     try {
       const pattern = `${this.tokenKeyPrefix}*`;
-      const keys = await this.redis.keys(pattern);
+      const keys = await this.redisService.keys(pattern);
 
       const stats = {
         totalApps: keys.length,
@@ -515,7 +515,7 @@ export class FeishuAuthService implements OnModuleDestroy {
       };
 
       for (const key of keys) {
-        const tokenData = await this.redis.hgetall(key);
+        const tokenData = await this.redisService.hgetall(key);
         if (tokenData.token) {
           stats.cachedTokens++;
 

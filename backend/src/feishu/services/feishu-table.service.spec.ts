@@ -31,6 +31,7 @@ import { ConfigService } from '@nestjs/config';
 import { FeishuTableService } from './feishu-table.service';
 import { FeishuAuthService } from './feishu-auth.service';
 import { FeishuContractValidatorService } from '../contract/validator.service';
+import { RedisService } from '../../redis';
 import {
   FeishuFieldType,
   FeishuFieldInfo,
@@ -243,9 +244,9 @@ describe('FeishuTableService - 完全重建版本', () => {
           useValue: mockContractValidator,
         },
 
-        // Redis Mock - 使用正确的Redis token
+        // Redis Mock - 使用新的RedisService
         {
-          provide: 'RedisModule:default',
+          provide: RedisService,
           useValue: mockRedis,
         },
       ],

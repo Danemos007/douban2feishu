@@ -16,8 +16,7 @@
 
 import { Test, TestingModule } from '@nestjs/testing';
 import { Logger } from '@nestjs/common';
-import { getRedisToken } from '@liaoliaots/nestjs-redis';
-import Redis from 'ioredis';
+import { RedisService } from '../../redis';
 
 import { FieldMappingService } from './field-mapping.service';
 import { FieldAutoCreationServiceV2 } from './field-auto-creation.service';
@@ -34,7 +33,7 @@ describe('FieldMappingService - Performance Benchmarks', () => {
   let fieldAutoCreationV2: FieldAutoCreationServiceV2;
   let feishuTableService: FeishuTableService;
   let prismaService: PrismaService;
-  let redis: Redis;
+  let redis: RedisService;
 
   const mockCredentials = {
     userId: 'user_perf_test',
@@ -105,7 +104,7 @@ describe('FieldMappingService - Performance Benchmarks', () => {
           useValue: mockPrismaService,
         },
         {
-          provide: getRedisToken('default'),
+          provide: RedisService,
           useValue: mockRedis,
         },
       ],
@@ -117,7 +116,7 @@ describe('FieldMappingService - Performance Benchmarks', () => {
     );
     feishuTableService = module.get<FeishuTableService>(FeishuTableService);
     prismaService = module.get<PrismaService>(PrismaService);
-    redis = module.get<Redis>(getRedisToken('default'));
+    redis = module.get<RedisService>(RedisService);
   });
 
   describe('🚀 核心API性能基准测试', () => {

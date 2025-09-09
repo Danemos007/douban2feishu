@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { RedisModule } from '@liaoliaots/nestjs-redis';
+import { RedisModule } from '../redis';
 
 import { FeishuService } from './feishu.service';
 import { FeishuController } from './feishu.controller';
@@ -30,23 +30,7 @@ import { PrismaModule } from '../common/prisma/prisma.module';
     ConfigModule,
     CryptoModule,
     PrismaModule,
-    RedisModule.forRootAsync({
-      useFactory: (configService: ConfigService) => ({
-        config: {
-          host: configService.get('REDIS_HOST', 'localhost'),
-          port: configService.get('REDIS_PORT', 6379),
-          password: configService.get('REDIS_PASSWORD'),
-          db: configService.get('REDIS_DB', 0),
-          retryDelayOnFailover: 100,
-          maxRetriesPerRequest: 1, // 减少重试次数，快速失败
-          lazyConnect: true, // 延迟连接，避免启动时阻塞
-          connectTimeout: 1000,
-          commandTimeout: 1000,
-          enableOfflineQueue: false, // 连接失败时不排队命令
-        },
-      }),
-      inject: [ConfigService],
-    }),
+    RedisModule,
   ],
   providers: [
     FeishuService,

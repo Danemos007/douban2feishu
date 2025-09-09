@@ -1,7 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
-import { getRedisToken } from '@liaoliaots/nestjs-redis';
-import Redis from 'ioredis';
+import { RedisService } from '../../redis';
 
 import { FeishuAuthService } from './feishu-auth.service';
 import { CryptoService } from '../../common/crypto/crypto.service';
@@ -78,7 +77,7 @@ describe('FeishuAuthService - Basic Integration', () => {
           },
         },
         {
-          provide: getRedisToken('default'),
+          provide: RedisService,
           useValue: mockRedis,
         },
       ],
@@ -160,7 +159,7 @@ describe('FeishuAuthService - Basic Integration', () => {
             },
           },
           {
-            provide: getRedisToken('default'),
+            provide: RedisService,
             useValue: null, // No Redis
           },
         ],
@@ -222,7 +221,7 @@ describe('FeishuAuthService - Basic Integration', () => {
             },
           },
           {
-            provide: getRedisToken('default'),
+            provide: RedisService,
             useValue: mockRedis,
           },
         ],
