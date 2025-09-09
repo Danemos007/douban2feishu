@@ -30,7 +30,7 @@ const FeishuAuthRequestSchema = z.object({
 const FeishuTokenResponseSchema = z
   .object({
     // API状态：严格验证
-    code: z.number().refine((val) => val === 0, { message: '飞书认证失败' }),
+    code: z.literal(0),
     msg: z.string(),
 
     // 核心Token数据：严格验证

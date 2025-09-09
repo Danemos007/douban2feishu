@@ -299,7 +299,18 @@ describe('FeishuTableService - 统一字段操作接口', () => {
           mockTableId,
           mockExistingWrongTypeField.field_id,
           mockBookStatusConfig,
-          mockAnalysisResult.differences,
+          [
+            {
+              property: 'type',
+              from: FeishuFieldType.Text,
+              to: FeishuFieldType.SingleSelect,
+            },
+            {
+              property: 'ui_type',
+              from: 'Text',
+              to: 'SingleSelect',
+            },
+          ],
         );
       });
 
