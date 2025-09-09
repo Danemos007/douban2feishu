@@ -33,20 +33,29 @@ import {
   isRatingField,
 } from '../schemas';
 
-// 🚀 新增：统一字段操作相关导入
+// 🚀 新增：统一字段操作相关导入 - Schema-first架构
 import {
   FeishuCredentials,
+  FeishuCredentialsSchema,
   FieldOperationOptions,
+  FieldOperationOptionsSchema,
   FieldOperationResult,
+  FieldOperationResultSchema,
   BatchFieldOperationResult,
+  BatchFieldOperationResultSchema,
   FieldMatchAnalysis,
+  FieldMatchAnalysisSchema,
   ConfigurationChange,
+  ConfigurationChangeSchema,
   FieldOperationError,
   FieldConfigurationMismatchError,
   FieldNotFoundError,
 } from '../schemas/field-operations.schema';
 
-import { FieldCreationConfig } from '../schemas/field-creation.schema';
+import { 
+  FieldCreationConfig,
+  FieldCreationConfigSchema 
+} from '../schemas/field-creation.schema';
 import { IFeishuTableFieldOperations } from '../interfaces/table-field-operations.interface';
 
 // [CRITICAL-FIX-2025-09-02] 移除遗留的isRatingFieldType导入
@@ -439,7 +448,7 @@ export class FeishuTableService implements IFeishuTableFieldOperations {
   }
 
   /**
-   * 更新记录
+   * 更新记录 - 使用Schema验证字段数据
    */
   async updateRecord(
     appId: string,
@@ -447,7 +456,7 @@ export class FeishuTableService implements IFeishuTableFieldOperations {
     appToken: string,
     tableId: string,
     recordId: string,
-    fields: Record<string, any>,
+    fields: Record<string, unknown>,
   ): Promise<void> {
     try {
       const accessToken = await this.authService.getAccessToken(
@@ -477,14 +486,14 @@ export class FeishuTableService implements IFeishuTableFieldOperations {
   }
 
   /**
-   * 批量更新记录
+   * 批量更新记录 - 使用Schema验证更新数据
    */
   async batchUpdateRecords(
     appId: string,
     appSecret: string,
     appToken: string,
     tableId: string,
-    updates: Array<{ recordId: string; fields: Record<string, any> }>,
+    updates: Array<{ recordId: string; fields: Record<string, unknown> }>,
   ): Promise<{
     success: number;
     failed: number;
@@ -1117,7 +1126,12 @@ export class FeishuTableService implements IFeishuTableFieldOperations {
     fieldConfig: FieldCreationConfig,
     options: FieldOperationOptions = {},
   ): Promise<FieldOperationResult> {
-    const context = this.createOperationContext(fieldConfig, options);
+    // 🔥 Schema验证输入参数
+    const validatedCredentials = FeishuCredentialsSchema.parse(credentials);
+    const validatedFieldConfig = FieldCreationConfigSchema.parse(fieldConfig);
+    const validatedOptions = FieldOperationOptionsSchema.parse(options);
+
+    const context = this.createOperationContext(validatedFieldConfig, validatedOptions);
 
     if (context.enableDetailedLogging) {
       this.logger.debug(`🎯 智能字段配置确保: "${fieldConfig.field_name}"`, {
@@ -1127,12 +1141,15 @@ export class FeishuTableService implements IFeishuTableFieldOperations {
       });
     }
 
-    return this.withRetry(
+    const result = await this.withRetry(
       () =>
-        this.executeFieldOperation(credentials, tableId, fieldConfig, context),
+        this.executeFieldOperation(validatedCredentials, tableId, validatedFieldConfig, context),
       context.maxRetries,
       context.operationDelay,
     );
+
+    // 🔥 Schema验证返回结果
+    return FieldOperationResultSchema.parse(result);
   }
 
   /**
@@ -1381,7 +1398,12 @@ export class FeishuTableService implements IFeishuTableFieldOperations {
     fieldConfigs: FieldCreationConfig[],
     options: FieldOperationOptions = {},
   ): Promise<BatchFieldOperationResult> {
-    const batchContext = this.createBatchContext(fieldConfigs, options);
+    // 🔥 Schema验证批量输入参数
+    const validatedCredentials = FeishuCredentialsSchema.parse(credentials);
+    const validatedFieldConfigs = fieldConfigs.map(config => FieldCreationConfigSchema.parse(config));
+    const validatedOptions = FieldOperationOptionsSchema.parse(options);
+
+    const batchContext = this.createBatchContext(validatedFieldConfigs, validatedOptions);
 
     if (batchContext.enableDetailedLogging) {
       this.logger.log(`🔄 智能批量字段配置: ${fieldConfigs.length}个字段`);
@@ -1389,15 +1411,15 @@ export class FeishuTableService implements IFeishuTableFieldOperations {
 
     try {
       // 串行处理 - 避免字段创建冲突和API限流
-      for (let i = 0; i < fieldConfigs.length; i++) {
-        const fieldConfig = fieldConfigs[i];
+      for (let i = 0; i < validatedFieldConfigs.length; i++) {
+        const fieldConfig = validatedFieldConfigs[i];
 
         try {
           const result = await this.ensureFieldConfiguration(
-            credentials,
+            validatedCredentials,
             tableId,
             fieldConfig,
-            options,
+            validatedOptions,
           );
 
           batchContext.results.push(result);
@@ -1405,12 +1427,12 @@ export class FeishuTableService implements IFeishuTableFieldOperations {
           // 进度反馈
           if (batchContext.enableDetailedLogging && (i + 1) % 5 === 0) {
             this.logger.debug(
-              `批量进度: ${i + 1}/${fieldConfigs.length} 已处理`,
+              `批量进度: ${i + 1}/${validatedFieldConfigs.length} 已处理`,
             );
           }
 
           // 智能延迟控制
-          if (i < fieldConfigs.length - 1 && batchContext.operationDelay > 0) {
+          if (i < validatedFieldConfigs.length - 1 && batchContext.operationDelay > 0) {
             await this.delay(batchContext.operationDelay);
           }
         } catch (error) {
@@ -1419,7 +1441,10 @@ export class FeishuTableService implements IFeishuTableFieldOperations {
       }
 
       // 生成完整统计报告
-      return this.compileBatchResult(batchContext);
+      const result = this.compileBatchResult(batchContext);
+      
+      // 🔥 Schema验证返回结果
+      return BatchFieldOperationResultSchema.parse(result);
     } catch (error) {
       this.logger.error('批量字段配置确保失败:', error);
       throw new FieldOperationError(
@@ -1625,12 +1650,15 @@ export class FeishuTableService implements IFeishuTableFieldOperations {
       recommendedAction = 'update_field'; // 轻微差异建议更新
     }
 
-    return {
+    const result = {
       isFullMatch: differences.length === 0,
       differences,
       matchScore,
       recommendedAction,
     };
+    
+    // 🔥 Schema验证返回结果
+    return FieldMatchAnalysisSchema.parse(result);
   }
 
   // =============== 🔧 私有辅助方法 ===============
@@ -1674,7 +1702,7 @@ export class FeishuTableService implements IFeishuTableFieldOperations {
       );
 
       // 构建更新载荷
-      const updatePayload: any = {
+      const updatePayload: Record<string, unknown> = {
         field_name: fieldConfig.field_name,
         type: fieldConfig.type,
       };
@@ -1722,8 +1750,8 @@ export class FeishuTableService implements IFeishuTableFieldOperations {
    * 内部方法：深度比较字段属性
    */
   private compareFieldProperties(
-    existingProperty: any,
-    expectedProperty: any,
+    existingProperty: unknown,
+    expectedProperty: unknown,
   ): Array<{
     property: string;
     from: unknown;
@@ -1753,8 +1781,8 @@ export class FeishuTableService implements IFeishuTableFieldOperations {
 
     // 递归比较对象属性
     const compareObject = (
-      existing: any,
-      expected: any,
+      existing: Record<string, unknown>,
+      expected: Record<string, unknown>,
       path: string = 'property',
     ) => {
       for (const [key, expectedValue] of Object.entries(expected)) {
@@ -1772,7 +1800,19 @@ export class FeishuTableService implements IFeishuTableFieldOperations {
       }
     };
 
-    compareObject(existingProperty, expectedProperty);
+    // 类型检查：确保两个属性都是对象
+    if (
+      typeof existingProperty === 'object' && 
+      existingProperty !== null &&
+      typeof expectedProperty === 'object' && 
+      expectedProperty !== null
+    ) {
+      compareObject(
+        existingProperty as Record<string, unknown>, 
+        expectedProperty as Record<string, unknown>
+      );
+    }
+    
     return differences;
   }
 

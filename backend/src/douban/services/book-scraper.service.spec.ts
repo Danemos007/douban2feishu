@@ -70,12 +70,18 @@ describe('BookScraperService', () => {
     it('should fetch books using legacy format', async () => {
       // Mock list page with one book
       mockAntiSpiderService.makeRequest
-        .mockResolvedValueOnce('<html><body>List page</body></html>')  // List page
+        .mockResolvedValueOnce('<html><body>List page</body></html>') // List page
         .mockResolvedValueOnce('<html><body>Book detail</body></html>'); // Book detail
 
       // Mock list page parsing
       mockHtmlParserService.parseListPage.mockReturnValue({
-        items: [{ id: '123456', title: '测试书籍', url: 'https://book.douban.com/subject/123456/' }],
+        items: [
+          {
+            id: '123456',
+            title: '测试书籍',
+            url: 'https://book.douban.com/subject/123456/',
+          },
+        ],
         total: 1,
         hasMore: false,
       });
@@ -129,7 +135,9 @@ describe('BookScraperService', () => {
 
     it('should handle empty book list', async () => {
       // Mock empty list page
-      mockAntiSpiderService.makeRequest.mockResolvedValue('<html><body>Empty</body></html>');
+      mockAntiSpiderService.makeRequest.mockResolvedValue(
+        '<html><body>Empty</body></html>',
+      );
       mockHtmlParserService.parseListPage.mockReturnValue({
         items: [],
         total: 0,

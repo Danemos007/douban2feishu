@@ -6,18 +6,17 @@ import Redis from 'ioredis';
 
 import { CryptoService } from '../../common/crypto/crypto.service';
 import { ExtendedAxiosRequestConfig } from '../../common/interfaces/http.interface';
-import { FeishuErrorResponse } from '../interfaces/api.interface';
 import { FeishuContractValidatorService } from '../contract/validator.service';
-import { FeishuTokenResponse } from '../schemas';
-
-/**
- * Token统计信息接口
- */
-interface TokenStats {
-  totalApps: number;
-  cachedTokens: number;
-  expiringSoon: number;
-}
+import {
+  FeishuTokenResponse,
+  FeishuAuthRequest,
+  FeishuAuthRequestSchema,
+  TokenStats,
+  TokenStatsSchema,
+  TokenCacheInfo,
+  TokenCacheInfoSchema,
+} from '../schemas';
+import { FeishuErrorResponseSchema } from '../schemas/api-responses.schema';
 
 /**
  * 飞书认证服务 - 企业级Token管理
@@ -171,15 +170,40 @@ export class FeishuAuthService implements OnModuleDestroy {
           return null;
         }
 
-        const expiresAt = parseInt(tokenData.expiresAt, 10);
-        const now = Date.now();
+        // 🔥 Schema验证缓存数据完整性
+        try {
+          const validatedCacheData = TokenCacheInfoSchema.parse({
+            token: tokenData.token,
+            expiresAt: parseInt(tokenData.expiresAt, 10),
+            createdAt: parseInt(
+              tokenData.createdAt || Date.now().toString(),
+              10,
+            ),
+            appId: cacheKey.replace(this.tokenKeyPrefix, ''),
+          });
 
-        // 检查token是否即将过期（提前刷新）
-        if (expiresAt <= now + this.authConfig.tokenRefreshBuffer * 1000) {
+          const now = Date.now();
+
+          // 检查token是否即将过期（提前刷新）
+          if (
+            validatedCacheData.expiresAt <=
+            now + this.authConfig.tokenRefreshBuffer * 1000
+          ) {
+            return null;
+          }
+
+          return validatedCacheData.token;
+        } catch (validationError) {
+          this.logger.warn(
+            'Cache data validation failed, clearing invalid cache:',
+            validationError instanceof Error
+              ? validationError.message
+              : String(validationError),
+          );
+          // 清理无效缓存数据
+          await this.redis.del(cacheKey);
           return null;
         }
-
-        return tokenData.token;
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : String(error);
@@ -222,10 +246,19 @@ export class FeishuAuthService implements OnModuleDestroy {
       decryptedSecret = await this.cryptoService.decrypt(appSecret, userId);
     }
 
-    const response = await this.httpClient.post(this.authConfig.tokenEndpoint, {
+    // 🔥 验证请求参数Schema
+    const requestPayload: FeishuAuthRequest = {
       app_id: appId,
       app_secret: decryptedSecret,
-    });
+    };
+
+    // Schema验证请求参数
+    const validatedRequest = FeishuAuthRequestSchema.parse(requestPayload);
+
+    const response = await this.httpClient.post(
+      this.authConfig.tokenEndpoint,
+      validatedRequest,
+    );
 
     // 🔥 使用契约验证器验证认证响应
     const validatedResponse = this.contractValidator.validateAuthResponse(
@@ -371,12 +404,26 @@ export class FeishuAuthService implements OnModuleDestroy {
   }
 
   /**
-   * 转换错误格式
+   * 转换错误格式 - 使用Schema验证错误响应
    */
   private transformError(error: AxiosError): Error {
     if (error.response?.data) {
-      const { code, msg } = error.response.data as FeishuErrorResponse;
-      return new Error(`Feishu API Error: [${code}] ${msg}`);
+      try {
+        // 🔥 使用Schema验证错误响应
+        const errorResponse = FeishuErrorResponseSchema.parse(
+          error.response.data,
+        );
+        return new Error(
+          `Feishu API Error: [${errorResponse.code}] ${errorResponse.msg}`,
+        );
+      } catch (validationError) {
+        // 如果错误响应格式不符合Schema，使用fallback处理
+        const fallbackData = error.response.data as any;
+        const code = fallbackData?.code || error.response.status;
+        const msg =
+          fallbackData?.msg || fallbackData?.message || 'Unknown error';
+        return new Error(`Feishu API Error: [${code}] ${msg}`);
+      }
     }
 
     return new Error(`Feishu API Request Failed: ${error.message}`);
@@ -436,14 +483,27 @@ export class FeishuAuthService implements OnModuleDestroy {
    */
   async clearTokenCache(appId: string): Promise<void> {
     const cacheKey = `${this.tokenKeyPrefix}${appId}`;
-    await this.redis.del(cacheKey);
+
+    // Redis缓存清理
+    if (this.redis) {
+      await this.redis.del(cacheKey);
+    }
+
+    // 内存缓存清理
+    this.memoryCache.delete(cacheKey);
+
     this.logger.log(`Token cache cleared for app: ${this.maskAppId(appId)}`);
   }
 
   /**
-   * 获取token统计信息
+   * 获取token统计信息 - 使用Schema验证返回数据
    */
   async getTokenStats(): Promise<TokenStats | null> {
+    if (!this.redis) {
+      this.logger.warn('Redis not available for token stats');
+      return null;
+    }
+
     try {
       const pattern = `${this.tokenKeyPrefix}*`;
       const keys = await this.redis.keys(pattern);
@@ -467,7 +527,8 @@ export class FeishuAuthService implements OnModuleDestroy {
         }
       }
 
-      return stats;
+      // 🔥 使用Schema验证统计数据
+      return TokenStatsSchema.parse(stats);
     } catch (error) {
       this.logger.error('Failed to get token stats:', error);
       return null;

@@ -1,9 +1,9 @@
 /**
  * 豆瓣解析结果Zod验证Schema
- * 
+ *
  * 为豆瓣数据解析后的结构化结果提供完整的运行时类型安全保障
  * 与现有 DoubanItem 接口保持兼容，同时提供更严格的验证
- * 
+ *
  * 创建时间: 2025-09-08
  * 用途: 解析结果的类型安全和验证，对接飞书同步系统
  */
@@ -19,29 +19,31 @@ export const DoubanItemBaseSchema = z.object({
   subjectId: z.string().min(1, '豆瓣ID不能为空'),
   title: z.string().min(1, '标题不能为空'),
   originalTitle: z.string().optional(),
-  
+
   // 基础元数据
   year: z.number().min(1800).max(2100).optional(),
-  rating: z.object({
-    average: z.number().min(0).max(10),
-    numRaters: z.number().min(0),
-  }).optional(),
-  
+  rating: z
+    .object({
+      average: z.number().min(0).max(10),
+      numRaters: z.number().min(0),
+    })
+    .optional(),
+
   // 分类和描述
   genres: z.array(z.string()).default([]),
   summary: z.string().optional(),
   coverUrl: z.string().url().optional(),
   doubanUrl: z.string().url('豆瓣URL必须是有效的URL'),
-  
+
   // 用户交互数据
   userRating: z.number().min(1).max(5).optional(),
   userComment: z.string().optional(),
   userTags: z.array(z.string()).default([]),
   readDate: z.coerce.date().optional(),
-  
+
   // 条目分类（必须明确）
   category: z.enum(['books', 'movies', 'music']),
-  
+
   // 创作者信息（可选，子类型会重写）
   directors: z.array(z.string()).default([]),
   cast: z.array(z.string()).default([]),
@@ -55,7 +57,7 @@ export const DoubanItemBaseSchema = z.object({
  */
 export const DoubanBookSchema = DoubanItemBaseSchema.extend({
   category: z.literal('books'),
-  
+
   // 书籍专有字段
   isbn: z.string().optional(),
   publisher: z.string().optional(),
@@ -63,11 +65,11 @@ export const DoubanBookSchema = DoubanItemBaseSchema.extend({
   pages: z.number().min(1).optional(),
   price: z.string().optional(),
   binding: z.string().optional(),
-  
+
   // 必需的创作者字段
   authors: z.array(z.string()).min(1, '书籍必须至少有一个作者'),
   translators: z.array(z.string()).default([]),
-  
+
   // 覆盖基类的可选字段，书籍不需要这些
   directors: z.array(z.string()).default([]).optional(),
   cast: z.array(z.string()).default([]).optional(),
@@ -80,19 +82,19 @@ export const DoubanBookSchema = DoubanItemBaseSchema.extend({
  */
 export const DoubanMovieSchema = DoubanItemBaseSchema.extend({
   category: z.literal('movies'),
-  
+
   // 电影专有字段
   imdbId: z.string().optional(),
   duration: z.string().optional(),
   countries: z.array(z.string()).default([]),
   languages: z.array(z.string()).default([]),
   releaseDate: z.string().optional(),
-  
+
   // 必需的创作者字段
   directors: z.array(z.string()).min(1, '电影必须至少有一个导演'),
   writers: z.array(z.string()).default([]),
   cast: z.array(z.string()).default([]),
-  
+
   // 覆盖基类的可选字段，电影不需要这些
   authors: z.array(z.string()).default([]).optional(),
   artists: z.array(z.string()).default([]).optional(),
@@ -104,7 +106,7 @@ export const DoubanMovieSchema = DoubanItemBaseSchema.extend({
  */
 export const DoubanMusicSchema = DoubanItemBaseSchema.extend({
   category: z.literal('music'),
-  
+
   // 音乐专有字段
   album: z.string().optional(),
   releaseDate: z.string().optional(),
@@ -112,10 +114,10 @@ export const DoubanMusicSchema = DoubanItemBaseSchema.extend({
   trackCount: z.number().min(1).optional(),
   duration: z.string().optional(),
   medium: z.string().optional(),
-  
+
   // 必需的创作者字段
   artists: z.array(z.string()).min(1, '音乐必须至少有一个艺术家'),
-  
+
   // 覆盖基类的可选字段，音乐不需要这些
   directors: z.array(z.string()).default([]).optional(),
   cast: z.array(z.string()).default([]).optional(),
@@ -128,7 +130,7 @@ export const DoubanMusicSchema = DoubanItemBaseSchema.extend({
  */
 export const DoubanTvSeriesSchema = DoubanItemBaseSchema.extend({
   category: z.literal('tv'), // 新的分类
-  
+
   // 电视剧专有字段
   imdbId: z.string().optional(),
   episodeDuration: z.string().optional(), // 单集时长
@@ -136,37 +138,37 @@ export const DoubanTvSeriesSchema = DoubanItemBaseSchema.extend({
   countries: z.array(z.string()).default([]),
   languages: z.array(z.string()).default([]),
   firstAirDate: z.string().optional(), // 首播日期
-  
+
   // 必需的创作者字段
   directors: z.array(z.string()).min(1, '电视剧必须至少有一个导演'),
   writers: z.array(z.string()).default([]),
   cast: z.array(z.string()).default([]),
-  
+
   // 覆盖基类的可选字段，电视剧不需要这些
   authors: z.array(z.string()).default([]).optional(),
   artists: z.array(z.string()).default([]).optional(),
 }).strict();
 
 /**
- * 扩展的豆瓣纪录片Schema  
+ * 扩展的豆瓣纪录片Schema
  * 从电视剧中细分出来，字段基本相同
  */
 export const DoubanDocumentarySchema = DoubanItemBaseSchema.extend({
   category: z.literal('documentary'), // 新的分类
-  
+
   // 纪录片专有字段（与电视剧相似）
   imdbId: z.string().optional(),
-  episodeDuration: z.string().optional(), 
+  episodeDuration: z.string().optional(),
   episodeCount: z.number().min(1).optional(),
   countries: z.array(z.string()).default([]),
   languages: z.array(z.string()).default([]),
   firstAirDate: z.string().optional(),
-  
+
   // 创作者字段（纪录片可能没有传统意义的演员）
   directors: z.array(z.string()).min(1, '纪录片必须至少有一个导演'),
   writers: z.array(z.string()).default([]),
   cast: z.array(z.string()).default([]), // 对于纪录片，可能是受访者
-  
+
   // 覆盖基类的可选字段
   authors: z.array(z.string()).default([]).optional(),
   artists: z.array(z.string()).default([]).optional(),
@@ -209,12 +211,16 @@ export const DoubanBatchResultSchema = z.object({
     failed: z.number().min(0),
     skipped: z.number().min(0),
   }),
-  errors: z.array(z.object({
-    subjectId: z.string().optional(),
-    url: z.string().url().optional(),
-    error: z.string(),
-    timestamp: z.date().default(() => new Date()),
-  })).default([]),
+  errors: z
+    .array(
+      z.object({
+        subjectId: z.string().optional(),
+        url: z.string().url().optional(),
+        error: z.string(),
+        timestamp: z.date().default(() => new Date()),
+      }),
+    )
+    .default([]),
 });
 
 /**
@@ -224,24 +230,30 @@ export const DoubanBatchResultSchema = z.object({
 export const DoubanParsingContextSchema = z.object({
   sourceUrl: z.string().url(),
   parseStrategy: z.enum(['json-ld', 'html-selectors', 'mixed']),
-  parsingStages: z.array(z.object({
-    stage: z.string(),
-    success: z.boolean(),
-    duration: z.number().min(0),
-    extractedFields: z.array(z.string()),
-    warnings: z.array(z.string()).default([]),
-  })),
+  parsingStages: z.array(
+    z.object({
+      stage: z.string(),
+      success: z.boolean(),
+      duration: z.number().min(0),
+      extractedFields: z.array(z.string()),
+      warnings: z.array(z.string()).default([]),
+    }),
+  ),
   finalValidation: z.object({
     isValid: z.boolean(),
     fieldsCovered: z.number().min(0),
     totalExpectedFields: z.number().min(0),
     coveragePercentage: z.number().min(0).max(100),
     missingFields: z.array(z.string()).default([]),
-    invalidFields: z.array(z.object({
-      field: z.string(),
-      value: z.unknown(),
-      reason: z.string(),
-    })).default([]),
+    invalidFields: z
+      .array(
+        z.object({
+          field: z.string(),
+          value: z.unknown(),
+          reason: z.string(),
+        }),
+      )
+      .default([]),
   }),
   performanceMetrics: z.object({
     totalDuration: z.number().min(0),
@@ -268,7 +280,7 @@ export type DoubanParsingContext = z.infer<typeof DoubanParsingContextSchema>;
  * 验证工具函数：验证豆瓣解析结果
  */
 export function validateDoubanItem(
-  data: unknown
+  data: unknown,
 ): { success: true; data: DoubanItem } | { success: false; error: string } {
   try {
     const validatedData = DoubanItemSchema.parse(data);
@@ -289,7 +301,7 @@ export function validateDoubanItem(
  */
 export function validateDoubanItemByType(
   data: unknown,
-  type: 'books' | 'movies' | 'music' | 'tv' | 'documentary'
+  type: 'books' | 'movies' | 'music' | 'tv' | 'documentary',
 ): { success: true; data: any } | { success: false; error: string } {
   try {
     let schema;
@@ -312,7 +324,7 @@ export function validateDoubanItemByType(
       default:
         return { success: false, error: '不支持的豆瓣条目类型' };
     }
-    
+
     const validatedData = schema.parse(data);
     return { success: true, data: validatedData };
   } catch (error) {
@@ -368,34 +380,46 @@ export function isDoubanDocumentary(item: unknown): item is DoubanDocumentary {
 /**
  * 智能类型推断：根据数据自动判断豆瓣条目类型
  */
-export function inferDoubanItemType(data: any): 'books' | 'movies' | 'tv' | 'documentary' | 'music' | 'unknown' {
+export function inferDoubanItemType(
+  data: any,
+): 'books' | 'movies' | 'tv' | 'documentary' | 'music' | 'unknown' {
   if (!data || typeof data !== 'object') return 'unknown';
-  
+
   // 明确的分类字段
-  if (data.category && ['books', 'movies', 'tv', 'documentary', 'music'].includes(data.category)) {
+  if (
+    data.category &&
+    ['books', 'movies', 'tv', 'documentary', 'music'].includes(data.category)
+  ) {
     return data.category;
   }
-  
+
   // 基于字段推断
   if (data.authors && Array.isArray(data.authors) && data.authors.length > 0) {
     return 'books';
   }
-  
-  if (data.directors && Array.isArray(data.directors) && data.directors.length > 0) {
+
+  if (
+    data.directors &&
+    Array.isArray(data.directors) &&
+    data.directors.length > 0
+  ) {
     if (data.episodeCount || data.firstAirDate) {
       // 检查genres是否包含"纪录片"
-      if (data.genres && Array.isArray(data.genres) && 
-          data.genres.some((g: string) => g.includes('纪录片'))) {
+      if (
+        data.genres &&
+        Array.isArray(data.genres) &&
+        data.genres.some((g: string) => g.includes('纪录片'))
+      ) {
         return 'documentary';
       }
       return 'tv';
     }
     return 'movies';
   }
-  
+
   if (data.artists && Array.isArray(data.artists) && data.artists.length > 0) {
     return 'music';
   }
-  
+
   return 'unknown';
 }

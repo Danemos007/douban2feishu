@@ -1,9 +1,9 @@
 /**
  * 飞书 API Zod Schemas 统一导出
- * 
+ *
  * 此模块提供完整的飞书 API 类型安全保障，遵循"未来优先"原则
  * 所有 Schema 基于真实 API 响应设计，确保契约验证的准确性
- * 
+ *
  * 设计原则:
  * 1. 未来优先 - 包含所有 API 字段，即使暂不使用
  * 2. 类型唯一性 - 所有 TS 类型从 Schema 生成
@@ -17,6 +17,7 @@ export {
   FeishuAuthRequestSchema,
   FeishuTokenResponseSchema,
   TokenCacheInfoSchema,
+  TokenStatsSchema,
   calculateTokenExpiry,
   isTokenExpiringSoon,
 } from './auth.schema';
@@ -81,6 +82,7 @@ export type {
   FeishuAuthRequest,
   FeishuTokenResponse,
   TokenCacheInfo,
+  TokenStats,
 } from './auth.schema';
 
 export type {

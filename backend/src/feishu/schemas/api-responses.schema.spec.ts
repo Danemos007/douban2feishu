@@ -1,6 +1,6 @@
 /**
  * 飞书 API 响应 Schema 单元测试
- * 
+ *
  * 测试原则:
  * 1. 验证各种响应格式能正确解析
  * 2. 验证错误响应能被正确识别
@@ -280,7 +280,8 @@ describe('FeishuRateLimitInfoSchema', () => {
 describe('FeishuRequestContextSchema', () => {
   it('should validate complete request context', () => {
     const validContext = {
-      endpoint: 'https://open.feishu.cn/open-apis/bitable/v1/apps/test/tables/test/records',
+      endpoint:
+        'https://open.feishu.cn/open-apis/bitable/v1/apps/test/tables/test/records',
       method: 'POST' as const,
       app_token: 'bascnCMII2ORuAUfUn',
       table_id: 'tblsRc9GRRXKqhvW',
@@ -289,7 +290,7 @@ describe('FeishuRequestContextSchema', () => {
       tenant_id: '2ed263bf32cf1651',
       timestamp: 1694764800000,
       headers: {
-        'Authorization': 'Bearer t-xxx',
+        Authorization: 'Bearer t-xxx',
         'Content-Type': 'application/json',
       },
     };
@@ -300,7 +301,8 @@ describe('FeishuRequestContextSchema', () => {
 
   it('should validate minimal request context', () => {
     const minimalContext = {
-      endpoint: 'https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal',
+      endpoint:
+        'https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal',
       method: 'POST' as const,
       request_id: '123e4567-e89b-12d3-a456-426614174000',
       timestamp: 1694764800000,
@@ -368,9 +370,18 @@ describe('Error Code Mapping and Helper Functions', () => {
   });
 
   it('should identify rate limit errors correctly', () => {
-    const rateLimitResponse: FeishuBaseResponse = { code: 99991630, msg: 'rate limited' };
-    const tenantLimitResponse: FeishuBaseResponse = { code: 99991631, msg: 'tenant limited' };
-    const normalErrorResponse: FeishuBaseResponse = { code: 99991400, msg: 'bad request' };
+    const rateLimitResponse: FeishuBaseResponse = {
+      code: 99991630,
+      msg: 'rate limited',
+    };
+    const tenantLimitResponse: FeishuBaseResponse = {
+      code: 99991631,
+      msg: 'tenant limited',
+    };
+    const normalErrorResponse: FeishuBaseResponse = {
+      code: 99991400,
+      msg: 'bad request',
+    };
 
     expect(isRateLimitError(rateLimitResponse)).toBe(true);
     expect(isRateLimitError(tenantLimitResponse)).toBe(true);
@@ -403,7 +414,7 @@ describe('Type Safety Integration', () => {
 
   it('should support generic paginated responses', () => {
     type TestItem = { id: string; name: string };
-    
+
     // 这应该在编译时通过类型检查
     const createPaginatedResponse = () => {
       const ItemSchema = z.object({
@@ -431,13 +442,13 @@ describe('Type Safety Integration', () => {
   it('should maintain error code type consistency', () => {
     // 编译时验证错误代码类型的一致性
     const errorCodes = Object.keys(FeishuErrorCodeMap).map(Number);
-    
+
     expect(errorCodes).toContain(99991663);
     expect(errorCodes).toContain(99991630);
     expect(errorCodes).toContain(99991500);
-    
+
     // 确保所有错误代码都有对应的消息
-    errorCodes.forEach(code => {
+    errorCodes.forEach((code) => {
       expect(getErrorMessage(code)).not.toBe(`未知错误 (${code})`);
     });
   });

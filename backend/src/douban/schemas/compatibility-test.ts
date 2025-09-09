@@ -1,9 +1,9 @@
 /**
  * Schema兼容性测试工具
- * 
+ *
  * 验证新创建的Zod Schema与现有豆瓣数据的兼容性
  * 确保不会引入破坏性变更
- * 
+ *
  * 创建时间: 2025-09-08
  * 用途: 验证Schema设计的正确性
  */
@@ -33,7 +33,8 @@ const testBookData = {
     numRaters: 425688,
   },
   genres: ['小说', '政治', '寓言'],
-  summary: '《动物农场》是奥威尔最优秀的作品之一，是一则入骨三分的反乌托邦的政治讽喻寓言。',
+  summary:
+    '《动物农场》是奥威尔最优秀的作品之一，是一则入骨三分的反乌托邦的政治讽喻寓言。',
   coverUrl: 'https://img9.doubanio.com/view/subject/s/public/s1085141.jpg',
   doubanUrl: 'https://book.douban.com/subject/36973237/',
   userRating: 5,
@@ -67,7 +68,8 @@ const testMovieData = {
   },
   genres: ['剧情', '犯罪'],
   summary: '希望让人自由。',
-  coverUrl: 'https://img2.doubanio.com/view/photo/s_ratio_poster/public/p480747492.jpg',
+  coverUrl:
+    'https://img2.doubanio.com/view/photo/s_ratio_poster/public/p480747492.jpg',
   doubanUrl: 'https://movie.douban.com/subject/1292052/',
   userRating: 5,
   userComment: '永恒的经典，关于希望的赞歌',
@@ -98,8 +100,10 @@ const testTvData = {
     numRaters: 1025684,
   },
   genres: ['剧情', '奇幻', '冒险'],
-  summary: '《权力的游戏》改编自美国作家乔治·R·R·马丁的奇幻小说《冰与火之歌》系列。',
-  coverUrl: 'https://img1.doubanio.com/view/photo/s_ratio_poster/public/p2561716440.jpg',
+  summary:
+    '《权力的游戏》改编自美国作家乔治·R·R·马丁的奇幻小说《冰与火之歌》系列。',
+  coverUrl:
+    'https://img1.doubanio.com/view/photo/s_ratio_poster/public/p2561716440.jpg',
   doubanUrl: 'https://movie.douban.com/subject/26794435/',
   userRating: 4,
   userComment: '史诗级巨制，前几季神作',
@@ -131,7 +135,8 @@ const testDocumentaryData = {
   },
   genres: ['纪录片', '自然'],
   summary: '《我们的星球》展现了地球上仍然存在的自然奇观和野生动物。',
-  coverUrl: 'https://img1.doubanio.com/view/photo/s_ratio_poster/public/p2552031888.jpg',
+  coverUrl:
+    'https://img1.doubanio.com/view/photo/s_ratio_poster/public/p2552031888.jpg',
   doubanUrl: 'https://movie.douban.com/subject/26302614/',
   userRating: 5,
   userComment: '震撼的自然纪录片，摄影绝美',
@@ -151,7 +156,10 @@ const testDocumentaryData = {
  * 运行兼容性测试
  */
 export function runCompatibilityTests() {
-  const results: Record<string, { success: boolean; error: string; data: any }> = {};
+  const results: Record<
+    string,
+    { success: boolean; error: string; data: any }
+  > = {};
 
   console.log('🧪 开始运行Schema兼容性测试...\n');
 
@@ -162,7 +170,7 @@ export function runCompatibilityTests() {
     results.book = {
       success: bookResult.success,
       error: bookResult.success ? '' : (bookResult as any).error || '验证失败',
-      data: bookResult.success ? bookResult.data : null
+      data: bookResult.success ? bookResult.data : null,
     };
     if (results.book.success) {
       console.log('✅ 书籍Schema验证成功');
@@ -187,8 +195,10 @@ export function runCompatibilityTests() {
     const movieResult = validateMovieComplete(testMovieData);
     results.movie = {
       success: movieResult.success,
-      error: movieResult.success ? '' : (movieResult as any).error || '验证失败',
-      data: movieResult.success ? movieResult.data : null
+      error: movieResult.success
+        ? ''
+        : (movieResult as any).error || '验证失败',
+      data: movieResult.success ? movieResult.data : null,
     };
     if (results.movie.success) {
       console.log('✅ 电影Schema验证成功');
@@ -214,7 +224,7 @@ export function runCompatibilityTests() {
     results.tv = {
       success: tvResult.success,
       error: tvResult.success ? '' : (tvResult as any).error || '验证失败',
-      data: tvResult.success ? tvResult.data : null
+      data: tvResult.success ? tvResult.data : null,
     };
     if (results.tv.success) {
       console.log('✅ 电视剧Schema验证成功');
@@ -240,20 +250,28 @@ export function runCompatibilityTests() {
     results.documentary = {
       success: docResult.success,
       error: docResult.success ? '' : (docResult as any).error || '验证失败',
-      data: docResult.success ? docResult.data : null
+      data: docResult.success ? docResult.data : null,
     };
     if (results.documentary.success) {
       console.log('✅ 纪录片Schema验证成功');
       console.log(`   - Subject ID: ${results.documentary.data.subjectId}`);
       console.log(`   - 标题: ${results.documentary.data.title}`);
-      console.log(`   - 导演: ${results.documentary.data.directors.join(', ')}`);
-      console.log(`   - 集数: ${results.documentary.data.episodeCount || 'N/A'}`);
+      console.log(
+        `   - 导演: ${results.documentary.data.directors.join(', ')}`,
+      );
+      console.log(
+        `   - 集数: ${results.documentary.data.episodeCount || 'N/A'}`,
+      );
     } else {
       console.log('❌ 纪录片Schema验证失败:');
       console.log(`   ${results.documentary.error}`);
     }
   } catch (error) {
-    results.documentary = { success: false, error: `测试异常: ${error}`, data: null };
+    results.documentary = {
+      success: false,
+      error: `测试异常: ${error}`,
+      data: null,
+    };
     console.log('❌ 纪录片Schema测试异常:', error);
   }
 
@@ -261,7 +279,7 @@ export function runCompatibilityTests() {
 
   // 汇总测试结果
   const totalTests = 4;
-  const successTests = Object.values(results).filter(r => r.success).length;
+  const successTests = Object.values(results).filter((r) => r.success).length;
   const successRate = (successTests / totalTests) * 100;
 
   console.log(`📊 测试结果汇总:`);
@@ -284,7 +302,7 @@ export function runCompatibilityTests() {
       total: totalTests,
       success: successTests,
       failed: totalTests - successTests,
-    }
+    },
   };
 }
 
@@ -293,12 +311,12 @@ export function runCompatibilityTests() {
  */
 export function runBoundaryTests() {
   console.log('\n🔬 开始边界情况测试...\n');
-  
+
   // 测试空数据
   console.log('🗑️ 测试空数据...');
   const emptyResult = validateBookComplete({});
   console.log(emptyResult.success ? '✅ 空数据处理正常' : '❌ 空数据处理异常');
-  
+
   // 测试最小数据
   console.log('📏 测试最小有效数据...');
   const minimalBook = {
@@ -309,19 +327,23 @@ export function runBoundaryTests() {
     category: 'books' as const,
   };
   const minimalResult = validateBookComplete(minimalBook);
-  console.log(minimalResult.success ? '✅ 最小数据验证通过' : '❌ 最小数据验证失败');
-  
+  console.log(
+    minimalResult.success ? '✅ 最小数据验证通过' : '❌ 最小数据验证失败',
+  );
+
   // 测试无效数据类型
   console.log('⚠️ 测试无效数据类型...');
   const invalidBook = {
     subjectId: 123, // 应该是字符串
-    title: '',      // 空标题
-    authors: [],    // 空作者数组
+    title: '', // 空标题
+    authors: [], // 空作者数组
     doubanUrl: 'invalid-url', // 无效URL
     category: 'books' as const,
   };
   const invalidResult = validateBookComplete(invalidBook);
-  console.log(!invalidResult.success ? '✅ 无效数据正确被拒绝' : '❌ 无效数据被错误接受');
+  console.log(
+    !invalidResult.success ? '✅ 无效数据正确被拒绝' : '❌ 无效数据被错误接受',
+  );
 }
 
 // 如果直接运行此文件，执行测试
