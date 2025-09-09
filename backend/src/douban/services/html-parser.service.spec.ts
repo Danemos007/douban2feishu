@@ -68,7 +68,7 @@ describe('HtmlParserService', () => {
       const result = await service.parseDoubanItem(
         mockHtml,
         'https://book.douban.com/subject/36973237/',
-        'books'
+        'books',
       );
 
       expect(result.success).toBe(true);
@@ -87,12 +87,14 @@ describe('HtmlParserService', () => {
       const result = await service.parseDoubanItem(
         invalidHtml,
         'https://book.douban.com/subject/invalid/',
-        'books'
+        'books',
       );
 
       expect(result.success).toBe(false);
       expect(result.errors.length).toBeGreaterThan(0);
-      expect(result.errors.some(error => error.includes('缺少必需字段'))).toBe(true);
+      expect(
+        result.errors.some((error) => error.includes('缺少必需字段')),
+      ).toBe(true);
     });
 
     it('should infer item type when not provided', async () => {
@@ -109,7 +111,7 @@ describe('HtmlParserService', () => {
 
       const result = await service.parseDoubanItem(
         mockBookHtml,
-        'https://book.douban.com/subject/123456/'
+        'https://book.douban.com/subject/123456/',
       );
 
       // 由于数据不足，推断可能失败，我们只检查是否有合理的处理
@@ -140,7 +142,7 @@ describe('HtmlParserService', () => {
       const result = await service.parseCollectionPage(
         mockCollectionHtml,
         'https://book.douban.com/people/test/collect',
-        'books'
+        'books',
       );
 
       // 收藏页解析可能因为Schema验证失败，我们验证基本功能
@@ -159,10 +161,10 @@ describe('HtmlParserService', () => {
         }
         </script>
       `;
-      
+
       const $ = require('cheerio').load(mockHtml);
       const result = service.parseStructuredData($);
-      
+
       expect(result).toBeDefined();
       expect(result.name).toBe('测试书籍');
     });
@@ -177,10 +179,10 @@ describe('HtmlParserService', () => {
           <span>2024-08-15</span>
         </div>
       `;
-      
+
       const $ = require('cheerio').load(mockHtml);
       const result = service.parseUserState($);
-      
+
       expect(result.rating).toBe(4);
       expect(result.tags).toEqual(['科幻', '文学']);
       expect(result.state).toBe('collect');
@@ -194,22 +196,22 @@ describe('HtmlParserService', () => {
         { invalid json }
         </script>
       `;
-      
+
       const $ = require('cheerio').load(mockHtml);
       const result = service.parseStructuredData($);
-      
+
       expect(result).toBeNull();
     });
 
     it('should handle missing required elements', async () => {
       const emptyHtml = '<html><body></body></html>';
-      
+
       const result = await service.parseDoubanItem(
         emptyHtml,
         'https://book.douban.com/subject/123/',
-        'books'
+        'books',
       );
-      
+
       expect(result.success).toBe(false);
       expect(result.errors.length).toBeGreaterThan(0);
     });
@@ -218,13 +220,13 @@ describe('HtmlParserService', () => {
   describe('performance tracking', () => {
     it('should track parsing performance', async () => {
       const mockHtml = '<html><body><h1>测试</h1></body></html>';
-      
+
       const result = await service.parseDoubanItem(
         mockHtml,
         'https://book.douban.com/subject/123/',
-        'books'
+        'books',
       );
-      
+
       expect(result.performance).toBeDefined();
       expect(result.performance?.startTime).toBeInstanceOf(Date);
       expect(result.performance?.endTime).toBeInstanceOf(Date);

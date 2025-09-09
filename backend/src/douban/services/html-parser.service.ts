@@ -8,11 +8,11 @@ import {
   DoubanMovieHtml,
   DoubanTvHtml,
   DoubanCollectionHtml,
-  
+
   // Validation Functions
   validateDoubanHtml,
   isValidDoubanHtml,
-  
+
   // Parsed Result Schemas
   DoubanItem,
   DoubanBook,
@@ -22,7 +22,7 @@ import {
   validateDoubanItem,
   validateDoubanItemByType,
   inferDoubanItemType,
-  
+
   // Field Schemas
   validateBookComplete,
   validateMovieComplete,
@@ -102,7 +102,7 @@ export interface ParseContext {
  * 1. JSON-LD结构化数据 (优先)
  * 2. Meta标签 (备选)
  * 3. DOM选择器 (兜底)
- * 
+ *
  * 新增特性:
  * - 完整的运行时类型验证
  * - 智能的数据类型推断
@@ -119,12 +119,13 @@ export class HtmlParserService {
   async parseDoubanItem(
     htmlContent: string,
     url: string,
-    expectedType?: 'books' | 'movies' | 'tv' | 'documentary' | 'music'
+    expectedType?: 'books' | 'movies' | 'tv' | 'documentary' | 'music',
   ): Promise<ParseResult<DoubanItem>> {
     const startTime = new Date();
     const errors: string[] = [];
     const warnings: string[] = [];
-    let parsingStrategy: 'json-ld' | 'html-selectors' | 'mixed' = 'html-selectors';
+    let parsingStrategy: 'json-ld' | 'html-selectors' | 'mixed' =
+      'html-selectors';
 
     try {
       // 创建解析上下文
@@ -167,7 +168,10 @@ export class HtmlParserService {
       }
 
       // 类型安全验证
-      const validationResult = this.validateParsedData(parsedData, inferredType);
+      const validationResult = this.validateParsedData(
+        parsedData,
+        inferredType,
+      );
       if (!validationResult.success) {
         errors.push(...validationResult.errors);
         if (validationResult.data) {
@@ -192,11 +196,12 @@ export class HtmlParserService {
       };
     } catch (error) {
       const endTime = new Date();
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       errors.push(`解析失败: ${errorMessage}`);
-      
+
       this.logger.error('Failed to parse Douban item', { url, error });
-      
+
       return {
         success: false,
         errors,
@@ -217,7 +222,7 @@ export class HtmlParserService {
   async parseCollectionPage(
     htmlContent: string,
     url: string,
-    itemType: 'books' | 'movies' | 'tv' | 'documentary' | 'music'
+    itemType: 'books' | 'movies' | 'tv' | 'documentary' | 'music',
   ): Promise<ParseResult<DoubanCollectionHtml>> {
     const startTime = new Date();
     const errors: string[] = [];
@@ -225,10 +230,10 @@ export class HtmlParserService {
 
     try {
       const $ = cheerio.load(htmlContent);
-      
+
       // 使用现有的列表解析逻辑，但包装在Schema验证中
       const listPage = this.parseListPage($);
-      
+
       const collectionData: Partial<DoubanCollectionHtml> = {
         title: $('title').text().trim(),
         url,
@@ -243,7 +248,7 @@ export class HtmlParserService {
           hasNextPage: listPage.hasMore,
           hasPrevPage: false,
         },
-        items: listPage.items.map(item => ({
+        items: listPage.items.map((item) => ({
           subjectId: item.id,
           title: item.title,
           url: item.url,
@@ -275,9 +280,10 @@ export class HtmlParserService {
         },
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       errors.push(`收藏页解析失败: ${errorMessage}`);
-      
+
       const endTime = new Date();
       return {
         success: false,
@@ -298,14 +304,14 @@ export class HtmlParserService {
    */
   private convertStructuredDataToItem(
     structuredData: any,
-    context: ParseContext
+    context: ParseContext,
   ): Partial<DoubanItem> {
     const item: Partial<DoubanItem> = {};
 
     if (structuredData.name) {
       item.title = structuredData.name;
     }
-    
+
     if (structuredData.alternateName) {
       item.originalTitle = structuredData.alternateName;
     }
@@ -409,7 +415,7 @@ export class HtmlParserService {
    */
   private mergeParsingResults(
     jsonLdData: Partial<DoubanItem>,
-    htmlData: Partial<DoubanItem>
+    htmlData: Partial<DoubanItem>,
   ): Partial<DoubanItem> {
     // JSON-LD数据优先，但HTML数据可以填补空缺
     const merged = { ...jsonLdData };
@@ -421,7 +427,7 @@ export class HtmlParserService {
     if (htmlData.readDate) merged.readDate = htmlData.readDate;
 
     // 其他字段如果JSON-LD缺失，则使用HTML数据
-    Object.keys(htmlData).forEach(key => {
+    Object.keys(htmlData).forEach((key) => {
       if (!merged[key] && htmlData[key]) {
         merged[key] = htmlData[key];
       }
@@ -435,7 +441,7 @@ export class HtmlParserService {
    */
   private validateParsedData(
     data: Partial<DoubanItem>,
-    itemType: string
+    itemType: string,
   ): { success: boolean; data?: DoubanItem; errors: string[] } {
     const errors: string[] = [];
 

@@ -20,7 +20,10 @@ import {
   isRatingField,
 } from '../schemas/field.schema';
 
-import { FeishuTokenResponse, FeishuTokenResponseSchema } from '../schemas/auth.schema';
+import {
+  FeishuTokenResponse,
+  FeishuTokenResponseSchema,
+} from '../schemas/auth.schema';
 
 import {
   FeishuRecordsResponse,

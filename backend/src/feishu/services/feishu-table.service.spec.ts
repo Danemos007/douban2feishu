@@ -42,6 +42,13 @@ import {
   FeishuCreateFieldPayload,
   FeishuRecordData,
 } from '../interfaces/feishu.interface';
+import {
+  FeishuCredentialsSchema,
+  FieldOperationOptionsSchema,
+  FieldOperationResultSchema,
+  BatchFieldOperationResultSchema,
+  FieldMatchAnalysisSchema,
+} from '../schemas/field-operations.schema';
 
 // ==================== Mock实现区域 ====================
 

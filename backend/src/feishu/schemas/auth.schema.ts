@@ -49,16 +49,27 @@ const TokenCacheInfoSchema = z.object({
   appId: z.string().min(1),
 });
 
+/**
+ * Token统计信息Schema - 用于Token管理监控
+ */
+const TokenStatsSchema = z.object({
+  totalApps: z.number().min(0),
+  cachedTokens: z.number().min(0),
+  expiringSoon: z.number().min(0),
+});
+
 // ✅ 类型唯一性：所有TS类型从Schema生成
 export type FeishuAuthRequest = z.infer<typeof FeishuAuthRequestSchema>;
 export type FeishuTokenResponse = z.infer<typeof FeishuTokenResponseSchema>;
 export type TokenCacheInfo = z.infer<typeof TokenCacheInfoSchema>;
+export type TokenStats = z.infer<typeof TokenStatsSchema>;
 
 // Schema导出
 export {
   FeishuAuthRequestSchema,
   FeishuTokenResponseSchema,
   TokenCacheInfoSchema,
+  TokenStatsSchema,
 };
 
 /**

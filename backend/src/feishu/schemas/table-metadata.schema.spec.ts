@@ -1,6 +1,6 @@
 /**
  * 飞书表格元数据 Schema 单元测试
- * 
+ *
  * 测试原则:
  * 1. 验证表格和应用信息能正确解析
  * 2. 验证视图配置的复杂结构
@@ -88,7 +88,7 @@ describe('FeishuAppInfoSchema', () => {
         name: '创建者',
       },
       last_modified_by: {
-        id: 'ou_987654321', 
+        id: 'ou_987654321',
         name: '修改者',
       },
     };
@@ -355,8 +355,8 @@ describe('FeishuPermissionSchema', () => {
 
   it('should validate all role types', () => {
     const roles = ['owner', 'editor', 'reader', 'commenter'] as const;
-    
-    roles.forEach(role => {
+
+    roles.forEach((role) => {
       const permission = {
         role,
         can_read: true,
@@ -457,9 +457,9 @@ describe('TableConfigurationSchema', () => {
       tableName: '豆瓣书籍表',
       primaryFieldId: 'fld123456',
       fieldMappings: {
-        '书名': 'fld001',
+        书名: 'fld001',
         'Subject ID': 'fld002',
-        '豆瓣评分': 'fld003',
+        豆瓣评分: 'fld003',
       },
       lastSyncTime: '2025-09-08T12:00:00Z',
       syncStatus: 'active' as const,
@@ -506,8 +506,8 @@ describe('TableConfigurationSchema', () => {
 
   it('should validate all sync status options', () => {
     const statuses = ['active', 'paused', 'error'] as const;
-    
-    statuses.forEach(status => {
+
+    statuses.forEach((status) => {
       const config = {
         appToken: 'test',
         tableId: 'test',

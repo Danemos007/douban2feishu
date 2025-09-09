@@ -116,29 +116,35 @@ export const SyncTaskSchema = z.object({
   type: z.enum(['manual', 'scheduled'] as const),
   status: SyncStatusSchema,
   config: SyncConfigSchema,
-  progress: z.object({
-    current: z.number(),
-    total: z.number(),
-    stage: z.string(),
-  }).optional(),
-  result: z.object({
-    totalItems: z.number(),
-    successfulItems: z.number(),
-    failedItems: z.number(),
-    skippedItems: z.number(),
-    itemsByCategory: z.object({
-      books: z.number(),
-      movies: z.number(),
-      tv: z.number(),
-      documentary: z.number(),
-    }),
-    errors: z.array(z.object({
-      itemId: z.string(),
-      error: z.string(),
-      category: z.string(),
-    })),
-    duration: z.number(),
-  }).optional(),
+  progress: z
+    .object({
+      current: z.number(),
+      total: z.number(),
+      stage: z.string(),
+    })
+    .optional(),
+  result: z
+    .object({
+      totalItems: z.number(),
+      successfulItems: z.number(),
+      failedItems: z.number(),
+      skippedItems: z.number(),
+      itemsByCategory: z.object({
+        books: z.number(),
+        movies: z.number(),
+        tv: z.number(),
+        documentary: z.number(),
+      }),
+      errors: z.array(
+        z.object({
+          itemId: z.string(),
+          error: z.string(),
+          category: z.string(),
+        }),
+      ),
+      duration: z.number(),
+    })
+    .optional(),
   error: z.string().optional(),
   createdAt: z.coerce.date(),
   startedAt: z.coerce.date().optional(),
@@ -195,10 +201,12 @@ export const DoubanParsedItemSchema = z.object({
   title: z.string(),
   originalTitle: z.string().optional(),
   year: z.number().optional(),
-  rating: z.object({
-    average: z.number(),
-    numRaters: z.number(),
-  }).optional(),
+  rating: z
+    .object({
+      average: z.number(),
+      numRaters: z.number(),
+    })
+    .optional(),
   genres: z.array(z.string()),
   summary: z.string().optional(),
   coverUrl: z.string().url().optional(),
@@ -219,12 +227,14 @@ export const DataTransformOptionsSchema = z.object({
   enableIntelligentRepair: z.boolean(),
   validateOutput: z.boolean(),
   includeMetadata: z.boolean(),
-  repairConfig: z.object({
-    fixDuration: z.boolean(),
-    fixReleaseDate: z.boolean(),
-    fixLanguage: z.boolean(),
-    fixCountry: z.boolean(),
-  }).optional(),
+  repairConfig: z
+    .object({
+      fixDuration: z.boolean(),
+      fixReleaseDate: z.boolean(),
+      fixLanguage: z.boolean(),
+      fixCountry: z.boolean(),
+    })
+    .optional(),
 });
 
 /**
@@ -233,11 +243,13 @@ export const DataTransformOptionsSchema = z.object({
 export const ValidationResultSchema = z.object({
   isValid: z.boolean(),
   data: z.unknown().optional(),
-  errors: z.array(z.object({
-    field: z.string(),
-    message: z.string(),
-    code: z.string().optional(),
-  })),
+  errors: z.array(
+    z.object({
+      field: z.string(),
+      message: z.string(),
+      code: z.string().optional(),
+    }),
+  ),
 });
 
 // ===== 导出类型推断 =====

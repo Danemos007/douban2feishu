@@ -1,6 +1,6 @@
 /**
  * 飞书批量操作 Schema 单元测试
- * 
+ *
  * 测试原则:
  * 1. 验证合法数据能正确解析
  * 2. 验证非法数据会被正确拒绝
@@ -28,16 +28,16 @@ describe('FeishuBatchCreateRequestSchema', () => {
       records: [
         {
           fields: {
-            '书名': '测试书籍',
+            书名: '测试书籍',
             'Subject ID': 'test123',
-            '豆瓣评分': 8.5,
+            豆瓣评分: 8.5,
           },
         },
         {
           fields: {
-            '书名': '另一本书',
-            'Subject ID': 'test456', 
-            '豆瓣评分': 9.0,
+            书名: '另一本书',
+            'Subject ID': 'test456',
+            豆瓣评分: 9.0,
           },
         },
       ],
@@ -56,20 +56,24 @@ describe('FeishuBatchCreateRequestSchema', () => {
     const result = FeishuBatchCreateRequestSchema.safeParse(invalidRequest);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toContain('批量创建至少需要一条记录');
+      expect(result.error.issues[0].message).toContain(
+        '批量创建至少需要一条记录',
+      );
     }
   });
 
   it('should reject request with too many records', () => {
     const records = Array.from({ length: 501 }, (_, i) => ({
-      fields: { '书名': `Book ${i}` },
+      fields: { 书名: `Book ${i}` },
     }));
     const invalidRequest = { records };
 
     const result = FeishuBatchCreateRequestSchema.safeParse(invalidRequest);
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toContain('单次批量创建最多500条记录');
+      expect(result.error.issues[0].message).toContain(
+        '单次批量创建最多500条记录',
+      );
     }
   });
 
@@ -78,11 +82,11 @@ describe('FeishuBatchCreateRequestSchema', () => {
       records: [
         {
           fields: {
-            '书名': '复杂测试',
-            '评分': 8,
-            '标签': ['科幻', '经典'],
-            '是否推荐': true,
-            '备注': null,
+            书名: '复杂测试',
+            评分: 8,
+            标签: ['科幻', '经典'],
+            是否推荐: true,
+            备注: null,
           },
         },
       ],
@@ -100,14 +104,14 @@ describe('FeishuBatchUpdateRequestSchema', () => {
         {
           record_id: 'rec123456',
           fields: {
-            '书名': '更新的书名',
-            '评分': 9.5,
+            书名: '更新的书名',
+            评分: 9.5,
           },
         },
         {
           record_id: 'rec789012',
           fields: {
-            '状态': '已读',
+            状态: '已读',
           },
         },
       ],
@@ -121,7 +125,7 @@ describe('FeishuBatchUpdateRequestSchema', () => {
     const invalidRequest = {
       records: [
         {
-          fields: { '书名': '测试' },
+          fields: { 书名: '测试' },
         },
       ],
     };
@@ -135,7 +139,7 @@ describe('FeishuBatchUpdateRequestSchema', () => {
       records: [
         {
           record_id: '',
-          fields: { '书名': '测试' },
+          fields: { 书名: '测试' },
         },
       ],
     };
@@ -181,7 +185,7 @@ describe('FeishuBatchOperationResponseSchema', () => {
           {
             record_id: 'rec123456',
             fields: {
-              '书名': '测试书籍',
+              书名: '测试书籍',
               'Subject ID': 'test123',
             },
             created_time: 1694764800000,
@@ -205,7 +209,7 @@ describe('FeishuBatchOperationResponseSchema', () => {
         records: [
           {
             record_id: 'rec123456',
-            fields: { '书名': '成功记录' },
+            fields: { 书名: '成功记录' },
           },
         ],
         failed_records: [
@@ -221,11 +225,14 @@ describe('FeishuBatchOperationResponseSchema', () => {
       },
     };
 
-    const result = FeishuBatchOperationResponseSchema.safeParse(responseWithFailures);
+    const result =
+      FeishuBatchOperationResponseSchema.safeParse(responseWithFailures);
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.data.failed_records).toHaveLength(1);
-      expect(result.data.data.failed_records![0].error_msg).toBe('字段验证失败');
+      expect(result.data.data.failed_records![0].error_msg).toBe(
+        '字段验证失败',
+      );
     }
   });
 
@@ -286,7 +293,7 @@ describe('BatchOperationConfigSchema', () => {
     const config = {};
     const result = BatchOperationConfigSchema.safeParse(config);
     expect(result.success).toBe(true);
-    
+
     if (result.success) {
       expect(result.data.batchSize).toBe(500);
       expect(result.data.concurrency).toBe(3);
@@ -392,7 +399,7 @@ describe('Type Safety Integration', () => {
       records: [
         {
           fields: {
-            '测试字段': '测试值',
+            测试字段: '测试值',
           },
         },
       ],
@@ -408,7 +415,7 @@ describe('Type Safety Integration', () => {
       records: [
         {
           record_id: 'rec123',
-          fields: { '字段': '值' },
+          fields: { 字段: '值' },
         },
       ],
     };
@@ -424,7 +431,7 @@ describe('Type Safety Integration', () => {
         records: [
           {
             record_id: 'rec123',
-            fields: { '字段': '值' },
+            fields: { 字段: '值' },
           },
         ],
       },

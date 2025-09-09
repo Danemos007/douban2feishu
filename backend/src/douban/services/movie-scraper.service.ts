@@ -7,7 +7,7 @@
  * - 统一的解析策略和错误处理
  * - 面向未来的API设计（破坏性变更以获得最佳架构）
  * - 完整的性能监控和批量处理支持
- * 
+ *
  * @version 3.0.0 - Future-First Architecture
  */
 
@@ -16,7 +16,7 @@ import { AntiSpiderService } from './anti-spider.service';
 import { HtmlParserService } from './html-parser.service';
 import {
   validateMovieComplete,
-  validateTvSeriesComplete, 
+  validateTvSeriesComplete,
   validateDocumentaryComplete,
   type MovieComplete,
   type TvSeriesComplete,
@@ -29,7 +29,10 @@ import * as cheerio from 'cheerio';
 /**
  * 电影/影视内容联合类型
  */
-export type MediaContent = MovieComplete | TvSeriesComplete | DocumentaryComplete;
+export type MediaContent =
+  | MovieComplete
+  | TvSeriesComplete
+  | DocumentaryComplete;
 
 /**
  * 内容类型枚举
@@ -117,7 +120,7 @@ export interface MovieData {
 
 /**
  * 豆瓣电影/影视抓取服务
- * 
+ *
  * 重构原则：
  * - 面向未来优先：不考虑向后兼容，追求最佳架构
  * - 类型安全优先：完整的Zod Schema运行时验证
@@ -136,7 +139,7 @@ export class MovieScraperService {
 
   /**
    * 获取用户的影视内容详情 - 新的统一API
-   * 
+   *
    * @param mediaId 媒体ID（豆瓣subject ID）
    * @param cookie 用户Cookie
    * @param expectedType 期望的媒体类型（可选，用于优化解析）
@@ -152,27 +155,36 @@ export class MovieScraperService {
 
     try {
       this.logger.debug(`Scraping media content: ${url}`);
-      
+
       // 使用AntiSpiderService进行安全请求
       const html = await this.antiSpiderService.makeRequest(url, cookie);
-      
+
       // 使用类型安全的HtmlParserService解析
-      const parseResult = await this.htmlParserService.parseDoubanItem(html, url, 'movies');
-      
+      const parseResult = await this.htmlParserService.parseDoubanItem(
+        html,
+        url,
+        'movies',
+      );
+
       if (parseResult.success && parseResult.data) {
         // 智能分类识别
         const detectedType = this.classifyMediaType(parseResult.data);
         const finalType = expectedType || detectedType;
-        
+
         // 根据类型进行特定验证
-        const validationResult = await this.validateByType(parseResult.data, finalType);
-        
+        const validationResult = await this.validateByType(
+          parseResult.data,
+          finalType,
+        );
+
         const endTime = new Date();
         const duration = endTime.getTime() - startTime.getTime();
 
         if (validationResult.success) {
-          this.logger.debug(`Successfully scraped ${finalType}: ${validationResult.data.title}`);
-          
+          this.logger.debug(
+            `Successfully scraped ${finalType}: ${validationResult.data.title}`,
+          );
+
           return {
             success: true,
             data: validationResult.data,
@@ -218,10 +230,11 @@ export class MovieScraperService {
       }
     } catch (error) {
       const endTime = new Date();
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+
       this.logger.error(`Failed to scrape media ${mediaId}:`, error);
-      
+
       return {
         success: false,
         errors: [errorMessage],
@@ -239,7 +252,7 @@ export class MovieScraperService {
 
   /**
    * 批量抓取用户的影视内容 - 新的统一批量API
-   * 
+   *
    * @param userId 用户ID
    * @param cookie 用户Cookie
    * @param options 抓取选项
@@ -256,13 +269,25 @@ export class MovieScraperService {
     } = {},
   ): Promise<MediaBatchResult> {
     const startTime = new Date();
-    const { status = 'collect', limit = 100, continueOnError = true, includeDetails = true } = options;
+    const {
+      status = 'collect',
+      limit = 100,
+      continueOnError = true,
+      includeDetails = true,
+    } = options;
 
     try {
-      this.logger.log(`[Batch] Starting media scraping for user ${userId} (${status})`);
-      
+      this.logger.log(
+        `[Batch] Starting media scraping for user ${userId} (${status})`,
+      );
+
       // 1. 获取列表页数据
-      const listItems = await this.scrapeMediaList(userId, cookie, status, limit);
+      const listItems = await this.scrapeMediaList(
+        userId,
+        cookie,
+        status,
+        limit,
+      );
       this.logger.log(`Found ${listItems.length} media items`);
 
       // 2. 初始化结果容器
@@ -288,7 +313,8 @@ export class MovieScraperService {
       if (!includeDetails || listItems.length === 0) {
         const endTime = new Date();
         result.performance.endTime = endTime;
-        result.performance.totalDurationMs = endTime.getTime() - startTime.getTime();
+        result.performance.totalDurationMs =
+          endTime.getTime() - startTime.getTime();
         result.success = listItems.length > 0;
         return result;
       }
@@ -297,7 +323,7 @@ export class MovieScraperService {
       for (const item of listItems) {
         try {
           const mediaResult = await this.scrapeMediaContent(item.id, cookie);
-          
+
           if (mediaResult.success && mediaResult.data && mediaResult.type) {
             // 按类型分组存储
             switch (mediaResult.type) {
@@ -305,30 +331,42 @@ export class MovieScraperService {
                 result.byType.movies.push(mediaResult.data as MovieComplete);
                 break;
               case 'tv':
-                result.byType.tvSeries.push(mediaResult.data as TvSeriesComplete);
+                result.byType.tvSeries.push(
+                  mediaResult.data as TvSeriesComplete,
+                );
                 break;
               case 'documentary':
-                result.byType.documentaries.push(mediaResult.data as DocumentaryComplete);
+                result.byType.documentaries.push(
+                  mediaResult.data as DocumentaryComplete,
+                );
                 break;
             }
             result.succeeded++;
-            
-            this.logger.debug(`✓ Scraped ${mediaResult.type}: ${mediaResult.data.title}`);
+
+            this.logger.debug(
+              `✓ Scraped ${mediaResult.type}: ${mediaResult.data.title}`,
+            );
           } else {
-            result.errors.push({ mediaId: item.id, error: mediaResult.errors.join(', ') });
+            result.errors.push({
+              mediaId: item.id,
+              error: mediaResult.errors.join(', '),
+            });
             result.failed++;
-            
+
             if (!continueOnError) {
               break;
             }
           }
         } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : String(error);
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
           result.errors.push({ mediaId: item.id, error: errorMessage });
           result.failed++;
-          
-          this.logger.warn(`✗ Failed to scrape media ${item.id}: ${errorMessage}`);
-          
+
+          this.logger.warn(
+            `✗ Failed to scrape media ${item.id}: ${errorMessage}`,
+          );
+
           if (!continueOnError) {
             break;
           }
@@ -338,27 +376,32 @@ export class MovieScraperService {
       // 4. 计算最终结果
       const endTime = new Date();
       const totalDuration = endTime.getTime() - startTime.getTime();
-      
+
       result.success = result.succeeded > 0;
       result.performance = {
         startTime,
         endTime,
         totalDurationMs: totalDuration,
-        averageDurationPerItem: result.total > 0 ? totalDuration / result.total : 0,
+        averageDurationPerItem:
+          result.total > 0 ? totalDuration / result.total : 0,
       };
 
       this.logger.log(
         `[Batch] Completed: ${result.succeeded}/${result.total} success ` +
-        `(Movies: ${result.byType.movies.length}, TV: ${result.byType.tvSeries.length}, Docs: ${result.byType.documentaries.length})`,
+          `(Movies: ${result.byType.movies.length}, TV: ${result.byType.tvSeries.length}, Docs: ${result.byType.documentaries.length})`,
       );
-      
+
       return result;
     } catch (error) {
       const endTime = new Date();
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      
-      this.logger.error(`[Batch] Failed to scrape media for user ${userId}:`, error);
-      
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+
+      this.logger.error(
+        `[Batch] Failed to scrape media for user ${userId}:`,
+        error,
+      );
+
       return {
         success: false,
         total: 0,
@@ -391,37 +434,40 @@ export class MovieScraperService {
 
     while (items.length < limit) {
       const url = this.buildListUrl(userId, status, start);
-      
+
       try {
         const html = await this.antiSpiderService.makeRequest(url, cookie);
         const $ = cheerio.load(html);
-        
+
         // 使用HtmlParserService解析列表页
         const listPage = this.htmlParserService.parseListPage($ as any);
-        
+
         if (listPage.items.length === 0) {
           this.logger.debug(`No more items found at start=${start}`);
           break;
         }
-        
+
         // 转换为MediaListItem格式
-        const mediaItems: MediaListItem[] = listPage.items.map(item => ({
+        const mediaItems: MediaListItem[] = listPage.items.map((item) => ({
           id: item.id,
           title: item.title,
           url: item.url,
           dateText: '', // 从列表页可能无法获取，但保持接口一致
         }));
-        
+
         items.push(...mediaItems);
-        
+
         // 检查是否还有更多页面
         if (!listPage.hasMore || listPage.items.length < pageSize) {
           break;
         }
-        
+
         start += pageSize;
       } catch (error) {
-        this.logger.error(`Failed to fetch list page at start=${start}:`, error);
+        this.logger.error(
+          `Failed to fetch list page at start=${start}:`,
+          error,
+        );
         break;
       }
     }
@@ -432,7 +478,11 @@ export class MovieScraperService {
   /**
    * 构建列表页URL
    */
-  private buildListUrl(userId: string, status: UserStatus, start: number): string {
+  private buildListUrl(
+    userId: string,
+    status: UserStatus,
+    start: number,
+  ): string {
     const baseParams = `start=${start}&sort=time&rating=all&filter=all&mode=list`;
     return `https://movie.douban.com/people/${userId}/${status}?${baseParams}`;
   }
@@ -444,34 +494,37 @@ export class MovieScraperService {
     // 优先检查显式类型信息
     if ('category' in data) {
       switch (data.category) {
-        case 'movies': return 'movie';
-        case 'tv': return 'tv';
-        case 'documentary': return 'documentary';
+        case 'movies':
+          return 'movie';
+        case 'tv':
+          return 'tv';
+        case 'documentary':
+          return 'documentary';
       }
     }
-    
+
     // 基于genres智能分类
     const genres = ('genres' in data ? data.genres : []) || [];
     const genreStr = genres.join(' ').toLowerCase();
-    
+
     // 优先识别纪录片
     if (genreStr.includes('纪录片') || genreStr.includes('documentary')) {
       return 'documentary';
     }
-    
+
     // 检查是否有电视剧特有字段
     if ('episodeCount' in data && data.episodeCount) {
       return 'tv';
     }
-    
+
     if ('episodeDuration' in data && data.episodeDuration) {
       return 'tv';
     }
-    
+
     if ('firstAirDate' in data && data.firstAirDate) {
       return 'tv';
     }
-    
+
     // 检查电视剧相关的类型标识
     const tvKeywords = ['电视剧', 'tv', 'series', '剧集', '连续剧', '网剧'];
     for (const keyword of tvKeywords) {
@@ -479,7 +532,7 @@ export class MovieScraperService {
         return 'tv';
       }
     }
-    
+
     // 默认为电影
     return 'movie';
   }
@@ -490,7 +543,9 @@ export class MovieScraperService {
   private async validateByType(
     data: DoubanItem,
     type: MediaType,
-  ): Promise<{ success: true; data: MediaContent } | { success: false; error: string }> {
+  ): Promise<
+    { success: true; data: MediaContent } | { success: false; error: string }
+  > {
     try {
       switch (type) {
         case 'movie': {
@@ -501,7 +556,7 @@ export class MovieScraperService {
             return { success: false, error: result.error };
           }
         }
-        
+
         case 'tv': {
           const result = validateTvSeriesComplete(data);
           if (result.success) {
@@ -510,7 +565,7 @@ export class MovieScraperService {
             return { success: false, error: result.error };
           }
         }
-        
+
         case 'documentary': {
           const result = validateDocumentaryComplete(data);
           if (result.success) {
@@ -519,7 +574,7 @@ export class MovieScraperService {
             return { success: false, error: result.error };
           }
         }
-        
+
         default:
           return { success: false, error: `Unknown media type: ${type}` };
       }
@@ -554,49 +609,67 @@ export class MovieScraperService {
       tvSeries: [] as TvSeriesComplete[],
       documentaries: [] as DocumentaryComplete[],
     };
-    const invalid: Array<{ index: number; data: unknown; errors: string[] }> = [];
+    const invalid: Array<{ index: number; data: unknown; errors: string[] }> =
+      [];
 
     items.forEach((item, index) => {
       // 尝试智能分类
       const detectedType = this.classifyMediaType(item as DoubanItem);
-      
+
       // 验证对应类型
       let validation: { success: boolean; data?: any; error?: string };
-      
+
       switch (detectedType) {
         case 'movie':
           validation = validateMovieComplete(item);
           if (validation.success && validation.data) {
             valid.movies.push(validation.data);
           } else {
-            invalid.push({ index, data: item, errors: [validation.error || 'Movie validation failed'] });
+            invalid.push({
+              index,
+              data: item,
+              errors: [validation.error || 'Movie validation failed'],
+            });
           }
           break;
-          
+
         case 'tv':
           validation = validateTvSeriesComplete(item);
           if (validation.success && validation.data) {
             valid.tvSeries.push(validation.data);
           } else {
-            invalid.push({ index, data: item, errors: [validation.error || 'TV series validation failed'] });
+            invalid.push({
+              index,
+              data: item,
+              errors: [validation.error || 'TV series validation failed'],
+            });
           }
           break;
-          
+
         case 'documentary':
           validation = validateDocumentaryComplete(item);
           if (validation.success && validation.data) {
             valid.documentaries.push(validation.data);
           } else {
-            invalid.push({ index, data: item, errors: [validation.error || 'Documentary validation failed'] });
+            invalid.push({
+              index,
+              data: item,
+              errors: [validation.error || 'Documentary validation failed'],
+            });
           }
           break;
-          
+
         default:
-          invalid.push({ index, data: item, errors: [`Unknown media type: ${detectedType}`] });
+          invalid.push({
+            index,
+            data: item,
+            errors: [`Unknown media type: ${detectedType}`],
+          });
       }
     });
 
-    const validCount = valid.movies.length + valid.tvSeries.length + valid.documentaries.length;
+    const validCount =
+      valid.movies.length + valid.tvSeries.length + valid.documentaries.length;
     const summary = {
       total: items.length,
       valid: validCount,
@@ -611,7 +684,7 @@ export class MovieScraperService {
 
     this.logger.log(
       `Batch validation: ${validCount}/${items.length} valid ` +
-      `(M:${valid.movies.length}, TV:${valid.tvSeries.length}, D:${valid.documentaries.length})`,
+        `(M:${valid.movies.length}, TV:${valid.tvSeries.length}, D:${valid.documentaries.length})`,
     );
 
     return { valid, invalid, summary };
@@ -630,7 +703,7 @@ export class MovieScraperService {
   getFieldMappingByType(type: MediaType): string[] {
     const baseFields = [
       'Subject ID',
-      '我的标签', 
+      '我的标签',
       '我的状态',
       '类型',
       '片名',
@@ -640,7 +713,7 @@ export class MovieScraperService {
       '剧情简介',
       '我的评分',
       '主演',
-      '导演', 
+      '导演',
       '编剧',
       '制片地区',
       '语言',
@@ -667,11 +740,13 @@ export class MovieScraperService {
    */
   async getMovieDetail(movieId: string, cookie: string): Promise<MovieData> {
     const result = await this.scrapeMediaContent(movieId, cookie, 'movie');
-    
+
     if (result.success && result.data) {
       return this.convertToLegacyFormat(result.data, result.type!);
     } else {
-      throw new Error(`Failed to get movie detail: ${result.errors.join(', ')}`);
+      throw new Error(
+        `Failed to get movie detail: ${result.errors.join(', ')}`,
+      );
     }
   }
 
@@ -685,26 +760,26 @@ export class MovieScraperService {
     limit = 1000,
   ): Promise<any[]> {
     const result = await this.batchScrapeUserMedia(userId, cookie, {
-      status: status as UserStatus,
+      status: status,
       limit,
       includeDetails: true,
     });
-    
+
     // 转换为旧格式
     const legacyItems: any[] = [];
-    
-    result.byType.movies.forEach(movie => {
+
+    result.byType.movies.forEach((movie) => {
       legacyItems.push(this.convertToLegacyFormat(movie, 'movie'));
     });
-    
-    result.byType.tvSeries.forEach(tv => {
+
+    result.byType.tvSeries.forEach((tv) => {
       legacyItems.push(this.convertToLegacyFormat(tv, 'tv'));
     });
-    
-    result.byType.documentaries.forEach(doc => {
+
+    result.byType.documentaries.forEach((doc) => {
       legacyItems.push(this.convertToLegacyFormat(doc, 'documentary'));
     });
-    
+
     return legacyItems;
   }
 
@@ -718,15 +793,15 @@ export class MovieScraperService {
     status: 'collect' | 'wish' | 'do' = 'collect',
   ): Promise<{ items: any[]; total: number }> {
     const start = page * 30;
-    const url = this.buildListUrl(userId, status as UserStatus, start);
-    
+    const url = this.buildListUrl(userId, status, start);
+
     try {
       const html = await this.antiSpiderService.makeRequest(url, cookie);
       const $ = cheerio.load(html);
       const listPage = this.htmlParserService.parseListPage($ as any);
-      
+
       return {
-        items: listPage.items.map(item => ({
+        items: listPage.items.map((item) => ({
           id: item.id,
           title: item.title,
           url: item.url,
@@ -735,7 +810,8 @@ export class MovieScraperService {
         total: listPage.total,
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       this.logger.error(`获取电影列表失败: ${errorMessage}`);
       throw error;
     }
@@ -751,7 +827,10 @@ export class MovieScraperService {
   /**
    * 转换为旧格式 - 向后兼容
    */
-  private convertToLegacyFormat(data: MediaContent, type: MediaType): MovieData {
+  private convertToLegacyFormat(
+    data: MediaContent,
+    type: MediaType,
+  ): MovieData {
     const baseData: MovieData = {
       subjectId: data.subjectId,
       title: data.title,
@@ -767,9 +846,20 @@ export class MovieScraperService {
       country: data.countries || [],
       language: data.languages || [],
       releaseYear: data.year?.toString(),
-      releaseDate: ('releaseDate' in data) ? data.releaseDate : ('firstAirDate' in data) ? data.firstAirDate : undefined,
-      duration: ('duration' in data) ? data.duration : ('episodeDuration' in data) ? data.episodeDuration : undefined,
-      episodes: ('episodeCount' in data) ? data.episodeCount?.toString() : undefined,
+      releaseDate:
+        'releaseDate' in data
+          ? data.releaseDate
+          : 'firstAirDate' in data
+            ? data.firstAirDate
+            : undefined,
+      duration:
+        'duration' in data
+          ? data.duration
+          : 'episodeDuration' in data
+            ? data.episodeDuration
+            : undefined,
+      episodes:
+        'episodeCount' in data ? data.episodeCount?.toString() : undefined,
       myRating: data.userRating,
       myTags: data.userTags || [],
       myStatus: data.userStatus,
@@ -777,7 +867,7 @@ export class MovieScraperService {
       markDate: data.readDate,
       type,
     };
-    
+
     return baseData;
   }
 }

@@ -1,9 +1,9 @@
 /**
  * 豆瓣Schema统一导出模块
- * 
+ *
  * 整合所有豆瓣相关的Zod验证Schema
  * 为外部模块提供统一的导入接口
- * 
+ *
  * 创建时间: 2025-09-08
  * 用途: 豆瓣数据类型安全的统一入口
  */
@@ -102,10 +102,7 @@ export type {
 /**
  * 统一验证工具函数导出
  */
-export {
-  validateDoubanHtml,
-  isValidDoubanHtml,
-} from './html-response.schema';
+export { validateDoubanHtml, isValidDoubanHtml } from './html-response.schema';
 
 export {
   validateDoubanItem,

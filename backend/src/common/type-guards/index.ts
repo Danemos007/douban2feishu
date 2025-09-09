@@ -17,7 +17,9 @@ import {
 /**
  * 检查值是否为非空值
  */
-export function isNotNullOrUndefined<T>(value: T | null | undefined): value is T {
+export function isNotNullOrUndefined<T>(
+  value: T | null | undefined,
+): value is T {
   return value !== null && value !== undefined;
 }
 
@@ -54,7 +56,8 @@ export function isValidDate(value: unknown): value is Date {
  */
 export function isValidUUID(value: unknown): value is string {
   if (!isNonEmptyString(value)) return false;
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  const uuidRegex =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   return uuidRegex.test(value);
 }
 
@@ -100,7 +103,7 @@ export function hasProperties<K extends string>(
   props: K[],
 ): obj is Record<K, unknown> {
   if (obj === null || typeof obj !== 'object') return false;
-  return props.every(prop => prop in obj);
+  return props.every((prop) => prop in obj);
 }
 
 /**
@@ -154,7 +157,9 @@ export function isNumberArray(value: unknown): value is number[] {
 /**
  * 检查是否为有效用户对象
  */
-export function isValidUser(value: unknown): value is z.infer<typeof UserSchema> {
+export function isValidUser(
+  value: unknown,
+): value is z.infer<typeof UserSchema> {
   try {
     UserSchema.parse(value);
     return true;
@@ -166,7 +171,9 @@ export function isValidUser(value: unknown): value is z.infer<typeof UserSchema>
 /**
  * 检查是否为有效同步配置
  */
-export function isValidSyncConfig(value: unknown): value is z.infer<typeof SyncConfigSchema> {
+export function isValidSyncConfig(
+  value: unknown,
+): value is z.infer<typeof SyncConfigSchema> {
   try {
     SyncConfigSchema.parse(value);
     return true;
@@ -248,7 +255,7 @@ export function isZodError(value: unknown): value is z.ZodError {
  */
 export function getErrorMessage(error: unknown): string {
   if (isError(error)) return error.message;
-  if (isZodError(error)) return error.issues.map(e => e.message).join(', ');
+  if (isZodError(error)) return error.issues.map((e) => e.message).join(', ');
   if (typeof error === 'string') return error;
   return '未知错误';
 }

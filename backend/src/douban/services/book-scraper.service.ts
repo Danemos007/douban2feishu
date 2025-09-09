@@ -378,9 +378,13 @@ export class BookScraperService {
   /**
    * 验证书籍数据完整性 - 类型安全版本
    */
-  validateBookData(data: unknown): { success: boolean; data?: BookComplete; errors: string[] } {
+  validateBookData(data: unknown): {
+    success: boolean;
+    data?: BookComplete;
+    errors: string[];
+  } {
     const result = validateBookComplete(data);
-    
+
     if (result.success) {
       return {
         success: true,
@@ -434,7 +438,8 @@ export class BookScraperService {
     };
   } {
     const valid: BookComplete[] = [];
-    const invalid: Array<{ index: number; data: unknown; errors: string[] }> = [];
+    const invalid: Array<{ index: number; data: unknown; errors: string[] }> =
+      [];
 
     books.forEach((book, index) => {
       const validation = this.validateBookData(book);

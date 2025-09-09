@@ -48,7 +48,7 @@ export const SyncStatus = {
   CANCELLED: 'cancelled',
 } as const;
 
-export type SyncStatusType = typeof SyncStatus[keyof typeof SyncStatus];
+export type SyncStatusType = (typeof SyncStatus)[keyof typeof SyncStatus];
 
 /**
  * 同步配置
@@ -196,7 +196,8 @@ export const WebSocketEventType = {
   SYNC_CANCELLED: 'sync_cancelled',
 } as const;
 
-export type WebSocketEventTypeEnum = typeof WebSocketEventType[keyof typeof WebSocketEventType];
+export type WebSocketEventTypeEnum =
+  (typeof WebSocketEventType)[keyof typeof WebSocketEventType];
 
 /**
  * WebSocket事件载荷
@@ -244,5 +245,7 @@ export function isValidSyncConfig(config: unknown): config is SyncConfig {
  * 检查同步状态是否为最终状态
  */
 export function isFinalSyncStatus(status: SyncStatusType): boolean {
-  return [SyncStatus.SUCCESS, SyncStatus.FAILED, SyncStatus.CANCELLED].includes(status as any);
+  return [SyncStatus.SUCCESS, SyncStatus.FAILED, SyncStatus.CANCELLED].includes(
+    status as any,
+  );
 }

@@ -1,9 +1,9 @@
 /**
  * 豆瓣HTML响应Zod验证Schema
- * 
+ *
  * 为豆瓣页面抓取和解析提供完整的运行时类型安全保障
  * 基于实际豆瓣页面结构设计，支持书籍、电影、电视剧、纪录片等类型
- * 
+ *
  * 创建时间: 2025-09-08
  * 用途: HTML解析的类型安全和验证
  */
@@ -29,209 +29,269 @@ export const DoubanHtmlBaseSchema = z.object({
  */
 export const DoubanItemHtmlSchema = DoubanHtmlBaseSchema.extend({
   // JSON-LD结构化数据（优先解析源）
-  jsonLd: z.object({
-    '@type': z.enum(['Book', 'Movie', 'TVSeries', 'CreativeWork']),
-    name: z.string(),
-    alternateName: z.string().optional(),
-    author: z.array(z.object({
-      '@type': z.string(),
+  jsonLd: z
+    .object({
+      '@type': z.enum(['Book', 'Movie', 'TVSeries', 'CreativeWork']),
       name: z.string(),
-    })).optional(),
-    director: z.array(z.object({
-      '@type': z.string(),
-      name: z.string(),
-    })).optional(),
-    actor: z.array(z.object({
-      '@type': z.string(),
-      name: z.string(),
-    })).optional(),
-    datePublished: z.string().optional(),
-    isbn: z.string().optional(),
-    publisher: z.object({
-      '@type': z.string(),
-      name: z.string(),
-    }).optional(),
-    aggregateRating: z.object({
-      '@type': z.string(),
-      ratingValue: z.number(),
-      ratingCount: z.number(),
-      bestRating: z.number().default(10),
-    }).optional(),
-    genre: z.array(z.string()).default([]),
-    description: z.string().optional(),
-    image: z.string().url().optional(),
-  }).optional(),
+      alternateName: z.string().optional(),
+      author: z
+        .array(
+          z.object({
+            '@type': z.string(),
+            name: z.string(),
+          }),
+        )
+        .optional(),
+      director: z
+        .array(
+          z.object({
+            '@type': z.string(),
+            name: z.string(),
+          }),
+        )
+        .optional(),
+      actor: z
+        .array(
+          z.object({
+            '@type': z.string(),
+            name: z.string(),
+          }),
+        )
+        .optional(),
+      datePublished: z.string().optional(),
+      isbn: z.string().optional(),
+      publisher: z
+        .object({
+          '@type': z.string(),
+          name: z.string(),
+        })
+        .optional(),
+      aggregateRating: z
+        .object({
+          '@type': z.string(),
+          ratingValue: z.number(),
+          ratingCount: z.number(),
+          bestRating: z.number().default(10),
+        })
+        .optional(),
+      genre: z.array(z.string()).default([]),
+      description: z.string().optional(),
+      image: z.string().url().optional(),
+    })
+    .optional(),
 
   // HTML页面元素（备选解析源）
-  pageElements: z.object({
-    // 标题相关
-    mainTitle: z.string().optional(),
-    subtitle: z.string().optional(),
-    originalTitle: z.string().optional(),
-    
-    // 评分信息
-    ratingValue: z.string().optional(),
-    ratingCount: z.string().optional(),
-    
-    // 基础信息
-    year: z.string().optional(),
-    genres: z.array(z.string()).default([]),
-    summary: z.string().optional(),
-    coverImage: z.string().optional(),
-    
-    // 创作者信息
-    authors: z.array(z.string()).default([]),
-    directors: z.array(z.string()).default([]),
-    cast: z.array(z.string()).default([]),
-    writers: z.array(z.string()).default([]),
-    
-    // 出版/发行信息
-    publisher: z.string().optional(),
-    publishDate: z.string().optional(),
-    releaseDate: z.string().optional(),
-    
-    // 其他元数据
-    pages: z.string().optional(),
-    duration: z.string().optional(),
-    countries: z.array(z.string()).default([]),
-    languages: z.array(z.string()).default([]),
-    isbn: z.string().optional(),
-    imdbId: z.string().optional(),
-  }).optional(),
+  pageElements: z
+    .object({
+      // 标题相关
+      mainTitle: z.string().optional(),
+      subtitle: z.string().optional(),
+      originalTitle: z.string().optional(),
+
+      // 评分信息
+      ratingValue: z.string().optional(),
+      ratingCount: z.string().optional(),
+
+      // 基础信息
+      year: z.string().optional(),
+      genres: z.array(z.string()).default([]),
+      summary: z.string().optional(),
+      coverImage: z.string().optional(),
+
+      // 创作者信息
+      authors: z.array(z.string()).default([]),
+      directors: z.array(z.string()).default([]),
+      cast: z.array(z.string()).default([]),
+      writers: z.array(z.string()).default([]),
+
+      // 出版/发行信息
+      publisher: z.string().optional(),
+      publishDate: z.string().optional(),
+      releaseDate: z.string().optional(),
+
+      // 其他元数据
+      pages: z.string().optional(),
+      duration: z.string().optional(),
+      countries: z.array(z.string()).default([]),
+      languages: z.array(z.string()).default([]),
+      isbn: z.string().optional(),
+      imdbId: z.string().optional(),
+    })
+    .optional(),
 
   // 用户相关数据（需登录）
-  userInteraction: z.object({
-    userRating: z.number().min(1).max(5).optional(),
-    userComment: z.string().optional(),
-    userTags: z.array(z.string()).default([]),
-    userStatus: z.enum(['wish', 'do', 'collect']).optional(),
-    markDate: z.string().optional(),
-  }).optional(),
+  userInteraction: z
+    .object({
+      userRating: z.number().min(1).max(5).optional(),
+      userComment: z.string().optional(),
+      userTags: z.array(z.string()).default([]),
+      userStatus: z.enum(['wish', 'do', 'collect']).optional(),
+      markDate: z.string().optional(),
+    })
+    .optional(),
 });
 
 /**
  * 豆瓣书籍页面专用Schema
  */
 export const DoubanBookHtmlSchema = DoubanItemHtmlSchema.extend({
-  jsonLd: z.object({
-    '@type': z.literal('Book'),
-    name: z.string(),
-    alternateName: z.string().optional(),
-    author: z.array(z.object({
-      '@type': z.string(),
+  jsonLd: z
+    .object({
+      '@type': z.literal('Book'),
       name: z.string(),
-    })),
-    isbn: z.string().optional(),
-    publisher: z.object({
-      '@type': z.string(),
-      name: z.string(),
-    }).optional(),
-    datePublished: z.string().optional(),
-    numberOfPages: z.number().optional(),
-    bookFormat: z.string().optional(),
-    aggregateRating: z.object({
-      '@type': z.string(),
-      ratingValue: z.number(),
-      ratingCount: z.number(),
-      bestRating: z.number().default(10),
-    }).optional(),
-    genre: z.array(z.string()).default([]),
-    description: z.string().optional(),
-    image: z.string().url().optional(),
-  }).optional(),
+      alternateName: z.string().optional(),
+      author: z.array(
+        z.object({
+          '@type': z.string(),
+          name: z.string(),
+        }),
+      ),
+      isbn: z.string().optional(),
+      publisher: z
+        .object({
+          '@type': z.string(),
+          name: z.string(),
+        })
+        .optional(),
+      datePublished: z.string().optional(),
+      numberOfPages: z.number().optional(),
+      bookFormat: z.string().optional(),
+      aggregateRating: z
+        .object({
+          '@type': z.string(),
+          ratingValue: z.number(),
+          ratingCount: z.number(),
+          bestRating: z.number().default(10),
+        })
+        .optional(),
+      genre: z.array(z.string()).default([]),
+      description: z.string().optional(),
+      image: z.string().url().optional(),
+    })
+    .optional(),
 
-  bookSpecific: z.object({
-    translators: z.array(z.string()).default([]),
-    binding: z.string().optional(),
-    price: z.string().optional(),
-    series: z.string().optional(),
-    originalLanguage: z.string().optional(),
-  }).optional(),
+  bookSpecific: z
+    .object({
+      translators: z.array(z.string()).default([]),
+      binding: z.string().optional(),
+      price: z.string().optional(),
+      series: z.string().optional(),
+      originalLanguage: z.string().optional(),
+    })
+    .optional(),
 });
 
 /**
  * 豆瓣电影页面专用Schema
  */
 export const DoubanMovieHtmlSchema = DoubanItemHtmlSchema.extend({
-  jsonLd: z.object({
-    '@type': z.literal('Movie'),
-    name: z.string(),
-    alternateName: z.string().optional(),
-    director: z.array(z.object({
-      '@type': z.string(),
+  jsonLd: z
+    .object({
+      '@type': z.literal('Movie'),
       name: z.string(),
-    })),
-    actor: z.array(z.object({
-      '@type': z.string(),
-      name: z.string(),
-    })).default([]),
-    datePublished: z.string().optional(),
-    duration: z.string().optional(),
-    countryOfOrigin: z.array(z.object({
-      '@type': z.string(),
-      name: z.string(),
-    })).default([]),
-    inLanguage: z.array(z.string()).default([]),
-    aggregateRating: z.object({
-      '@type': z.string(),
-      ratingValue: z.number(),
-      ratingCount: z.number(),
-      bestRating: z.number().default(10),
-    }).optional(),
-    genre: z.array(z.string()).default([]),
-    description: z.string().optional(),
-    image: z.string().url().optional(),
-  }).optional(),
+      alternateName: z.string().optional(),
+      director: z.array(
+        z.object({
+          '@type': z.string(),
+          name: z.string(),
+        }),
+      ),
+      actor: z
+        .array(
+          z.object({
+            '@type': z.string(),
+            name: z.string(),
+          }),
+        )
+        .default([]),
+      datePublished: z.string().optional(),
+      duration: z.string().optional(),
+      countryOfOrigin: z
+        .array(
+          z.object({
+            '@type': z.string(),
+            name: z.string(),
+          }),
+        )
+        .default([]),
+      inLanguage: z.array(z.string()).default([]),
+      aggregateRating: z
+        .object({
+          '@type': z.string(),
+          ratingValue: z.number(),
+          ratingCount: z.number(),
+          bestRating: z.number().default(10),
+        })
+        .optional(),
+      genre: z.array(z.string()).default([]),
+      description: z.string().optional(),
+      image: z.string().url().optional(),
+    })
+    .optional(),
 
-  movieSpecific: z.object({
-    imdbId: z.string().optional(),
-    writers: z.array(z.string()).default([]),
-    releaseYear: z.number().optional(),
-    runtime: z.string().optional(),
-    productionCountries: z.array(z.string()).default([]),
-    spokenLanguages: z.array(z.string()).default([]),
-  }).optional(),
+  movieSpecific: z
+    .object({
+      imdbId: z.string().optional(),
+      writers: z.array(z.string()).default([]),
+      releaseYear: z.number().optional(),
+      runtime: z.string().optional(),
+      productionCountries: z.array(z.string()).default([]),
+      spokenLanguages: z.array(z.string()).default([]),
+    })
+    .optional(),
 });
 
 /**
  * 豆瓣电视剧页面专用Schema
  */
 export const DoubanTvHtmlSchema = DoubanItemHtmlSchema.extend({
-  jsonLd: z.object({
-    '@type': z.literal('TVSeries'),
-    name: z.string(),
-    alternateName: z.string().optional(),
-    director: z.array(z.object({
-      '@type': z.string(),
+  jsonLd: z
+    .object({
+      '@type': z.literal('TVSeries'),
       name: z.string(),
-    })),
-    actor: z.array(z.object({
-      '@type': z.string(),
-      name: z.string(),
-    })).default([]),
-    datePublished: z.string().optional(),
-    numberOfEpisodes: z.number().optional(),
-    episodeRunTime: z.string().optional(),
-    aggregateRating: z.object({
-      '@type': z.string(),
-      ratingValue: z.number(),
-      ratingCount: z.number(),
-      bestRating: z.number().default(10),
-    }).optional(),
-    genre: z.array(z.string()).default([]),
-    description: z.string().optional(),
-    image: z.string().url().optional(),
-  }).optional(),
+      alternateName: z.string().optional(),
+      director: z.array(
+        z.object({
+          '@type': z.string(),
+          name: z.string(),
+        }),
+      ),
+      actor: z
+        .array(
+          z.object({
+            '@type': z.string(),
+            name: z.string(),
+          }),
+        )
+        .default([]),
+      datePublished: z.string().optional(),
+      numberOfEpisodes: z.number().optional(),
+      episodeRunTime: z.string().optional(),
+      aggregateRating: z
+        .object({
+          '@type': z.string(),
+          ratingValue: z.number(),
+          ratingCount: z.number(),
+          bestRating: z.number().default(10),
+        })
+        .optional(),
+      genre: z.array(z.string()).default([]),
+      description: z.string().optional(),
+      image: z.string().url().optional(),
+    })
+    .optional(),
 
-  tvSpecific: z.object({
-    episodeCount: z.number().optional(),
-    episodeDuration: z.string().optional(),
-    seasons: z.number().optional(),
-    network: z.string().optional(),
-    firstAirDate: z.string().optional(),
-    lastAirDate: z.string().optional(),
-    status: z.enum(['ended', 'ongoing', 'upcoming']).optional(),
-  }).optional(),
+  tvSpecific: z
+    .object({
+      episodeCount: z.number().optional(),
+      episodeDuration: z.string().optional(),
+      seasons: z.number().optional(),
+      network: z.string().optional(),
+      firstAirDate: z.string().optional(),
+      lastAirDate: z.string().optional(),
+      status: z.enum(['ended', 'ongoing', 'upcoming']).optional(),
+    })
+    .optional(),
 });
 
 /**
@@ -241,7 +301,7 @@ export const DoubanTvHtmlSchema = DoubanItemHtmlSchema.extend({
 export const DoubanCollectionHtmlSchema = DoubanHtmlBaseSchema.extend({
   collectionType: z.enum(['books', 'movies', 'tv', 'music']),
   collectionStatus: z.enum(['wish', 'do', 'collect']),
-  
+
   // 分页信息
   pagination: z.object({
     currentPage: z.number().min(1),
@@ -253,32 +313,40 @@ export const DoubanCollectionHtmlSchema = DoubanHtmlBaseSchema.extend({
   }),
 
   // 条目列表
-  items: z.array(z.object({
-    subjectId: z.string(),
-    title: z.string(),
-    url: z.string().url(),
-    coverImage: z.string().url().optional(),
-    rating: z.object({
-      average: z.number().min(0).max(10).optional(),
-      userRating: z.number().min(1).max(5).optional(),
-    }).optional(),
-    userComment: z.string().optional(),
-    userTags: z.array(z.string()).default([]),
-    markDate: z.string().optional(),
-    quickInfo: z.object({
-      year: z.number().optional(),
-      author: z.string().optional(),
-      director: z.string().optional(),
-      genres: z.array(z.string()).default([]),
-    }).optional(),
-  })),
+  items: z.array(
+    z.object({
+      subjectId: z.string(),
+      title: z.string(),
+      url: z.string().url(),
+      coverImage: z.string().url().optional(),
+      rating: z
+        .object({
+          average: z.number().min(0).max(10).optional(),
+          userRating: z.number().min(1).max(5).optional(),
+        })
+        .optional(),
+      userComment: z.string().optional(),
+      userTags: z.array(z.string()).default([]),
+      markDate: z.string().optional(),
+      quickInfo: z
+        .object({
+          year: z.number().optional(),
+          author: z.string().optional(),
+          director: z.string().optional(),
+          genres: z.array(z.string()).default([]),
+        })
+        .optional(),
+    }),
+  ),
 
   // 用户信息
-  userProfile: z.object({
-    userId: z.string(),
-    username: z.string(),
-    avatarUrl: z.string().url().optional(),
-  }).optional(),
+  userProfile: z
+    .object({
+      userId: z.string(),
+      username: z.string(),
+      avatarUrl: z.string().url().optional(),
+    })
+    .optional(),
 });
 
 /**
@@ -290,12 +358,12 @@ export const DoubanHttpErrorSchema = z.object({
   message: z.string(),
   url: z.string().url(),
   timestamp: z.date().default(() => new Date()),
-  
+
   // 反爬虫检测
   isAntiSpiderDetected: z.boolean().default(false),
   requiresCookieRefresh: z.boolean().default(false),
   retryAfterSeconds: z.number().optional(),
-  
+
   // 响应详情
   responseBody: z.string().optional(),
   responseHeaders: z.record(z.string(), z.string()).optional(),
@@ -329,7 +397,7 @@ export type DoubanRateLimit = z.infer<typeof DoubanRateLimitSchema>;
  */
 export function validateDoubanHtml(
   html: unknown,
-  type: 'book' | 'movie' | 'tv' | 'collection'
+  type: 'book' | 'movie' | 'tv' | 'collection',
 ): { success: true; data: any } | { success: false; error: string } {
   try {
     let schema;
@@ -349,7 +417,7 @@ export function validateDoubanHtml(
       default:
         return { success: false, error: '不支持的豆瓣页面类型' };
     }
-    
+
     const validatedData = schema.parse(html);
     return { success: true, data: validatedData };
   } catch (error) {
@@ -368,7 +436,7 @@ export function validateDoubanHtml(
  */
 export function isValidDoubanHtml(
   value: unknown,
-  type?: 'book' | 'movie' | 'tv' | 'collection'
+  type?: 'book' | 'movie' | 'tv' | 'collection',
 ): value is DoubanItemHtml {
   if (!type) {
     // 通用检查
@@ -379,7 +447,7 @@ export function isValidDoubanHtml(
       return false;
     }
   }
-  
+
   const result = validateDoubanHtml(value, type);
   return result.success;
 }

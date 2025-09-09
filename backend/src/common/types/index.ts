@@ -89,7 +89,7 @@ export const TaskStatus = {
   CANCELLED: 'cancelled',
 } as const;
 
-export type TaskStatusType = typeof TaskStatus[keyof typeof TaskStatus];
+export type TaskStatusType = (typeof TaskStatus)[keyof typeof TaskStatus];
 
 /**
  * 通用任务类型
@@ -119,7 +119,7 @@ export const LogLevel = {
   ERROR: 'error',
 } as const;
 
-export type LogLevelType = typeof LogLevel[keyof typeof LogLevel];
+export type LogLevelType = (typeof LogLevel)[keyof typeof LogLevel];
 
 /**
  * 结构化日志类型
