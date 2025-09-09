@@ -6,6 +6,14 @@ import { FeishuTableService } from './feishu-table.service';
 import { FieldMappingService } from './field-mapping.service';
 import { FeishuRecordItem } from '../interfaces/feishu.interface';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { 
+  SyncEngineConfig,
+  SyncOptionsConfig,
+  SyncResult,
+  SyncProgressCallback,
+  DoubanDataCategory,
+  SyncPhase 
+} from '../../sync/interfaces/sync.interface';
 
 /**
  * 数据同步引擎 - Subject ID增量同步核心服务
@@ -50,20 +58,9 @@ export class SyncEngineService {
    */
   async performIncrementalSync(
     userId: string,
-    syncConfig: {
-      appId: string;
-      appSecret: string;
-      appToken: string;
-      tableId: string;
-      dataType: 'books' | 'movies' | 'tv';
-      subjectIdField: string; // ~~飞书表格中Subject ID字段的Field ID~~ **Subject ID字段名**
-    },
-    doubanData: any[],
-    options: {
-      fullSync?: boolean; // 是否强制全量同步
-      onProgress?: (progress: SyncProgress) => void;
-      conflictStrategy?: 'douban_wins' | 'feishu_wins' | 'merge';
-    } = {},
+    syncConfig: SyncEngineConfig,
+    doubanData: unknown[],
+    options: SyncOptionsConfig = {},
   ): Promise<SyncResult> {
     try {
       this.logger.log(
@@ -370,27 +367,29 @@ export class SyncEngineService {
     options: any,
   ): Promise<SyncResult> {
     const result: SyncResult = {
+      success: true,
+      itemsProcessed: 0,
       summary: {
         total:
           changes.toCreate.length +
           changes.toUpdate.length +
           changes.toDelete.length,
+        synced: 0,
         created: 0,
         updated: 0,
         deleted: 0,
         failed: 0,
         unchanged: changes.unchanged.length,
       },
-      details: {
-        createdRecords: [],
-        updatedRecords: [],
-        deletedRecords: [],
-        failedRecords: [],
-      },
       performance: {
         startTime: new Date(),
         endTime: new Date(),
         duration: 0,
+      },
+      details: {
+        createdRecords: [],
+        updatedRecords: [],
+        failedRecords: [],
       },
     };
 
@@ -406,7 +405,13 @@ export class SyncEngineService {
         );
         result.summary.created = createResult.success;
         result.summary.failed += createResult.failed;
-        result.details.createdRecords = createResult.details;
+        result.summary.synced += createResult.success;
+        if (result.details) {
+          result.details.createdRecords = createResult.details.map(d => ({
+            subjectId: d.subjectId,
+            recordId: d.recordId || '',
+          }));
+        }
 
         options.onProgress?.({
           phase: 'create',
@@ -426,7 +431,13 @@ export class SyncEngineService {
         );
         result.summary.updated = updateResult.success;
         result.summary.failed += updateResult.failed;
-        result.details.updatedRecords = updateResult.details;
+        result.summary.synced += updateResult.success;
+        if (result.details) {
+          result.details.updatedRecords = updateResult.details.map(d => ({
+            subjectId: d.subjectId,
+            recordId: d.recordId || '',
+          }));
+        }
 
         options.onProgress?.({
           phase: 'update',
@@ -445,7 +456,14 @@ export class SyncEngineService {
         );
         result.summary.deleted = deleteResult.success;
         result.summary.failed += deleteResult.failed;
-        result.details.deletedRecords = deleteResult.details;
+        if (result.details) {
+          result.details.failedRecords.push(...deleteResult.details
+            .filter(d => !d.success)
+            .map(d => ({
+              subjectId: d.subjectId,
+              error: d.error || 'Unknown error',
+            })));
+        }
 
         options.onProgress?.({
           phase: 'delete',
@@ -454,11 +472,15 @@ export class SyncEngineService {
         });
       }
 
-      // 完成时间计算
+      // 完成时间计算和最终统计
       result.performance.endTime = new Date();
       result.performance.duration =
         result.performance.endTime.getTime() -
         result.performance.startTime.getTime();
+      
+      // 更新最终统计
+      result.itemsProcessed = result.summary.synced;
+      result.success = result.summary.failed === 0;
 
       return result;
     } catch (error) {
@@ -473,13 +495,13 @@ export class SyncEngineService {
    * 批量创建记录
    */
   private async batchCreateRecords(
-    syncConfig: any,
+    syncConfig: SyncEngineConfig,
     fieldMappings: Record<string, string>,
     createItems: ChangeItem[],
-    options: any,
+    options: SyncOptionsConfig,
   ): Promise<BatchOperationResult> {
     const records = createItems.map((item) =>
-      this.transformRecordForFeishu(item.doubanData, fieldMappings),
+      this.transformRecordForFeishu(item.doubanData as Record<string, unknown>, fieldMappings),
     );
 
     const result = await this.tableService.batchCreateRecords(
@@ -511,14 +533,14 @@ export class SyncEngineService {
    * 批量更新记录
    */
   private async batchUpdateRecords(
-    syncConfig: any,
+    syncConfig: SyncEngineConfig,
     fieldMappings: Record<string, string>,
     updateItems: ChangeItem[],
-    options: any,
+    options: SyncOptionsConfig,
   ): Promise<BatchOperationResult> {
     const updates = updateItems.map((item) => ({
       recordId: item.recordId!,
-      fields: this.transformRecordForFeishu(item.doubanData, fieldMappings)
+      fields: this.transformRecordForFeishu(item.doubanData as Record<string, unknown>, fieldMappings)
         .fields,
     }));
 
@@ -547,9 +569,9 @@ export class SyncEngineService {
    * 批量删除记录
    */
   private async batchDeleteRecords(
-    syncConfig: any,
+    syncConfig: SyncEngineConfig,
     deleteItems: ChangeItem[],
-    options: any,
+    options: SyncOptionsConfig,
   ): Promise<BatchOperationResult> {
     let success = 0;
     let failed = 0;
@@ -656,14 +678,14 @@ export class SyncEngineService {
    * 转换记录格式用于飞书
    */
   private transformRecordForFeishu(
-    record: any,
+    record: Record<string, unknown>,
     fieldMappings: Record<string, string>,
-  ): any {
-    const fields: Record<string, any> = {};
+  ): { fields: Record<string, string | number | boolean | null | Array<string | number>> } {
+    const fields: Record<string, string | number | boolean | null | Array<string | number>> = {};
 
     Object.entries(fieldMappings).forEach(([doubanField, feishuFieldId]) => {
       if (!doubanField.startsWith('_') && record[doubanField] !== undefined) {
-        fields[feishuFieldId] = this.formatValueForFeishu(record[doubanField]);
+        fields[feishuFieldId] = this.formatValueForFeishu(record[doubanField]) as (string | number | boolean | null | Array<string | number>);
       }
     });
 
@@ -673,7 +695,7 @@ export class SyncEngineService {
   /**
    * 格式化值用于飞书
    */
-  private formatValueForFeishu(value: any): any {
+  private formatValueForFeishu(value: unknown): unknown {
     if (value === null || value === undefined) return null;
     if (typeof value === 'string') return value.trim();
     if (typeof value === 'number') return value;
@@ -771,31 +793,9 @@ interface ChangeAnalysis {
 interface ChangeItem {
   subjectId: string;
   recordId?: string;
-  doubanData?: any;
+  doubanData?: unknown;
   existingData?: FeishuRecordItem;
   action: 'create' | 'update' | 'delete' | 'unchanged';
-}
-
-export interface SyncResult {
-  summary: {
-    total: number;
-    created: number;
-    updated: number;
-    deleted: number;
-    failed: number;
-    unchanged: number;
-  };
-  details: {
-    createdRecords: any[];
-    updatedRecords: any[];
-    deletedRecords: any[];
-    failedRecords: any[];
-  };
-  performance: {
-    startTime: Date;
-    endTime: Date;
-    duration: number;
-  };
 }
 
 interface BatchOperationResult {
@@ -808,11 +808,4 @@ interface BatchOperationResult {
     success: boolean;
     error?: string;
   }>;
-}
-
-interface SyncProgress {
-  phase: 'create' | 'update' | 'delete';
-  processed: number;
-  total: number;
-  message?: string;
 }

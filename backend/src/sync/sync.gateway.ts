@@ -11,7 +11,13 @@ import { Logger, UseGuards } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { SyncProgress } from './interfaces/sync.interface';
+import { 
+  SyncProgress, 
+  WebSocketEvent,
+  SyncProgressEvent,
+  SyncErrorEvent,
+  SystemMessageEvent 
+} from './interfaces/sync.interface';
 
 /**
  * 同步WebSocket网关 - 实时状态更新
@@ -103,13 +109,13 @@ export class SyncGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   /**
-   * 订阅同步更新
+   * 订阅同步更新 - 类型安全版本
    */
   @SubscribeMessage('subscribe-sync')
   async handleSubscribeSync(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { syncIds?: string[] },
-  ) {
+    @MessageBody() data: { syncIds?: string[]; categories?: string[]; },
+  ): Promise<void> {
     try {
       const userId = this.extractUserFromSocket(client);
 
@@ -139,13 +145,13 @@ export class SyncGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   /**
-   * 取消订阅同步更新
+   * 取消订阅同步更新 - 类型安全版本
    */
   @SubscribeMessage('unsubscribe-sync')
   async handleUnsubscribeSync(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { syncIds?: string[] },
-  ) {
+    @MessageBody() data: { syncIds?: string[]; },
+  ): Promise<void> {
     try {
       if (data.syncIds?.length) {
         for (const syncId of data.syncIds) {
@@ -166,9 +172,9 @@ export class SyncGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   /**
-   * 发送同步进度更新 (被Service调用)
+   * 发送同步进度更新 - 强类型版本 (被Service调用)
    */
-  notifyProgress(userId: string, progress: SyncProgress) {
+  notifyProgress(userId: string, progress: SyncProgress): void {
     try {
       // 发送到用户房间
       this.server.to(`user:${userId}`).emit('sync-progress', {
@@ -193,12 +199,12 @@ export class SyncGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   /**
-   * 发送错误通知
+   * 发送错误通知 - 强类型版本
    */
   notifyError(
     userId: string,
-    error: { syncId?: string; message: string; code?: string },
-  ) {
+    error: SyncErrorEvent['data'],
+  ): void {
     try {
       this.server.to(`user:${userId}`).emit('sync-error', {
         ...error,
@@ -210,12 +216,12 @@ export class SyncGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   /**
-   * 广播系统消息
+   * 广播系统消息 - 强类型版本
    */
   broadcastSystemMessage(
     message: string,
     level: 'info' | 'warning' | 'error' = 'info',
-  ) {
+  ): void {
     this.server.emit('system-message', {
       message,
       level,
@@ -239,7 +245,70 @@ export class SyncGateway implements OnGatewayConnection, OnGatewayDisconnect {
   /**
    * 获取在线用户统计
    */
-  getOnlineStats() {
+  /**
+   * 发送类型安全的WebSocket事件
+   */
+  private emitTypedEvent(userId: string, event: WebSocketEvent): void {
+    const eventData = {
+      ...event,
+      timestamp: event.timestamp || new Date().toISOString(),
+      eventId: `${event.type}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    };
+
+    this.server.to(`user:${userId}`).emit(event.type, eventData);
+    
+    if (event.type === 'sync-progress' && event.data.syncId) {
+      this.server.to(`sync:${event.data.syncId}`).emit(event.type, eventData);
+    }
+  }
+
+  /**
+   * 发送同步完成通知
+   */
+  notifyCompletion(
+    userId: string,
+    syncData: {
+      syncId: string;
+      success: boolean;
+      itemsProcessed: number;
+      duration: number;
+      summary?: string;
+    },
+  ): void {
+    const event: SyncProgressEvent = {
+      type: 'sync-progress',
+      timestamp: new Date().toISOString(),
+      data: {
+        syncId: syncData.syncId,
+        status: syncData.success ? 'SUCCESS' : 'FAILED',
+        progress: syncData.success ? 100 : 0,
+        message: syncData.summary || `Sync ${syncData.success ? 'completed' : 'failed'}`,
+        itemsProcessed: syncData.itemsProcessed,
+        metadata: {
+          performance: {
+            duration: syncData.duration,
+          },
+        },
+      },
+    };
+
+    this.emitTypedEvent(userId, event);
+  }
+
+  getOnlineStats(): {
+    totalConnections: number;
+    uniqueUsers: number;
+    userConnections: Array<{
+      userId: string;
+      connections: number;
+      lastActivity?: string;
+    }>;
+    serverInfo: {
+      namespace: string;
+      uptime: number;
+      timestamp: string;
+    };
+  } {
     return {
       totalConnections: this.server.sockets.sockets.size,
       uniqueUsers: this.userConnections.size,
@@ -247,8 +316,14 @@ export class SyncGateway implements OnGatewayConnection, OnGatewayDisconnect {
         ([userId, sockets]) => ({
           userId,
           connections: sockets.size,
+          lastActivity: new Date().toISOString(),
         }),
       ),
+      serverInfo: {
+        namespace: '/sync',
+        uptime: process.uptime(),
+        timestamp: new Date().toISOString(),
+      },
     };
   }
 }

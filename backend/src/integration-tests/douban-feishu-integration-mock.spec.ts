@@ -257,8 +257,11 @@ describe('Douban-Feishu Integration (Mock)', () => {
         }
 
         return {
+          success: true,
+          itemsProcessed: data.length,
           summary: {
             total: data.length,
+            synced: data.length - 1,
             created: data.length - 1,
             updated: 1,
             failed: 0,
@@ -268,7 +271,6 @@ describe('Douban-Feishu Integration (Mock)', () => {
           details: {
             createdRecords: [],
             updatedRecords: [],
-            deletedRecords: [],
             failedRecords: [],
           },
           performance: {

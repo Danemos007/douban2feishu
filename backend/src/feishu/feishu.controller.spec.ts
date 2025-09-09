@@ -10,7 +10,7 @@ import { PrismaService } from '../common/prisma/prisma.service';
 import { CryptoService } from '../common/crypto/crypto.service';
 
 // [TDD-TEST] 尝试导入SyncResult类型 - 这个导入应该失败
-import { SyncResult } from './services/sync-engine.service';
+import { SyncResult } from '../sync/interfaces/sync.interface';
 
 describe('FeishuController - SyncResult Type Export Issue', () => {
   let controller: FeishuController;
@@ -79,8 +79,11 @@ describe('FeishuController - SyncResult Type Export Issue', () => {
     it('should have correct return type SyncResult', async () => {
       // [TDD-TEST] 验证方法返回类型可以正确赋值给SyncResult类型
       const mockSyncResult: SyncResult = {
+        success: true,
+        itemsProcessed: 9,
         summary: {
           total: 10,
+          synced: 9,
           created: 5,
           updated: 3,
           deleted: 1,
@@ -90,7 +93,6 @@ describe('FeishuController - SyncResult Type Export Issue', () => {
         details: {
           createdRecords: [],
           updatedRecords: [],
-          deletedRecords: [],
           failedRecords: [],
         },
         performance: {

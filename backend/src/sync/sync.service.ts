@@ -57,10 +57,10 @@ export class SyncService {
           userId,
           triggerType: triggerSyncDto.triggerType || 'MANUAL',
           status: 'PENDING',
-          metadata: {
+          metadata: JSON.stringify({
             options: triggerSyncDto.options || {},
             requestedAt: new Date().toISOString(),
-          },
+          }),
         },
       });
 
@@ -276,13 +276,13 @@ export class SyncService {
           userId,
           triggerType: 'MANUAL',
           status: 'RUNNING',
-          metadata: {
+          metadata: JSON.stringify({
             options: {
               category: options.category,
               transformationEnabled: true,
             },
             requestedAt: new Date().toISOString(),
-          },
+          }),
         },
       });
 
@@ -356,8 +356,8 @@ export class SyncService {
           status: 'SUCCESS',
           completedAt: new Date(),
           itemsSynced: feishuSyncResult.summary.total || 0,
-          metadata: {
-            ...(syncHistory.metadata || {}),
+          metadata: JSON.stringify({
+            ...(syncHistory.metadata ? JSON.parse(syncHistory.metadata as string) : {}),
             transformationStats: transformationResult.transformationStats,
             feishuSyncStats: {
               total: feishuSyncResult.summary.total || 0,
@@ -365,7 +365,7 @@ export class SyncService {
               updated: feishuSyncResult.summary.updated || 0,
               failed: feishuSyncResult.summary.failed || 0,
             },
-          },
+          }),
         },
       });
 
