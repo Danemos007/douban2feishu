@@ -7,6 +7,15 @@ import { AuthGuard } from '@nestjs/passport';
 import { Reflector } from '@nestjs/core';
 
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
+import { AuthenticatedUser } from '../interfaces/auth.interface';
+
+/**
+ * 错误信息类型定义
+ */
+interface AuthError {
+  name?: string;
+  message?: string;
+}
 
 /**
  * JWT认证守卫 - 保护需要认证的路由
@@ -44,11 +53,12 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
   /**
    * 处理认证失败情况
    */
-  override handleRequest<TUser = any>(
-    err: any,
-    user: any,
-    info: any,
-    context: ExecutionContext,
+  override handleRequest<TUser = AuthenticatedUser>(
+    err: Error | null,
+    user: AuthenticatedUser | false,
+    info: AuthError | undefined,
+    context?: ExecutionContext,
+    status?: any,
   ): TUser {
     if (err || !user) {
       let message = 'Authentication failed';
@@ -64,6 +74,6 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       throw new UnauthorizedException(message);
     }
 
-    return user;
+    return user as TUser;
   }
 }

@@ -131,21 +131,31 @@ export class DoubanService {
         preserveRawData: false,
       };
 
-      // 执行数据转换
-      const transformationResult =
-        await this.dataTransformation.transformDoubanData(
-          rawData,
-          fetchDto.category,
-          transformationOptions,
-        );
+      // 执行数据转换 - 逐个处理数组项目
+      const transformedData: any[] = [];
+      let totalRepairsApplied = 0;
+      let totalValidationWarnings = 0;
+
+      for (const item of rawData) {
+        const transformationResult =
+          await this.dataTransformation.transformDoubanData(
+            item as any,
+            fetchDto.category,
+            transformationOptions,
+          );
+        
+        transformedData.push(transformationResult.data);
+        totalRepairsApplied += transformationResult.statistics?.repairedFields || 0;
+        totalValidationWarnings += transformationResult.warnings?.length || 0;
+      }
 
       const processingTime = Date.now() - startTime;
 
       // 构建统计信息
       const transformationStats = {
         totalProcessed: rawData.length,
-        repairsApplied: transformationResult.statistics?.repairedFields || 0,
-        validationWarnings: transformationResult.warnings?.length || 0,
+        repairsApplied: totalRepairsApplied,
+        validationWarnings: totalValidationWarnings,
         processingTime,
       };
 
@@ -155,7 +165,7 @@ export class DoubanService {
 
       return {
         rawData,
-        transformedData: transformationResult.data,
+        transformedData,
         transformationStats,
       };
     } catch (error) {

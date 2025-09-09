@@ -19,27 +19,26 @@ import {
   VerifiedFieldMappingConfig,
 } from '../../feishu/config/douban-field-mapping.config';
 
-// 定义期望的类型 - 基于我们的设计
-interface TransformationResult<T = any> {
-  data: T;
-  statistics: {
-    totalFields: number;
-    transformedFields: number;
-    repairedFields: number;
-    failedFields: number;
-  };
-  warnings: string[];
-  rawData?: any;
-}
+import {
+  RawDataInput,
+  TransformedDataOutput,
+  GenericTransformationResult,
+  DoubanBookData,
+  DoubanMovieData,
+} from '../types/transformation-generics.types';
 
-interface TransformationOptions {
-  enableIntelligentRepairs?: boolean;
-  strictValidation?: boolean;
-  preserveRawData?: boolean;
-  customFieldMappings?: Record<string, string>;
-}
+// 导入类型定义
+import {
+  DoubanDataType,
+  TransformationOptions,
+} from '../contract/transformation.schema';
 
-type DoubanDataType = 'books' | 'movies' | 'tv' | 'documentary';
+// 兼容性类型别名 - 更新到新的泛型接口
+type TransformationResult<T extends TransformedDataOutput = TransformedDataOutput> = GenericTransformationResult<T>;
+
+// 测试用的具体类型
+type TestBookResult = GenericTransformationResult<DoubanBookData>;
+type TestMovieResult = GenericTransformationResult<DoubanMovieData>;
 
 describe('DataTransformationService - Enterprise Data Transformation', () => {
   let service: DataTransformationService;
@@ -75,7 +74,7 @@ describe('DataTransformationService - Enterprise Data Transformation', () => {
           publishDate: '1996-12',
         };
 
-        const result = await service.transformDoubanData(rawBookData, 'books');
+        const result = await service.transformDoubanData<typeof rawBookData, DoubanBookData>(rawBookData, 'books');
 
         expect(result).toBeDefined();
         expect(result.data).toBeDefined();
@@ -142,9 +141,9 @@ describe('DataTransformationService - Enterprise Data Transformation', () => {
       });
 
       it('应该正确处理null/undefined数据', async () => {
-        const resultNull = await service.transformDoubanData(null, 'books');
+        const resultNull = await service.transformDoubanData(null as any, 'books');
         const resultUndefined = await service.transformDoubanData(
-          undefined,
+          undefined as any,
           'books',
         );
 

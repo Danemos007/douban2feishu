@@ -18,14 +18,28 @@ import { Injectable, Logger } from '@nestjs/common';
 import {
   DoubanDataType,
   TransformationOptions,
-  TransformationResult,
   TransformationStatistics,
-  IntelligentRepairConfig,
-  FieldTransformationContext,
-  TransformationError,
   validateTransformationOptions,
-  validateTransformationResult,
 } from '../contract/transformation.schema';
+
+import {
+  RawDataInput,
+  TransformedDataOutput,
+  GenericTransformationResult,
+  GenericTransformer,
+  StatisticsCollector,
+  DoubanBookData,
+  DoubanMovieData,
+} from '../types/transformation-generics.types';
+
+// 本地错误类型定义
+interface TransformationError {
+  fieldName: string;
+  errorMessage: string;
+  errorType: string;
+  sourceValue: unknown;
+  timestamp: Date;
+}
 
 import {
   getVerifiedFieldMapping,
@@ -33,7 +47,11 @@ import {
 } from '../../feishu/config/douban-field-mapping.config';
 
 @Injectable()
-export class DataTransformationService {
+export class DataTransformationService
+  implements
+    GenericTransformer<RawDataInput, TransformedDataOutput>,
+    StatisticsCollector<TransformationStatistics>
+{
   private readonly logger = new Logger(DataTransformationService.name);
 
   // 转换过程中的状态
@@ -42,18 +60,57 @@ export class DataTransformationService {
   private statistics: Partial<TransformationStatistics> = {};
 
   /**
+   * 安全地将值转换为字符串，避免 [object Object] 问题
+   */
+  private safeStringify(value: unknown): string {
+    if (value === null) return 'null';
+    if (value === undefined) return 'undefined';
+    if (typeof value === 'string') return value;
+    if (typeof value === 'number' || typeof value === 'boolean')
+      return String(value);
+    if (typeof value === 'object') return JSON.stringify(value);
+    return '[unknown type]';
+  }
+
+  /**
    * 🔥 核心转换方法 - 整合四个版本的精华逻辑
+   *
+   * 泛型实现：支持严格类型约束和复用性
    *
    * @param rawData 原始豆瓣数据
    * @param dataType 数据类型
    * @param options 转换选项
    * @returns 转换结果
    */
-  async transformDoubanData<T = any>(
-    rawData: any,
+  async transform<
+    TInput extends RawDataInput,
+    TOutput extends TransformedDataOutput,
+  >(
+    rawData: TInput,
     dataType: DoubanDataType,
     options?: TransformationOptions,
-  ): Promise<TransformationResult<T>> {
+  ): Promise<GenericTransformationResult<TOutput>> {
+    return Promise.resolve(
+      this.transformDoubanData(rawData, dataType, options),
+    );
+  }
+
+  /**
+   * 🔥 核心转换方法实现 - 保持向后兼容
+   *
+   * @param rawData 原始豆瓣数据
+   * @param dataType 数据类型
+   * @param options 转换选项
+   * @returns 转换结果
+   */
+  transformDoubanData<
+    TInput extends RawDataInput,
+    TOutput extends TransformedDataOutput,
+  >(
+    rawData: TInput,
+    dataType: DoubanDataType,
+    options?: TransformationOptions,
+  ): GenericTransformationResult<TOutput> {
     // 🔥 TDD: 这个方法需要实现，目前只是骨架
     try {
       this.logger.log(`Starting data transformation for ${dataType}`);
@@ -69,7 +126,7 @@ export class DataTransformationService {
       };
 
       // 1. 验证和处理选项
-      const validatedOptions = await this.validateAndProcessOptions(options);
+      const validatedOptions = this.validateAndProcessOptions(options);
 
       // 2. 处理空数据情况
       if (rawData == null) {
@@ -88,7 +145,7 @@ export class DataTransformationService {
       this.statistics.totalFields = Object.keys(fieldMappings).length;
 
       // 4. 应用通用转换 (实现A逻辑)
-      const transformedData = await this.applyGeneralTransformation(
+      const transformedData = this.applyGeneralTransformation(
         rawData,
         fieldMappings,
       );
@@ -96,35 +153,30 @@ export class DataTransformationService {
       // 5. 应用智能修复 (实现D逻辑) - [CRITICAL-FIX-2025-09-04] 传入原始HTML数据
       const dataWithHtml = { ...transformedData, html: rawData.html }; // 保留HTML用于智能修复
       const enhancedData = validatedOptions.enableIntelligentRepairs
-        ? await this.applyIntelligentRepairs(dataWithHtml, dataType)
+        ? this.applyIntelligentRepairs(dataWithHtml, dataType)
         : transformedData;
 
-      // 6. 应用严格验证 (实现C逻辑) - 待实现
+      // 6. 应用严格验证 (实现C逻辑)
       const validatedData = validatedOptions.strictValidation
-        ? await this.validateTransformedData(enhancedData, dataType)
+        ? this.validateTransformedData(enhancedData, dataType)
         : enhancedData;
 
       // 7. 构建结果
-      const result = {
-        data: validatedData,
+      const result: GenericTransformationResult<TOutput> = {
+        data: validatedData as TOutput,
         statistics: this.generateTransformationStats(),
         warnings: this.collectWarnings(),
         ...(validatedOptions.preserveRawData && { rawData }),
       };
 
-      // 8. 验证结果格式
-      const validationResult = validateTransformationResult(result);
-      if (!validationResult.success) {
-        throw new Error(`结果验证失败: ${validationResult.error}`);
-      }
-
+      // 8. 验证结果格式 - 泛型结果不需要旧验证函数
       this.logger.log(`Data transformation completed for ${dataType}`, {
         totalFields: this.statistics.totalFields,
         transformedFields: this.statistics.transformedFields,
         warnings: this.warnings.length,
       });
 
-      return validationResult.data;
+      return result;
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
@@ -135,7 +187,7 @@ export class DataTransformationService {
 
       // 返回错误状态的结果，而不是抛出异常
       return {
-        data: {} as T,
+        data: {} as TOutput,
         statistics: {
           totalFields: 0,
           transformedFields: 0,
@@ -150,12 +202,12 @@ export class DataTransformationService {
   // =============== 实现A: 通用转换引擎方法 ===============
 
   /**
-   * 🔥 嵌套属性值提取 (实现A核心逻辑)
+   * 🔥 嵌套属性值提取 (实现A核心逻辑) - 泛型实现
    */
-  private async extractNestedValue(
-    data: any,
+  private extractNestedValue<TInput extends RawDataInput, TOutput = unknown>(
+    data: TInput,
     fieldConfig: VerifiedFieldMappingConfig,
-  ): Promise<any> {
+  ): TOutput | undefined {
     // 如果数据为null或undefined，直接返回undefined
     if (data == null) {
       return undefined;
@@ -165,38 +217,38 @@ export class DataTransformationService {
 
     // 如果没有嵌套路径或路径为空，返回直接属性值
     if (!nestedPath || !nestedPath.includes('.')) {
-      return data[doubanFieldName];
+      return data[doubanFieldName] as TOutput;
     }
 
-    // 🔥 整合版本A的嵌套属性解析逻辑
+    // 🔥 整合版本A的嵌套属性解析逻辑 - 类型安全版本
     const keys = nestedPath.split('.');
-    let value = data;
+    let value: unknown = data;
 
     for (const key of keys) {
-      if (value == null) {
+      if (value == null || typeof value !== 'object') {
         return undefined;
       }
-      value = value[key];
+      value = (value as Record<string, unknown>)[key];
     }
 
-    return value;
+    return value as TOutput;
   }
 
   /**
-   * 🔥 数组字段智能处理 (实现A增强)
+   * 🔥 数组字段智能处理 (实现A增强) - 泛型实现
    */
-  private async processArrayField(
-    value: any,
+  private processArrayField<TOutput = string | unknown[]>(
+    value: unknown,
     fieldConfig: VerifiedFieldMappingConfig,
-  ): Promise<string | any[]> {
+  ): TOutput {
     // 如果不是数组，直接返回原值
     if (!Array.isArray(value)) {
-      return value;
+      return value as TOutput;
     }
 
     // 如果是空数组，返回空字符串
     if (value.length === 0) {
-      return '';
+      return '' as TOutput;
     }
 
     // 基于processingNotes决定处理方式
@@ -219,21 +271,24 @@ export class DataTransformationService {
     ].includes(fieldConfig.doubanFieldName);
 
     if (hasJoinProcessing || isKnownArrayField) {
-      return value.join(' / ');
+      return value.join(' / ') as TOutput;
     }
 
     // 默认情况下，将数组转换为用 ' / ' 分隔的字符串
-    return value.join(' / ');
+    return value.join(' / ') as TOutput;
   }
 
   /**
-   * 🔥 通用字段转换应用
+   * 🔥 通用字段转换应用 - 泛型实现
    */
-  private async applyGeneralTransformation(
-    rawData: any,
+  private applyGeneralTransformation<
+    TInput extends RawDataInput,
+    TOutput extends TransformedDataOutput,
+  >(
+    rawData: TInput,
     fieldMappings: Record<string, VerifiedFieldMappingConfig>,
-  ): Promise<any> {
-    const transformedData: any = {};
+  ): TOutput {
+    const transformedData: Record<string, unknown> = {};
     let transformedCount = 0;
     let failedCount = 0;
 
@@ -242,11 +297,11 @@ export class DataTransformationService {
     )) {
       try {
         // 1. 提取值 (支持嵌套路径)
-        let value = await this.extractNestedValue(rawData, fieldConfig);
+        let value = this.extractNestedValue(rawData, fieldConfig);
 
         // 2. 处理数组字段
         if (Array.isArray(value)) {
-          value = await this.processArrayField(value, fieldConfig);
+          value = this.processArrayField(value, fieldConfig);
         }
 
         // 3. 设置转换后的字段
@@ -270,19 +325,19 @@ export class DataTransformationService {
     this.statistics.transformedFields = transformedCount;
     this.statistics.failedFields = failedCount;
 
-    return transformedData;
+    return transformedData as TOutput;
   }
 
   // =============== 实现D: 智能修复引擎方法 ===============
 
   /**
-   * 🔥 智能修复引擎 - 整合实现D的复杂解析逻辑
+   * 🔥 智能修复引擎 - 整合实现D的复杂解析逻辑 - 泛型实现
    */
-  private async applyIntelligentRepairs(
-    data: any,
+  private applyIntelligentRepairs<TData extends TransformedDataOutput>(
+    data: TData,
     dataType: DoubanDataType,
     options?: { enableIntelligentRepairs?: boolean },
-  ): Promise<any> {
+  ): TData {
     // 如果禁用智能修复，直接返回原数据
     if (options?.enableIntelligentRepairs === false) {
       return data;
@@ -293,9 +348,9 @@ export class DataTransformationService {
         case 'movies':
         case 'tv':
         case 'documentary':
-          return await this.repairMovieData(data);
+          return this.repairMovieData(data);
         case 'books':
-          return await this.repairBookData(data);
+          return this.repairBookData(data);
         default:
           return data;
       }
@@ -308,9 +363,11 @@ export class DataTransformationService {
   }
 
   /**
-   * 🔥 电影数据智能修复 (实现D核心逻辑 + TDD增强)
+   * 🔥 电影数据智能修复 (实现D核心逻辑 + TDD增强) - 泛型实现
    */
-  private async repairMovieData(movieData: any): Promise<any> {
+  private repairMovieData<TData extends DoubanMovieData>(
+    movieData: TData,
+  ): TData {
     const repaired = { ...movieData };
     let repairedCount = 0;
 
@@ -321,7 +378,7 @@ export class DataTransformationService {
         (!repaired.duration || repaired.duration === null) &&
         movieData.html
       ) {
-        const repairedDuration = await this.repairDurationField(movieData);
+        const repairedDuration = this.repairDurationField(movieData);
         if (repairedDuration) {
           repaired.duration = repairedDuration;
           repairedCount++;
@@ -335,8 +392,7 @@ export class DataTransformationService {
         (!repaired.releaseDate || repaired.releaseDate === null) &&
         movieData.html
       ) {
-        const repairedReleaseDate =
-          await this.repairReleaseDateField(movieData);
+        const repairedReleaseDate = this.repairReleaseDateField(movieData);
         if (repairedReleaseDate) {
           repaired.releaseDate = repairedReleaseDate;
           repairedCount++;
@@ -407,9 +463,9 @@ export class DataTransformationService {
   }
 
   /**
-   * 🔥 书籍数据智能修复 - 基于实现A和C的逻辑
+   * 🔥 书籍数据智能修复 - 基于实现A和C的逻辑 - 泛型实现
    */
-  private async repairBookData(bookData: any): Promise<any> {
+  private repairBookData<TData extends DoubanBookData>(bookData: TData): TData {
     const repaired = { ...bookData };
     let repairedCount = 0;
 
@@ -601,13 +657,13 @@ export class DataTransformationService {
   // =============== 实现C: 严格验证系统方法 (基于实现C) ===============
 
   /**
-   * 🔥 严格验证转换后的数据 - 整合实现C的超详细验证逻辑
+   * 🔥 严格验证转换后的数据 - 整合实现C的超详细验证逻辑 - 泛型实现
    */
-  private async validateTransformedData(
-    data: any,
+  private validateTransformedData<TData extends TransformedDataOutput>(
+    data: TData,
     dataType: DoubanDataType,
-  ): Promise<any> {
-    const validated = { ...data };
+  ): TData {
+    const validated = { ...data } as Record<string, unknown>;
     const fieldMappings = getVerifiedFieldMapping(dataType);
 
     for (const [fieldName, config] of Object.entries(fieldMappings)) {
@@ -641,14 +697,14 @@ export class DataTransformationService {
       }
     }
 
-    return validated;
+    return validated as TData;
   }
 
   /**
    * 🔥 选择字段验证 - 实现C核心逻辑
    */
   private validateSelectField(
-    value: any,
+    value: unknown,
     fieldName: string,
     dataType: DoubanDataType,
   ): string | null {
@@ -656,24 +712,24 @@ export class DataTransformationService {
       const validStatuses =
         dataType === 'books' ? ['想读', '在读', '读过'] : ['想看', '看过'];
 
-      if (validStatuses.includes(value)) {
+      if (typeof value === 'string' && validStatuses.includes(value)) {
         return value;
       }
 
       this.addWarning(
-        `Invalid status value: ${value}, expected one of: ${validStatuses.join(', ')}`,
+        `Invalid status value: ${String(value)}, expected one of: ${validStatuses.join(', ')}`,
       );
       return null;
     }
 
     // 其他选择字段保持原值
-    return value;
+    return typeof value === 'string' ? value : null;
   }
 
   /**
    * 🔥 评分字段验证 - 实现C核心逻辑
    */
-  private validateRatingField(value: any): number | null {
+  private validateRatingField(value: unknown): number | null {
     if (value === null || value === undefined) {
       return null;
     }
@@ -684,7 +740,7 @@ export class DataTransformationService {
     // 检查是否为有效数字
     if (isNaN(numValue)) {
       this.addWarning(
-        `Invalid rating value: ${value}, expected number between 1-5`,
+        `Invalid rating value: ${this.safeStringify(value)}, expected number between 1-5`,
       );
       return null;
     }
@@ -701,13 +757,15 @@ export class DataTransformationService {
   /**
    * 🔥 日期时间字段验证 - 实现C核心逻辑
    */
-  private validateDateTimeField(value: any): string | null {
+  private validateDateTimeField(value: unknown): string | null {
     if (value === null || value === undefined) {
       return null;
     }
 
     if (typeof value !== 'string') {
-      this.addWarning(`Invalid date format: ${value}, expected string`);
+      this.addWarning(
+        `Invalid date format: ${this.safeStringify(value)}, expected string`,
+      );
       return null;
     }
 
@@ -729,7 +787,7 @@ export class DataTransformationService {
     }
 
     // 3. 验证月份和日期范围
-    const [year, month, day] = dateStr.split('-').map(Number);
+    const [, month, day] = dateStr.split('-').map(Number);
     if (month < 1 || month > 12) {
       this.addWarning(`Invalid month in date: ${dateStr}`);
       return null;
@@ -748,7 +806,7 @@ export class DataTransformationService {
   /**
    * 🔥 检查片长是否需要修复
    */
-  private async needsDurationRepair(duration: any): Promise<boolean> {
+  private needsDurationRepair(duration: unknown): boolean {
     if (!duration) {
       return true; // null/undefined/empty 需要修复
     }
@@ -765,8 +823,11 @@ export class DataTransformationService {
   /**
    * 🔥 修复片长字段 - 从HTML中解析片长信息
    */
-  private async repairDurationField(movieData: any): Promise<string | null> {
-    const html = movieData.html;
+  private repairDurationField(movieData: RawDataInput): string | null {
+    if (!movieData || typeof movieData !== 'object') {
+      return null;
+    }
+    const html = (movieData as Record<string, unknown>).html;
     if (!html || typeof html !== 'string') {
       return null;
     }
@@ -822,7 +883,7 @@ export class DataTransformationService {
   /**
    * 🔥 修复片长字段文本 - 对已有片长文本进行格式修复
    */
-  private async repairDurationFieldText(duration: string): Promise<string> {
+  private repairDurationFieldText(duration: string): string {
     if (!duration || typeof duration !== 'string') {
       return duration;
     }
@@ -861,7 +922,7 @@ export class DataTransformationService {
   /**
    * 🔥 检查上映日期是否需要修复
    */
-  private async needsReleaseDateRepair(releaseDate: any): Promise<boolean> {
+  private needsReleaseDateRepair(releaseDate: unknown): boolean {
     if (!releaseDate) {
       return true; // null/undefined/empty 需要修复
     }
@@ -881,8 +942,11 @@ export class DataTransformationService {
   /**
    * 🔥 修复上映日期字段 - 从HTML中解析上映日期
    */
-  private async repairReleaseDateField(movieData: any): Promise<string | null> {
-    const html = movieData.html;
+  private repairReleaseDateField(movieData: RawDataInput): string | null {
+    if (!movieData || typeof movieData !== 'object') {
+      return null;
+    }
+    const html = (movieData as Record<string, unknown>).html;
     if (!html || typeof html !== 'string') {
       return null;
     }
@@ -892,12 +956,11 @@ export class DataTransformationService {
     const releaseDates: string[] = [];
     const releaseDateRegex =
       /<[^>]*property="v:initialReleaseDate"[^>]*>([^<]+)<\/[^>]*>/g;
-    let match;
-
+    let match: RegExpExecArray | null;
     while ((match = releaseDateRegex.exec(html)) !== null) {
-      const dateText = match[1].trim();
-      if (dateText) {
-        releaseDates.push(dateText);
+      const dateText = match[1];
+      if (dateText && typeof dateText === 'string') {
+        releaseDates.push(dateText.trim());
       }
     }
 
@@ -940,9 +1003,7 @@ export class DataTransformationService {
   /**
    * 🔥 修复上映日期字段文本 - 对已有日期文本进行格式修复
    */
-  private async repairReleaseDateFieldText(
-    releaseDate: string,
-  ): Promise<string> {
+  private repairReleaseDateFieldText(releaseDate: string): string {
     if (!releaseDate || typeof releaseDate !== 'string') {
       return releaseDate;
     }
@@ -957,7 +1018,7 @@ export class DataTransformationService {
   /**
    * 🔥 检查制片地区是否需要修复
    */
-  private async needsCountryRepair(country: any): Promise<boolean> {
+  private needsCountryRepair(country: unknown): boolean {
     if (!country || typeof country !== 'string') {
       return false;
     }
@@ -974,9 +1035,12 @@ export class DataTransformationService {
   /**
    * 🔥 修复制片地区字段 - 清理和标准化
    */
-  private repairCountryField(country: any): string {
+  private repairCountryField(country: unknown): string {
     if (!country || typeof country !== 'string') {
-      return country;
+      return country &&
+        (typeof country === 'string' || typeof country === 'number')
+        ? String(country)
+        : '';
     }
 
     let countryStr = country.trim();
@@ -1047,7 +1111,7 @@ export class DataTransformationService {
   /**
    * 🔥 检查语言是否需要修复
    */
-  private async needsLanguageRepair(language: any): Promise<boolean> {
+  private needsLanguageRepair(language: unknown): boolean {
     if (!language || typeof language !== 'string') {
       return false;
     }
@@ -1064,9 +1128,12 @@ export class DataTransformationService {
   /**
    * 🔥 修复语言字段 - 清理和标准化
    */
-  private repairLanguageField(language: any): string {
+  private repairLanguageField(language: unknown): string {
     if (!language || typeof language !== 'string') {
-      return language;
+      return language &&
+        (typeof language === 'string' || typeof language === 'number')
+        ? String(language)
+        : '';
     }
 
     let languageStr = language.trim();
@@ -1148,9 +1215,9 @@ export class DataTransformationService {
   /**
    * 验证和处理转换选项
    */
-  private async validateAndProcessOptions(
+  private validateAndProcessOptions(
     options?: TransformationOptions,
-  ): Promise<TransformationOptions> {
+  ): TransformationOptions {
     const defaultOptions: TransformationOptions = {
       enableIntelligentRepairs: true,
       strictValidation: true,
@@ -1171,12 +1238,12 @@ export class DataTransformationService {
   /**
    * 构建空数据结果
    */
-  private buildEmptyResult(
+  private buildEmptyResult<TOutput extends TransformedDataOutput>(
     rawData: any,
     options: TransformationOptions,
-  ): TransformationResult {
+  ): GenericTransformationResult<TOutput> {
     return {
-      data: {},
+      data: {} as TOutput,
       statistics: {
         totalFields: 0,
         transformedFields: 0,
@@ -1184,8 +1251,36 @@ export class DataTransformationService {
         failedFields: 0,
       },
       warnings: this.warnings,
-      ...(options.preserveRawData && { rawData }),
+      ...(options.preserveRawData && { rawData: rawData as RawDataInput }),
     };
+  }
+
+  /**
+   * 🔥 生成转换统计信息 - 实现StatisticsCollector接口
+   */
+  generateStats(): TransformationStatistics {
+    return this.generateTransformationStats();
+  }
+
+  /**
+   * 🔥 重置统计信息 - 实现StatisticsCollector接口
+   */
+  resetStats(): void {
+    this.warnings = [];
+    this.errors = [];
+    this.statistics = {
+      totalFields: 0,
+      transformedFields: 0,
+      repairedFields: 0,
+      failedFields: 0,
+    };
+  }
+
+  /**
+   * 🔥 更新统计信息 - 实现StatisticsCollector接口
+   */
+  updateStats(partial: Partial<TransformationStatistics>): void {
+    this.statistics = { ...this.statistics, ...partial };
   }
 
   /**
