@@ -72,12 +72,14 @@ describe('HtmlParserService', () => {
       );
 
       expect(result.success).toBe(true);
-      expect(result.data?.title).toBe('动物农场');
-      expect(result.data?.originalTitle).toBe('AnimalFarm'); // JSON解析会清理空白字符
-      expect(result.data?.authors).toContain('乔治·奥威尔');
-      expect(result.data?.rating?.average).toBe(9.4);
-      expect(result.data?.rating?.numRaters).toBe(425688);
-      expect(result.data?.subjectId).toBe('36973237');
+      expect(result.data).not.toBeNull();
+      expect(result.data!.title).toBe('动物农场');
+      expect(result.data!.originalTitle).toBe('AnimalFarm'); // JSON解析会清理空白字符
+      expect(result.data!.authors).toContain('乔治·奥威尔');
+      expect(result.data!.rating).not.toBeNull();
+      expect(result.data!.rating!.average).toBe(9.4);
+      expect(result.data!.rating!.numRaters).toBe(425688);
+      expect(result.data!.subjectId).toBe('36973237');
       expect(['json-ld', 'mixed'].includes(result.parsingStrategy)).toBe(true); // 可能使用混合策略
     });
 
@@ -166,7 +168,8 @@ describe('HtmlParserService', () => {
       const result = service.parseStructuredData($);
 
       expect(result).toBeDefined();
-      expect(result.name).toBe('测试书籍');
+      expect(result).not.toBeNull();
+      expect(result!.name).toBe('测试书籍');
     });
 
     it('should maintain backward compatibility for parseUserState', () => {
@@ -228,9 +231,10 @@ describe('HtmlParserService', () => {
       );
 
       expect(result.performance).toBeDefined();
-      expect(result.performance?.startTime).toBeInstanceOf(Date);
-      expect(result.performance?.endTime).toBeInstanceOf(Date);
-      expect(typeof result.performance?.durationMs).toBe('number');
+      expect(result.performance).not.toBeNull();
+      expect(result.performance!.startTime).toBeInstanceOf(Date);
+      expect(result.performance!.endTime).toBeInstanceOf(Date);
+      expect(typeof result.performance!.durationMs).toBe('number');
     });
   });
 });

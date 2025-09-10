@@ -2,25 +2,14 @@ import { Injectable, Logger } from '@nestjs/common';
 import * as cheerio from 'cheerio';
 import {
   // HTML Response Schemas
-  DoubanHtmlBase,
-  DoubanItemHtml,
-  DoubanBookHtml,
-  DoubanMovieHtml,
-  DoubanTvHtml,
   DoubanCollectionHtml,
 
   // Validation Functions
   validateDoubanHtml,
-  isValidDoubanHtml,
 
   // Parsed Result Schemas
   DoubanItem,
-  DoubanBook,
-  DoubanMovie,
-  DoubanTvSeries,
-  DoubanDocumentary,
   validateDoubanItem,
-  validateDoubanItemByType,
   inferDoubanItemType,
 
   // Field Schemas
@@ -29,6 +18,53 @@ import {
   validateTvSeriesComplete,
   validateDocumentaryComplete,
 } from '../schemas';
+
+// ===== JSON-LD结构化数据类型定义 =====
+
+/**
+ * JSON-LD结构化数据的聚合评分接口
+ */
+interface StructuredAggregateRating {
+  ratingValue?: number;
+  ratingCount?: number;
+}
+
+/**
+ * JSON-LD结构化数据的人员信息接口
+ */
+interface StructuredPerson {
+  name?: string;
+}
+
+/**
+ * JSON-LD结构化数据的主要接口
+ * 定义豆瓣页面中JSON-LD标签包含的数据结构
+ */
+interface StructuredData {
+  name?: string;
+  alternateName?: string;
+  aggregateRating?: StructuredAggregateRating;
+  genre?: string[];
+  description?: string;
+  image?: string;
+  author?: (string | StructuredPerson)[];
+  director?: (string | StructuredPerson)[];
+  actor?: (string | StructuredPerson)[];
+}
+
+/**
+ * 验证函数的标准返回类型
+ */
+interface ValidationResponse<T> {
+  success: boolean;
+  data?: T;
+  error?: string;
+}
+
+/**
+ * 信息区域解析值类型
+ */
+type InfoValue = string | string[] | undefined;
 
 // ===== 向后兼容的接口定义 =====
 
@@ -116,11 +152,11 @@ export class HtmlParserService {
   /**
    * 主要解析入口 - 解析豆瓣条目详情页
    */
-  async parseDoubanItem(
+  parseDoubanItem(
     htmlContent: string,
     url: string,
     expectedType?: 'books' | 'movies' | 'tv' | 'documentary' | 'music',
-  ): Promise<ParseResult<DoubanItem>> {
+  ): ParseResult<DoubanItem> {
     const startTime = new Date();
     const errors: string[] = [];
     const warnings: string[] = [];
@@ -164,7 +200,7 @@ export class HtmlParserService {
       if (inferredType === 'unknown') {
         warnings.push('无法确定条目类型，请检查URL或数据完整性');
       } else {
-        parsedData.category = inferredType as any;
+        parsedData.category = inferredType as 'books' | 'movies' | 'music';
       }
 
       // 类型安全验证
@@ -219,11 +255,11 @@ export class HtmlParserService {
   /**
    * 解析豆瓣收藏列表页
    */
-  async parseCollectionPage(
+  parseCollectionPage(
     htmlContent: string,
     url: string,
     itemType: 'books' | 'movies' | 'tv' | 'documentary' | 'music',
-  ): Promise<ParseResult<DoubanCollectionHtml>> {
+  ): ParseResult<DoubanCollectionHtml> {
     const startTime = new Date();
     const errors: string[] = [];
     const warnings: string[] = [];
@@ -260,9 +296,12 @@ export class HtmlParserService {
       };
 
       // 验证收藏页数据
-      const validationResult = validateDoubanHtml(collectionData, 'collection');
+      const validationResult = validateDoubanHtml(
+        collectionData,
+        'collection',
+      ) as ValidationResponse<DoubanCollectionHtml>;
       if (!validationResult.success) {
-        errors.push((validationResult as any).error || '收藏页验证失败');
+        errors.push(validationResult.error || '收藏页验证失败');
       }
 
       const endTime = new Date();
@@ -303,7 +342,7 @@ export class HtmlParserService {
    * 从结构化数据转换为条目数据
    */
   private convertStructuredDataToItem(
-    structuredData: any,
+    structuredData: StructuredData,
     context: ParseContext,
   ): Partial<DoubanItem> {
     const item: Partial<DoubanItem> = {};
@@ -336,15 +375,21 @@ export class HtmlParserService {
     }
 
     if (structuredData.author && Array.isArray(structuredData.author)) {
-      item.authors = structuredData.author.map((a: any) => a.name || a);
+      item.authors = structuredData.author
+        .map((a) => (typeof a === 'string' ? a : (a.name ?? '')))
+        .filter(Boolean);
     }
 
     if (structuredData.director && Array.isArray(structuredData.director)) {
-      item.directors = structuredData.director.map((d: any) => d.name || d);
+      item.directors = structuredData.director
+        .map((d) => (typeof d === 'string' ? d : (d.name ?? '')))
+        .filter(Boolean);
     }
 
     if (structuredData.actor && Array.isArray(structuredData.actor)) {
-      item.cast = structuredData.actor.map((a: any) => a.name || a);
+      item.cast = structuredData.actor
+        .map((a) => (typeof a === 'string' ? a : (a.name ?? '')))
+        .filter(Boolean);
     }
 
     // URL处理
@@ -428,8 +473,9 @@ export class HtmlParserService {
 
     // 其他字段如果JSON-LD缺失，则使用HTML数据
     Object.keys(htmlData).forEach((key) => {
-      if (!merged[key] && htmlData[key]) {
-        merged[key] = htmlData[key];
+      const typedKey = key as keyof DoubanItem;
+      if (!merged[typedKey] && htmlData[typedKey]) {
+        (merged as Record<string, unknown>)[key] = htmlData[typedKey];
       }
     });
 
@@ -442,7 +488,7 @@ export class HtmlParserService {
   private validateParsedData(
     data: Partial<DoubanItem>,
     itemType: string,
-  ): { success: boolean; data?: DoubanItem; errors: string[] } {
+  ): ValidationResponse<DoubanItem> & { errors: string[] } {
     const errors: string[] = [];
 
     // 必需字段检查
@@ -457,28 +503,38 @@ export class HtmlParserService {
     }
 
     // 根据类型进行专门验证
-    let validationResult;
+    let validationResult: ValidationResponse<DoubanItem>;
     switch (itemType) {
       case 'books':
-        validationResult = validateBookComplete(data);
+        validationResult = validateBookComplete(
+          data,
+        ) as ValidationResponse<DoubanItem>;
         break;
       case 'movies':
-        validationResult = validateMovieComplete(data);
+        validationResult = validateMovieComplete(
+          data,
+        ) as ValidationResponse<DoubanItem>;
         break;
       case 'tv':
-        validationResult = validateTvSeriesComplete(data);
+        validationResult = validateTvSeriesComplete(
+          data,
+        ) as ValidationResponse<DoubanItem>;
         break;
       case 'documentary':
-        validationResult = validateDocumentaryComplete(data);
+        validationResult = validateDocumentaryComplete(
+          data,
+        ) as ValidationResponse<DoubanItem>;
         break;
       default:
         // 通用验证
-        validationResult = validateDoubanItem(data);
+        validationResult = validateDoubanItem(
+          data,
+        ) as ValidationResponse<DoubanItem>;
     }
 
     if (!validationResult.success) {
-      errors.push(validationResult.error);
-      return { success: false, errors };
+      errors.push(validationResult.error || '验证失败');
+      return { success: false, errors, error: validationResult.error };
     }
 
     return {
@@ -493,7 +549,7 @@ export class HtmlParserService {
   /**
    * 解析JSON-LD结构化数据
    */
-  parseStructuredData($: cheerio.Root): any {
+  parseStructuredData($: cheerio.Root): StructuredData | null {
     try {
       const scripts = $('script[type="application/ld+json"]');
       if (scripts.length === 0) {
@@ -507,7 +563,7 @@ export class HtmlParserService {
 
       // 清理JSON内容 - 移除多余空白字符
       const cleanedContent = jsonContent.replace(/[\r\n\t\s+]/g, '');
-      const structuredData = JSON.parse(cleanedContent);
+      const structuredData = JSON.parse(cleanedContent) as StructuredData;
 
       this.logger.debug('Structured data parsed successfully');
       return structuredData;
@@ -663,7 +719,7 @@ export class HtmlParserService {
   private mapUserState(
     stateText: string,
   ): 'wish' | 'do' | 'collect' | undefined {
-    const stateMap = {
+    const stateMap: Record<string, 'wish' | 'do' | 'collect'> = {
       // 书籍
       想读: 'wish',
       在读: 'do',
@@ -678,7 +734,7 @@ export class HtmlParserService {
       听过: 'collect',
     };
 
-    return stateMap[stateText] || undefined;
+    return stateMap[stateText] ?? undefined;
   }
 
   /**
@@ -847,8 +903,8 @@ export class HtmlParserService {
   /**
    * 解析#info区域的详细信息
    */
-  parseInfoSection($: cheerio.Root): Record<string, any> {
-    const infoMap = new Map<string, any>();
+  parseInfoSection($: cheerio.Root): Record<string, InfoValue> {
+    const infoMap = new Map<string, InfoValue>();
 
     try {
       const infoElement = $('#info');
@@ -861,7 +917,7 @@ export class HtmlParserService {
         const $element = $(element);
         const key = $element.text().trim();
 
-        let value: any;
+        let value: InfoValue;
 
         if (
           key.includes('译者') ||
@@ -881,20 +937,20 @@ export class HtmlParserService {
             .find('a')
             .each((i, link) => {
               const linkText = $(link).text().trim();
-              if (linkText) {
+              if (linkText && Array.isArray(value)) {
                 value.push(linkText);
               }
             });
 
           // 如果没有链接，则从文本中提取（用斜杠分隔）
-          if (value.length === 0) {
+          if (Array.isArray(value) && value.length === 0) {
             const nextElement = $element.next();
             if (nextElement.length > 0) {
               const textContent = nextElement.text()?.trim();
               if (textContent) {
                 // 处理用斜杠或逗号分隔的多值
                 value = textContent
-                  .split(/[\/,、]/)
+                  .split(/[/,、]/)
                   .map((item) => item.trim())
                   .filter(Boolean);
               }
@@ -941,7 +997,7 @@ export class HtmlParserService {
    * 映射info区域的key到标准字段名
    */
   private mapInfoKey(key: string): string | undefined {
-    const keyMap = {
+    const keyMap: Record<string, string> = {
       作者: 'author',
       '出版社:': 'publisher',
       '原作名:': 'originalTitle',
@@ -967,14 +1023,14 @@ export class HtmlParserService {
       '单集片长:': 'episodeDuration',
     };
 
-    return keyMap[key];
+    return keyMap[key] ?? undefined;
   }
 
   /**
    * HTML解码
    */
   htmlDecode(str: string): string {
-    const entityMap = {
+    const entityMap: Record<string, string> = {
       '&amp;': '&',
       '&lt;': '<',
       '&gt;': '>',
@@ -987,7 +1043,7 @@ export class HtmlParserService {
     };
 
     return str.replace(/&[#\w\d]+;/g, (entity) => {
-      return entityMap[entity] || entity;
+      return entityMap[entity] ?? entity;
     });
   }
 }
