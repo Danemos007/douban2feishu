@@ -7,15 +7,48 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import {
   SyncProgress,
   SyncProgressEvent,
-  SyncErrorEvent,
-  SystemMessageEvent,
   SyncStatus,
+  WebSocketEvent,
 } from './interfaces/sync.interface';
+
+// 测试专用接口 - 用于安全访问SyncGateway私有方法和属性
+interface SyncGatewayTestAccess {
+  extractUserFromSocket(client: Socket): string | null;
+  emitTypedEvent(userId: string, event: WebSocketEvent): void;
+  userConnections: Map<string, Set<string>>;
+}
+
+// 类型安全的Jest匹配器类型定义 - 已移除未使用的类型
+
+// Jest匹配器工厂函数 - 提供类型安全的匹配器
+const createTypeSafeMatchers = {
+  objectContaining: <T>(obj: Partial<T>): T =>
+    expect.objectContaining(obj) as T,
+  any: <T>(constructor: new (...args: unknown[]) => T): T =>
+    expect.any(constructor) as T,
+};
 
 describe('SyncGateway', () => {
   let gateway: SyncGateway;
   let mockServer: jest.Mocked<Server>;
   let mockSocket: jest.Mocked<Socket>;
+
+  // Logger spies - 解决unbound-method问题
+  let loggerLogSpy: jest.SpyInstance;
+  let loggerWarnSpy: jest.SpyInstance;
+  let loggerErrorSpy: jest.SpyInstance;
+  let loggerDebugSpy: jest.SpyInstance;
+
+  // Mock方法引用 - 解决unbound-method问题
+  let mockSocketJoin: jest.MockedFunction<(...args: any[]) => any>;
+  let mockSocketEmit: jest.MockedFunction<(...args: any[]) => any>;
+  let mockSocketDisconnect: jest.MockedFunction<(...args: any[]) => any>;
+  let mockSocketLeave: jest.MockedFunction<(...args: any[]) => any>;
+  let mockServerTo: jest.MockedFunction<(...args: any[]) => any>;
+  let mockServerEmit: jest.MockedFunction<(...args: any[]) => any>;
+
+  // Gateway spy引用 - 解决unbound-method问题
+  let emitTypedEventSpy: jest.SpyInstance;
 
   // Mock 数据
   const mockUserId = 'test-user-id';
@@ -52,7 +85,7 @@ describe('SyncGateway', () => {
   };
 
   beforeEach(async () => {
-    // 创建 Mock Server
+    // 创建 Mock Server - 完全类型安全的mock
     mockServer = {
       to: jest.fn().mockReturnThis(),
       emit: jest.fn().mockReturnValue(true),
@@ -61,17 +94,33 @@ describe('SyncGateway', () => {
           size: 0,
         },
       },
-    } as any;
+    } as unknown as jest.Mocked<Server>;
 
-    // 创建 Mock Socket
+    // 创建 Mock Socket - 完全类型安全的mock
     mockSocket = {
       id: mockSocketId,
-      join: jest.fn(),
-      leave: jest.fn(),
-      emit: jest.fn(),
-      disconnect: jest.fn(),
+      join: jest.fn().mockResolvedValue(undefined),
+      leave: jest.fn().mockResolvedValue(undefined),
+      emit: jest.fn().mockReturnValue(true),
+      disconnect: jest.fn().mockReturnThis(),
       user: { id: mockUserId },
-    } as any;
+      // 添加Socket所需的基础属性
+      handshake: {
+        auth: {},
+        headers: {},
+        query: {},
+        url: '',
+        address: '',
+        time: '',
+        issued: 0,
+        xdomain: false,
+        secure: false,
+      },
+      rooms: new Set(),
+      data: {},
+      connected: true,
+      disconnected: false,
+    } as unknown as jest.Mocked<Socket & { user: { id: string } }>;
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -90,11 +139,19 @@ describe('SyncGateway', () => {
     // 设置 Mock Server
     gateway.server = mockServer;
 
-    // Mock Logger 方法
-    jest.spyOn(Logger.prototype, 'log').mockImplementation();
-    jest.spyOn(Logger.prototype, 'warn').mockImplementation();
-    jest.spyOn(Logger.prototype, 'error').mockImplementation();
-    jest.spyOn(Logger.prototype, 'debug').mockImplementation();
+    // Mock Logger 方法 - 存储spy引用解决unbound-method
+    loggerLogSpy = jest.spyOn(Logger.prototype, 'log').mockImplementation();
+    loggerWarnSpy = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+    loggerErrorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+    loggerDebugSpy = jest.spyOn(Logger.prototype, 'debug').mockImplementation();
+
+    // 初始化Mock方法引用 - 解决unbound-method问题
+    mockSocketJoin = mockSocket.join as jest.MockedFunction<(...args: any[]) => any>;
+    mockSocketEmit = mockSocket.emit as jest.MockedFunction<(...args: any[]) => any>;
+    mockSocketDisconnect = mockSocket.disconnect as jest.MockedFunction<(...args: any[]) => any>;
+    mockSocketLeave = mockSocket.leave as jest.MockedFunction<(...args: any[]) => any>;
+    mockServerTo = mockServer.to as jest.MockedFunction<(...args: any[]) => any>;
+    mockServerEmit = mockServer.emit as jest.MockedFunction<(...args: any[]) => any>;
   });
 
   afterEach(() => {
@@ -105,78 +162,94 @@ describe('SyncGateway', () => {
     beforeEach(() => {
       // Mock extractUserFromSocket
       jest
-        .spyOn(gateway as any, 'extractUserFromSocket')
+        .spyOn(
+          gateway as unknown as SyncGatewayTestAccess,
+          'extractUserFromSocket',
+        )
         .mockReturnValue(mockUserId);
     });
 
     it('应该成功处理客户端连接', async () => {
       await gateway.handleConnection(mockSocket);
 
-      expect(mockSocket.join).toHaveBeenCalledWith(`user:${mockUserId}`);
-      expect(mockSocket.emit).toHaveBeenCalledWith('connected', {
+      expect(mockSocketJoin).toHaveBeenCalledWith(`user:${mockUserId}`);
+      expect(mockSocketEmit).toHaveBeenCalledWith('connected', {
         message: 'WebSocket connected successfully',
         userId: mockUserId,
-        timestamp: expect.any(String),
+        timestamp: createTypeSafeMatchers.any(String),
       });
-      expect(Logger.prototype.log).toHaveBeenCalledWith(
+      expect(loggerLogSpy).toHaveBeenCalledWith(
         `Client ${mockSocketId} connected for user ${mockUserId}`,
       );
     });
 
     it('应该拒绝没有有效用户ID的连接', async () => {
-      jest.spyOn(gateway as any, 'extractUserFromSocket').mockReturnValue(null);
+      jest
+        .spyOn(
+          gateway as unknown as SyncGatewayTestAccess,
+          'extractUserFromSocket',
+        )
+        .mockReturnValue(null);
 
       await gateway.handleConnection(mockSocket);
 
-      expect(Logger.prototype.warn).toHaveBeenCalledWith(
+      expect(loggerWarnSpy).toHaveBeenCalledWith(
         'Connection rejected: No valid user ID',
       );
-      expect(mockSocket.disconnect).toHaveBeenCalled();
-      expect(mockSocket.join).not.toHaveBeenCalled();
+      expect(mockSocketDisconnect).toHaveBeenCalled();
+      expect(mockSocketJoin).not.toHaveBeenCalled();
     });
 
     it('应该处理连接过程中的错误', async () => {
       const testError = new Error('Connection error');
       jest
-        .spyOn(gateway as any, 'extractUserFromSocket')
+        .spyOn(
+          gateway as unknown as SyncGatewayTestAccess,
+          'extractUserFromSocket',
+        )
         .mockImplementation(() => {
           throw testError;
         });
 
       await gateway.handleConnection(mockSocket);
 
-      expect(Logger.prototype.error).toHaveBeenCalledWith(
+      expect(loggerErrorSpy).toHaveBeenCalledWith(
         'Connection error:',
         'Connection error',
       );
-      expect(mockSocket.disconnect).toHaveBeenCalled();
+      expect(mockSocketDisconnect).toHaveBeenCalled();
     });
 
     it('应该管理用户连接记录', async () => {
       await gateway.handleConnection(mockSocket);
 
       // 访问私有属性进行测试
-      const userConnections = (gateway as any).userConnections;
+      const userConnections = (gateway as unknown as SyncGatewayTestAccess)
+        .userConnections;
       expect(userConnections.has(mockUserId)).toBe(true);
-      expect(userConnections.get(mockUserId).has(mockSocketId)).toBe(true);
+      expect(userConnections.get(mockUserId)?.has(mockSocketId)).toBe(true);
     });
   });
 
   describe('handleDisconnect', () => {
     beforeEach(() => {
       jest
-        .spyOn(gateway as any, 'extractUserFromSocket')
+        .spyOn(
+          gateway as unknown as SyncGatewayTestAccess,
+          'extractUserFromSocket',
+        )
         .mockReturnValue(mockUserId);
     });
 
     it('应该成功处理客户端断开', () => {
       // 先建立连接
-      const userConnections = (gateway as any).userConnections;
+      const userConnections = (gateway as unknown as SyncGatewayTestAccess)
+        .userConnections;
       userConnections.set(mockUserId, new Set([mockSocketId]));
 
       gateway.handleDisconnect(mockSocket);
 
-      expect(Logger.prototype.log).toHaveBeenCalledWith(
+      expect(loggerLogSpy).toHaveBeenCalledWith(
         `Client ${mockSocketId} disconnected for user ${mockUserId}`,
       );
       expect(userConnections.has(mockUserId)).toBe(false);
@@ -184,34 +257,43 @@ describe('SyncGateway', () => {
 
     it('应该清理用户连接记录', () => {
       // 设置多个连接
-      const userConnections = (gateway as any).userConnections;
+      const userConnections = (gateway as unknown as SyncGatewayTestAccess)
+        .userConnections;
       const socketSet = new Set([mockSocketId, 'another-socket']);
       userConnections.set(mockUserId, socketSet);
 
       gateway.handleDisconnect(mockSocket);
 
-      expect(userConnections.get(mockUserId).has(mockSocketId)).toBe(false);
-      expect(userConnections.get(mockUserId).has('another-socket')).toBe(true);
+      expect(userConnections.get(mockUserId)?.has(mockSocketId)).toBe(false);
+      expect(userConnections.get(mockUserId)?.has('another-socket')).toBe(true);
     });
 
     it('应该处理断开过程中的错误', () => {
       const testError = new Error('Disconnect error');
       jest
-        .spyOn(gateway as any, 'extractUserFromSocket')
+        .spyOn(
+          gateway as unknown as SyncGatewayTestAccess,
+          'extractUserFromSocket',
+        )
         .mockImplementation(() => {
           throw testError;
         });
 
       gateway.handleDisconnect(mockSocket);
 
-      expect(Logger.prototype.error).toHaveBeenCalledWith(
+      expect(loggerErrorSpy).toHaveBeenCalledWith(
         'Disconnect error:',
         'Disconnect error',
       );
     });
 
     it('应该处理未知用户的断开', () => {
-      jest.spyOn(gateway as any, 'extractUserFromSocket').mockReturnValue(null);
+      jest
+        .spyOn(
+          gateway as unknown as SyncGatewayTestAccess,
+          'extractUserFromSocket',
+        )
+        .mockReturnValue(null);
 
       // 不应该抛出错误
       expect(() => gateway.handleDisconnect(mockSocket)).not.toThrow();
@@ -221,7 +303,10 @@ describe('SyncGateway', () => {
   describe('handleSubscribeSync', () => {
     beforeEach(() => {
       jest
-        .spyOn(gateway as any, 'extractUserFromSocket')
+        .spyOn(
+          gateway as unknown as SyncGatewayTestAccess,
+          'extractUserFromSocket',
+        )
         .mockReturnValue(mockUserId);
     });
 
@@ -233,35 +318,40 @@ describe('SyncGateway', () => {
 
       await gateway.handleSubscribeSync(mockSocket, subscribeData);
 
-      expect(mockSocket.join).toHaveBeenCalledWith(`sync:${mockSyncId}`);
-      expect(mockSocket.join).toHaveBeenCalledWith('sync:another-sync-id');
-      expect(mockSocket.emit).toHaveBeenCalledWith('subscribed', {
+      expect(mockSocketJoin).toHaveBeenCalledWith(`sync:${mockSyncId}`);
+      expect(mockSocketJoin).toHaveBeenCalledWith('sync:another-sync-id');
+      expect(mockSocketEmit).toHaveBeenCalledWith('subscribed', {
         message: 'Subscribed to sync updates',
         syncIds: subscribeData.syncIds,
-        timestamp: expect.any(String),
+        timestamp: createTypeSafeMatchers.any(String),
       });
     });
 
     it('应该处理没有指定syncIds的订阅', async () => {
       await gateway.handleSubscribeSync(mockSocket, {});
 
-      expect(mockSocket.join).not.toHaveBeenCalled();
-      expect(mockSocket.emit).toHaveBeenCalledWith('subscribed', {
+      expect(mockSocketJoin).not.toHaveBeenCalled();
+      expect(mockSocketEmit).toHaveBeenCalledWith('subscribed', {
         message: 'Subscribed to sync updates',
         syncIds: [],
-        timestamp: expect.any(String),
+        timestamp: createTypeSafeMatchers.any(String),
       });
     });
 
     it('应该拒绝未认证用户的订阅', async () => {
-      jest.spyOn(gateway as any, 'extractUserFromSocket').mockReturnValue(null);
+      jest
+        .spyOn(
+          gateway as unknown as SyncGatewayTestAccess,
+          'extractUserFromSocket',
+        )
+        .mockReturnValue(null);
 
       await gateway.handleSubscribeSync(mockSocket, { syncIds: [mockSyncId] });
 
-      expect(mockSocket.emit).toHaveBeenCalledWith('error', {
+      expect(mockSocketEmit).toHaveBeenCalledWith('error', {
         message: 'Authentication required',
       });
-      expect(mockSocket.join).not.toHaveBeenCalled();
+      expect(mockSocketJoin).not.toHaveBeenCalled();
     });
 
     it('应该处理订阅过程中的错误', async () => {
@@ -270,11 +360,11 @@ describe('SyncGateway', () => {
 
       await gateway.handleSubscribeSync(mockSocket, { syncIds: [mockSyncId] });
 
-      expect(Logger.prototype.error).toHaveBeenCalledWith(
+      expect(loggerErrorSpy).toHaveBeenCalledWith(
         'Subscribe error:',
         'Subscribe error',
       );
-      expect(mockSocket.emit).toHaveBeenCalledWith('error', {
+      expect(mockSocketEmit).toHaveBeenCalledWith('error', {
         message: 'Subscription failed',
       });
     });
@@ -288,23 +378,23 @@ describe('SyncGateway', () => {
 
       await gateway.handleUnsubscribeSync(mockSocket, unsubscribeData);
 
-      expect(mockSocket.leave).toHaveBeenCalledWith(`sync:${mockSyncId}`);
-      expect(mockSocket.leave).toHaveBeenCalledWith('sync:another-sync-id');
-      expect(mockSocket.emit).toHaveBeenCalledWith('unsubscribed', {
+      expect(mockSocketLeave).toHaveBeenCalledWith(`sync:${mockSyncId}`);
+      expect(mockSocketLeave).toHaveBeenCalledWith('sync:another-sync-id');
+      expect(mockSocketEmit).toHaveBeenCalledWith('unsubscribed', {
         message: 'Unsubscribed from sync updates',
         syncIds: unsubscribeData.syncIds,
-        timestamp: expect.any(String),
+        timestamp: createTypeSafeMatchers.any(String),
       });
     });
 
     it('应该处理没有指定syncIds的取消订阅', async () => {
       await gateway.handleUnsubscribeSync(mockSocket, {});
 
-      expect(mockSocket.leave).not.toHaveBeenCalled();
-      expect(mockSocket.emit).toHaveBeenCalledWith('unsubscribed', {
+      expect(mockSocketLeave).not.toHaveBeenCalled();
+      expect(mockSocketEmit).toHaveBeenCalledWith('unsubscribed', {
         message: 'Unsubscribed from sync updates',
         syncIds: [],
-        timestamp: expect.any(String),
+        timestamp: createTypeSafeMatchers.any(String),
       });
     });
 
@@ -316,7 +406,7 @@ describe('SyncGateway', () => {
         syncIds: [mockSyncId],
       });
 
-      expect(Logger.prototype.error).toHaveBeenCalledWith(
+      expect(loggerErrorSpy).toHaveBeenCalledWith(
         'Unsubscribe error:',
         'Unsubscribe error',
       );
@@ -327,17 +417,17 @@ describe('SyncGateway', () => {
     it('应该发送同步进度更新到用户房间', () => {
       gateway.notifyProgress(mockUserId, mockSyncProgress);
 
-      expect(mockServer.to).toHaveBeenCalledWith(`user:${mockUserId}`);
-      expect(mockServer.emit).toHaveBeenCalledWith('sync-progress', {
+      expect(mockServerTo).toHaveBeenCalledWith(`user:${mockUserId}`);
+      expect(mockServerEmit).toHaveBeenCalledWith('sync-progress', {
         ...mockSyncProgress,
-        timestamp: expect.any(String),
+        timestamp: createTypeSafeMatchers.any(String),
       });
     });
 
     it('应该同时发送到同步ID房间', () => {
       gateway.notifyProgress(mockUserId, mockSyncProgress);
 
-      expect(mockServer.to).toHaveBeenCalledWith(`sync:${mockSyncId}`);
+      expect(mockServerTo).toHaveBeenCalledWith(`sync:${mockSyncId}`);
     });
 
     it('应该处理没有syncId的进度更新', () => {
@@ -348,14 +438,14 @@ describe('SyncGateway', () => {
 
       gateway.notifyProgress(mockUserId, progressWithoutSyncId);
 
-      expect(mockServer.to).toHaveBeenCalledWith(`user:${mockUserId}`);
-      expect(mockServer.to).toHaveBeenCalledTimes(1); // 不应该调用sync房间
+      expect(mockServerTo).toHaveBeenCalledWith(`user:${mockUserId}`);
+      expect(mockServerTo).toHaveBeenCalledTimes(1); // 不应该调用sync房间
     });
 
     it('应该记录调试日志', () => {
       gateway.notifyProgress(mockUserId, mockSyncProgress);
 
-      expect(Logger.prototype.debug).toHaveBeenCalledWith(
+      expect(loggerDebugSpy).toHaveBeenCalledWith(
         `Progress sent to user ${mockUserId}: ${mockSyncProgress.message}`,
       );
     });
@@ -368,7 +458,7 @@ describe('SyncGateway', () => {
 
       gateway.notifyProgress(mockUserId, mockSyncProgress);
 
-      expect(Logger.prototype.error).toHaveBeenCalledWith(
+      expect(loggerErrorSpy).toHaveBeenCalledWith(
         'Failed to send progress notification:',
         'Progress error',
       );
@@ -379,10 +469,10 @@ describe('SyncGateway', () => {
     it('应该发送错误通知到用户房间', () => {
       gateway.notifyError(mockUserId, mockSyncErrorData);
 
-      expect(mockServer.to).toHaveBeenCalledWith(`user:${mockUserId}`);
-      expect(mockServer.emit).toHaveBeenCalledWith('sync-error', {
+      expect(mockServerTo).toHaveBeenCalledWith(`user:${mockUserId}`);
+      expect(mockServerEmit).toHaveBeenCalledWith('sync-error', {
         ...mockSyncErrorData,
-        timestamp: expect.any(String),
+        timestamp: createTypeSafeMatchers.any(String),
       });
     });
 
@@ -394,7 +484,7 @@ describe('SyncGateway', () => {
 
       gateway.notifyError(mockUserId, mockSyncErrorData);
 
-      expect(Logger.prototype.error).toHaveBeenCalledWith(
+      expect(loggerErrorSpy).toHaveBeenCalledWith(
         'Failed to send error notification:',
         testError,
       );
@@ -408,10 +498,10 @@ describe('SyncGateway', () => {
 
       gateway.broadcastSystemMessage(message, level);
 
-      expect(mockServer.emit).toHaveBeenCalledWith('system-message', {
+      expect(mockServerEmit).toHaveBeenCalledWith('system-message', {
         message,
         level,
-        timestamp: expect.any(String),
+        timestamp: createTypeSafeMatchers.any(String),
       });
     });
 
@@ -420,25 +510,47 @@ describe('SyncGateway', () => {
 
       gateway.broadcastSystemMessage(message);
 
-      expect(mockServer.emit).toHaveBeenCalledWith('system-message', {
+      expect(mockServerEmit).toHaveBeenCalledWith('system-message', {
         message,
         level: 'info',
-        timestamp: expect.any(String),
+        timestamp: createTypeSafeMatchers.any(String),
       });
     });
   });
 
   describe('extractUserFromSocket', () => {
     it('应该从socket中提取用户ID', () => {
-      const result = (gateway as any).extractUserFromSocket(mockSocket);
+      const result = (
+        gateway as unknown as SyncGatewayTestAccess
+      ).extractUserFromSocket(mockSocket);
 
       expect(result).toBe(mockUserId);
     });
 
     it('应该处理没有用户信息的socket', () => {
-      const socketWithoutUser = { user: undefined } as any;
+      const socketWithoutUser = {
+        user: undefined,
+        id: 'test-socket-no-user',
+        handshake: {
+          auth: {},
+          headers: {},
+          query: {},
+          url: '',
+          address: '',
+          time: '',
+          issued: 0,
+          xdomain: false,
+          secure: false,
+        },
+        rooms: new Set(),
+        data: {},
+        connected: true,
+        disconnected: false,
+      } as unknown as Socket;
 
-      const result = (gateway as any).extractUserFromSocket(socketWithoutUser);
+      const result = (
+        gateway as unknown as SyncGatewayTestAccess
+      ).extractUserFromSocket(socketWithoutUser);
 
       expect(result).toBeNull();
     });
@@ -448,9 +560,27 @@ describe('SyncGateway', () => {
         get user() {
           throw new Error('User extraction error');
         },
-      } as any;
+        id: 'test-socket-faulty',
+        handshake: {
+          auth: {},
+          headers: {},
+          query: {},
+          url: '',
+          address: '',
+          time: '',
+          issued: 0,
+          xdomain: false,
+          secure: false,
+        },
+        rooms: new Set(),
+        data: {},
+        connected: true,
+        disconnected: false,
+      } as unknown as Socket;
 
-      const result = (gateway as any).extractUserFromSocket(faultySocket);
+      const result = (
+        gateway as unknown as SyncGatewayTestAccess
+      ).extractUserFromSocket(faultySocket);
 
       expect(result).toBeNull();
     });
@@ -464,31 +594,45 @@ describe('SyncGateway', () => {
     };
 
     it('应该发送类型安全的WebSocket事件', () => {
-      (gateway as any).emitTypedEvent(mockUserId, mockProgressEvent);
+      (gateway as unknown as SyncGatewayTestAccess).emitTypedEvent(
+        mockUserId,
+        mockProgressEvent,
+      );
 
-      expect(mockServer.to).toHaveBeenCalledWith(`user:${mockUserId}`);
-      expect(mockServer.emit).toHaveBeenCalledWith('sync-progress', {
+      expect(mockServerTo).toHaveBeenCalledWith(`user:${mockUserId}`);
+      expect(mockServerEmit).toHaveBeenCalledWith('sync-progress', {
         ...mockProgressEvent,
-        timestamp: expect.any(String),
-        eventId: expect.any(String),
+        timestamp: createTypeSafeMatchers.any(String),
+        eventId: createTypeSafeMatchers.any(String),
       });
     });
 
     it('应该为sync-progress事件同时发送到sync房间', () => {
-      (gateway as any).emitTypedEvent(mockUserId, mockProgressEvent);
+      (gateway as unknown as SyncGatewayTestAccess).emitTypedEvent(
+        mockUserId,
+        mockProgressEvent,
+      );
 
-      expect(mockServer.to).toHaveBeenCalledWith(`sync:${mockSyncId}`);
+      expect(mockServerTo).toHaveBeenCalledWith(`sync:${mockSyncId}`);
     });
 
     it('应该生成唯一的eventId', () => {
-      const calls: any[] = [];
-      mockServer.emit.mockImplementation((...args) => {
-        calls.push(args);
-        return true;
-      });
+      const calls: Array<[string, { eventId: string }]> = [];
+      mockServerEmit.mockImplementation(
+        (...args: [string, { eventId: string }]) => {
+          calls.push(args);
+          return true;
+        },
+      );
 
-      (gateway as any).emitTypedEvent(mockUserId, mockProgressEvent);
-      (gateway as any).emitTypedEvent(mockUserId, mockProgressEvent);
+      (gateway as unknown as SyncGatewayTestAccess).emitTypedEvent(
+        mockUserId,
+        mockProgressEvent,
+      );
+      (gateway as unknown as SyncGatewayTestAccess).emitTypedEvent(
+        mockUserId,
+        mockProgressEvent,
+      );
 
       // 每次emitTypedEvent调用会发送到2个房间（用户房间+sync房间），所以总共4次调用
       expect(calls.length).toBe(4);
@@ -506,23 +650,25 @@ describe('SyncGateway', () => {
     };
 
     beforeEach(() => {
-      jest.spyOn(gateway as any, 'emitTypedEvent').mockImplementation();
+      emitTypedEventSpy = jest
+        .spyOn(gateway as unknown as SyncGatewayTestAccess, 'emitTypedEvent')
+        .mockImplementation();
     });
 
     it('应该发送成功的同步完成通知', () => {
       gateway.notifyCompletion(mockUserId, mockSyncData);
 
-      expect((gateway as any).emitTypedEvent).toHaveBeenCalledWith(
+      expect(emitTypedEventSpy).toHaveBeenCalledWith(
         mockUserId,
-        expect.objectContaining({
+        createTypeSafeMatchers.objectContaining<SyncProgressEvent>({
           type: 'sync-progress',
-          data: expect.objectContaining({
+          data: createTypeSafeMatchers.objectContaining({
             syncId: mockSyncId,
-            status: 'SUCCESS',
+            status: 'SUCCESS' as SyncStatus,
             progress: 100,
             message: 'Sync completed successfully',
             itemsProcessed: 100,
-            metadata: expect.objectContaining({
+            metadata: createTypeSafeMatchers.objectContaining({
               performance: { duration: 5000 },
             }),
           }),
@@ -535,11 +681,12 @@ describe('SyncGateway', () => {
 
       gateway.notifyCompletion(mockUserId, failedSyncData);
 
-      expect((gateway as any).emitTypedEvent).toHaveBeenCalledWith(
+      expect(emitTypedEventSpy).toHaveBeenCalledWith(
         mockUserId,
-        expect.objectContaining({
-          data: expect.objectContaining({
-            status: 'FAILED',
+        createTypeSafeMatchers.objectContaining<SyncProgressEvent>({
+          data: createTypeSafeMatchers.objectContaining({
+            syncId: mockSyncId,
+            status: 'FAILED' as SyncStatus,
             progress: 0,
             message: 'Sync completed successfully', // 使用提供的summary
           }),
@@ -557,10 +704,13 @@ describe('SyncGateway', () => {
 
       gateway.notifyCompletion(mockUserId, syncDataWithoutSummary);
 
-      expect((gateway as any).emitTypedEvent).toHaveBeenCalledWith(
+      expect(emitTypedEventSpy).toHaveBeenCalledWith(
         mockUserId,
-        expect.objectContaining({
-          data: expect.objectContaining({
+        createTypeSafeMatchers.objectContaining<SyncProgressEvent>({
+          data: createTypeSafeMatchers.objectContaining({
+            syncId: mockSyncId,
+            status: 'SUCCESS' as SyncStatus,
+            progress: 100,
             message: 'Sync completed',
           }),
         }),
@@ -571,7 +721,8 @@ describe('SyncGateway', () => {
   describe('getOnlineStats', () => {
     beforeEach(() => {
       // 设置mock用户连接
-      const userConnections = (gateway as any).userConnections;
+      const userConnections = (gateway as unknown as SyncGatewayTestAccess)
+        .userConnections;
       userConnections.set(mockUserId, new Set([mockSocketId, 'socket-2']));
       userConnections.set('user-2', new Set(['socket-3']));
 
@@ -593,24 +744,24 @@ describe('SyncGateway', () => {
           {
             userId: mockUserId,
             connections: 2,
-            lastActivity: expect.any(String),
+            lastActivity: createTypeSafeMatchers.any(String),
           },
           {
             userId: 'user-2',
             connections: 1,
-            lastActivity: expect.any(String),
+            lastActivity: createTypeSafeMatchers.any(String),
           },
         ],
         serverInfo: {
           namespace: '/sync',
-          uptime: expect.any(Number),
-          timestamp: expect.any(String),
+          uptime: createTypeSafeMatchers.any(Number),
+          timestamp: createTypeSafeMatchers.any(String),
         },
       });
     });
 
     it('应该返回空统计当没有连接时', () => {
-      (gateway as any).userConnections.clear();
+      (gateway as unknown as SyncGatewayTestAccess).userConnections.clear();
       Object.defineProperty(mockServer.sockets.sockets, 'size', {
         value: 0,
         writable: true,
@@ -628,7 +779,10 @@ describe('SyncGateway', () => {
   describe('集成测试', () => {
     it('应该完整处理客户端连接到订阅的流程', async () => {
       jest
-        .spyOn(gateway as any, 'extractUserFromSocket')
+        .spyOn(
+          gateway as unknown as SyncGatewayTestAccess,
+          'extractUserFromSocket',
+        )
         .mockReturnValue(mockUserId);
 
       // 1. 处理连接
@@ -649,15 +803,18 @@ describe('SyncGateway', () => {
       });
 
       // 验证完整流程
-      expect(mockSocket.join).toHaveBeenCalledWith(`user:${mockUserId}`);
-      expect(mockSocket.join).toHaveBeenCalledWith(`sync:${mockSyncId}`);
-      expect(mockServer.to).toHaveBeenCalledWith(`user:${mockUserId}`);
-      expect(mockServer.to).toHaveBeenCalledWith(`sync:${mockSyncId}`);
+      expect(mockSocketJoin).toHaveBeenCalledWith(`user:${mockUserId}`);
+      expect(mockSocketJoin).toHaveBeenCalledWith(`sync:${mockSyncId}`);
+      expect(mockServerTo).toHaveBeenCalledWith(`user:${mockUserId}`);
+      expect(mockServerTo).toHaveBeenCalledWith(`sync:${mockSyncId}`);
     });
 
     it('应该处理错误恢复场景', async () => {
       jest
-        .spyOn(gateway as any, 'extractUserFromSocket')
+        .spyOn(
+          gateway as unknown as SyncGatewayTestAccess,
+          'extractUserFromSocket',
+        )
         .mockReturnValue(mockUserId);
 
       // 模拟连接建立
@@ -669,11 +826,11 @@ describe('SyncGateway', () => {
       // 模拟连接断开
       gateway.handleDisconnect(mockSocket);
 
-      expect(mockSocket.emit).toHaveBeenCalledWith(
+      expect(mockSocketEmit).toHaveBeenCalledWith(
         'connected',
         expect.any(Object),
       );
-      expect(mockServer.emit).toHaveBeenCalledWith(
+      expect(mockServerEmit).toHaveBeenCalledWith(
         'sync-error',
         expect.any(Object),
       );
