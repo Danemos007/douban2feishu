@@ -146,12 +146,24 @@ describe('SyncGateway', () => {
     loggerDebugSpy = jest.spyOn(Logger.prototype, 'debug').mockImplementation();
 
     // 初始化Mock方法引用 - 解决unbound-method问题
-    mockSocketJoin = mockSocket.join as jest.MockedFunction<(...args: any[]) => any>;
-    mockSocketEmit = mockSocket.emit as jest.MockedFunction<(...args: any[]) => any>;
-    mockSocketDisconnect = mockSocket.disconnect as jest.MockedFunction<(...args: any[]) => any>;
-    mockSocketLeave = mockSocket.leave as jest.MockedFunction<(...args: any[]) => any>;
-    mockServerTo = mockServer.to as jest.MockedFunction<(...args: any[]) => any>;
-    mockServerEmit = mockServer.emit as jest.MockedFunction<(...args: any[]) => any>;
+    mockSocketJoin = mockSocket.join as jest.MockedFunction<
+      (...args: any[]) => any
+    >;
+    mockSocketEmit = mockSocket.emit as jest.MockedFunction<
+      (...args: any[]) => any
+    >;
+    mockSocketDisconnect = mockSocket.disconnect as jest.MockedFunction<
+      (...args: any[]) => any
+    >;
+    mockSocketLeave = mockSocket.leave as jest.MockedFunction<
+      (...args: any[]) => any
+    >;
+    mockServerTo = mockServer.to as jest.MockedFunction<
+      (...args: any[]) => any
+    >;
+    mockServerEmit = mockServer.emit as jest.MockedFunction<
+      (...args: any[]) => any
+    >;
   });
 
   afterEach(() => {
