@@ -1,12 +1,17 @@
 /**
  * User模型类型守卫函数
  * 用于运行时验证数据库查询结果的类型安全性
- * 
+ *
  * @author Claude
  * @date 2025-09-09
  */
 
-import { User, UserCredentials, SyncConfig, SyncHistory } from '../../../generated/prisma';
+import {
+  User,
+  UserCredentials,
+  SyncConfig,
+  SyncHistory,
+} from '../../../generated/prisma';
 
 /**
  * 检查对象是否为有效的User类型
@@ -58,7 +63,10 @@ export function isUserWithRelations(obj: unknown): obj is User & {
   }
 
   if (user.syncHistory !== undefined) {
-    if (!Array.isArray(user.syncHistory) || !user.syncHistory.every(isSyncHistory)) {
+    if (
+      !Array.isArray(user.syncHistory) ||
+      !user.syncHistory.every(isSyncHistory)
+    ) {
       return false;
     }
   }
@@ -83,7 +91,7 @@ export function isUserArray(arr: unknown): arr is User[] {
 export function assertIsUser(obj: unknown): asserts obj is User {
   if (!isUser(obj)) {
     throw new Error(
-      `Object is not a valid User type. Received: ${JSON.stringify(obj, null, 2)}`
+      `Object is not a valid User type. Received: ${JSON.stringify(obj, null, 2)}`,
     );
   }
 }
@@ -98,9 +106,11 @@ function isUserCredentials(obj: unknown): obj is UserCredentials {
 
   return (
     typeof cred.userId === 'string' &&
-    (cred.doubanCookieEncrypted === null || typeof cred.doubanCookieEncrypted === 'string') &&
+    (cred.doubanCookieEncrypted === null ||
+      typeof cred.doubanCookieEncrypted === 'string') &&
     (cred.feishuAppId === null || typeof cred.feishuAppId === 'string') &&
-    (cred.feishuAppSecretEncrypted === null || typeof cred.feishuAppSecretEncrypted === 'string') &&
+    (cred.feishuAppSecretEncrypted === null ||
+      typeof cred.feishuAppSecretEncrypted === 'string') &&
     typeof cred.encryptionIv === 'string' &&
     cred.updatedAt instanceof Date &&
     cred.createdAt instanceof Date
@@ -117,7 +127,8 @@ function isSyncConfig(obj: unknown): obj is SyncConfig {
 
   return (
     typeof config.userId === 'string' &&
-    (config.mappingType === 'THREE_TABLES' || config.mappingType === 'FOUR_TABLES') &&
+    (config.mappingType === 'THREE_TABLES' ||
+      config.mappingType === 'FOUR_TABLES') &&
     typeof config.autoSyncEnabled === 'boolean' &&
     config.createdAt instanceof Date &&
     config.updatedAt instanceof Date
@@ -136,7 +147,9 @@ function isSyncHistory(obj: unknown): obj is SyncHistory {
     typeof history.id === 'string' &&
     typeof history.userId === 'string' &&
     (history.triggerType === 'MANUAL' || history.triggerType === 'AUTO') &&
-    ['PENDING', 'RUNNING', 'SUCCESS', 'FAILED', 'CANCELLED'].includes(history.status as string) &&
+    ['PENDING', 'RUNNING', 'SUCCESS', 'FAILED', 'CANCELLED'].includes(
+      history.status as string,
+    ) &&
     history.startedAt instanceof Date &&
     (history.completedAt === null || history.completedAt instanceof Date) &&
     typeof history.itemsSynced === 'number' &&

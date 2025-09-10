@@ -21,7 +21,7 @@ describe('SyncGateway', () => {
   const mockUserId = 'test-user-id';
   const mockSocketId = 'test-socket-id';
   const mockSyncId = 'test-sync-id';
-  
+
   const mockSyncProgress: SyncProgress = {
     syncId: mockSyncId,
     jobId: 'test-job-id',
@@ -86,7 +86,7 @@ describe('SyncGateway', () => {
     }).compile();
 
     gateway = module.get<SyncGateway>(SyncGateway);
-    
+
     // 设置 Mock Server
     gateway.server = mockServer;
 
@@ -104,7 +104,9 @@ describe('SyncGateway', () => {
   describe('handleConnection', () => {
     beforeEach(() => {
       // Mock extractUserFromSocket
-      jest.spyOn(gateway as any, 'extractUserFromSocket').mockReturnValue(mockUserId);
+      jest
+        .spyOn(gateway as any, 'extractUserFromSocket')
+        .mockReturnValue(mockUserId);
     });
 
     it('应该成功处理客户端连接', async () => {
@@ -117,7 +119,7 @@ describe('SyncGateway', () => {
         timestamp: expect.any(String),
       });
       expect(Logger.prototype.log).toHaveBeenCalledWith(
-        `Client ${mockSocketId} connected for user ${mockUserId}`
+        `Client ${mockSocketId} connected for user ${mockUserId}`,
       );
     });
 
@@ -127,7 +129,7 @@ describe('SyncGateway', () => {
       await gateway.handleConnection(mockSocket);
 
       expect(Logger.prototype.warn).toHaveBeenCalledWith(
-        'Connection rejected: No valid user ID'
+        'Connection rejected: No valid user ID',
       );
       expect(mockSocket.disconnect).toHaveBeenCalled();
       expect(mockSocket.join).not.toHaveBeenCalled();
@@ -135,15 +137,17 @@ describe('SyncGateway', () => {
 
     it('应该处理连接过程中的错误', async () => {
       const testError = new Error('Connection error');
-      jest.spyOn(gateway as any, 'extractUserFromSocket').mockImplementation(() => {
-        throw testError;
-      });
+      jest
+        .spyOn(gateway as any, 'extractUserFromSocket')
+        .mockImplementation(() => {
+          throw testError;
+        });
 
       await gateway.handleConnection(mockSocket);
 
       expect(Logger.prototype.error).toHaveBeenCalledWith(
         'Connection error:',
-        'Connection error'
+        'Connection error',
       );
       expect(mockSocket.disconnect).toHaveBeenCalled();
     });
@@ -160,7 +164,9 @@ describe('SyncGateway', () => {
 
   describe('handleDisconnect', () => {
     beforeEach(() => {
-      jest.spyOn(gateway as any, 'extractUserFromSocket').mockReturnValue(mockUserId);
+      jest
+        .spyOn(gateway as any, 'extractUserFromSocket')
+        .mockReturnValue(mockUserId);
     });
 
     it('应该成功处理客户端断开', () => {
@@ -171,7 +177,7 @@ describe('SyncGateway', () => {
       gateway.handleDisconnect(mockSocket);
 
       expect(Logger.prototype.log).toHaveBeenCalledWith(
-        `Client ${mockSocketId} disconnected for user ${mockUserId}`
+        `Client ${mockSocketId} disconnected for user ${mockUserId}`,
       );
       expect(userConnections.has(mockUserId)).toBe(false);
     });
@@ -190,15 +196,17 @@ describe('SyncGateway', () => {
 
     it('应该处理断开过程中的错误', () => {
       const testError = new Error('Disconnect error');
-      jest.spyOn(gateway as any, 'extractUserFromSocket').mockImplementation(() => {
-        throw testError;
-      });
+      jest
+        .spyOn(gateway as any, 'extractUserFromSocket')
+        .mockImplementation(() => {
+          throw testError;
+        });
 
       gateway.handleDisconnect(mockSocket);
 
       expect(Logger.prototype.error).toHaveBeenCalledWith(
         'Disconnect error:',
-        'Disconnect error'
+        'Disconnect error',
       );
     });
 
@@ -212,7 +220,9 @@ describe('SyncGateway', () => {
 
   describe('handleSubscribeSync', () => {
     beforeEach(() => {
-      jest.spyOn(gateway as any, 'extractUserFromSocket').mockReturnValue(mockUserId);
+      jest
+        .spyOn(gateway as any, 'extractUserFromSocket')
+        .mockReturnValue(mockUserId);
     });
 
     it('应该成功订阅同步更新', async () => {
@@ -262,7 +272,7 @@ describe('SyncGateway', () => {
 
       expect(Logger.prototype.error).toHaveBeenCalledWith(
         'Subscribe error:',
-        'Subscribe error'
+        'Subscribe error',
       );
       expect(mockSocket.emit).toHaveBeenCalledWith('error', {
         message: 'Subscription failed',
@@ -302,11 +312,13 @@ describe('SyncGateway', () => {
       const testError = new Error('Unsubscribe error');
       mockSocket.leave.mockRejectedValue(testError);
 
-      await gateway.handleUnsubscribeSync(mockSocket, { syncIds: [mockSyncId] });
+      await gateway.handleUnsubscribeSync(mockSocket, {
+        syncIds: [mockSyncId],
+      });
 
       expect(Logger.prototype.error).toHaveBeenCalledWith(
         'Unsubscribe error:',
-        'Unsubscribe error'
+        'Unsubscribe error',
       );
     });
   });
@@ -344,7 +356,7 @@ describe('SyncGateway', () => {
       gateway.notifyProgress(mockUserId, mockSyncProgress);
 
       expect(Logger.prototype.debug).toHaveBeenCalledWith(
-        `Progress sent to user ${mockUserId}: ${mockSyncProgress.message}`
+        `Progress sent to user ${mockUserId}: ${mockSyncProgress.message}`,
       );
     });
 
@@ -358,7 +370,7 @@ describe('SyncGateway', () => {
 
       expect(Logger.prototype.error).toHaveBeenCalledWith(
         'Failed to send progress notification:',
-        'Progress error'
+        'Progress error',
       );
     });
   });
@@ -384,7 +396,7 @@ describe('SyncGateway', () => {
 
       expect(Logger.prototype.error).toHaveBeenCalledWith(
         'Failed to send error notification:',
-        testError
+        testError,
       );
     });
   });
@@ -514,7 +526,7 @@ describe('SyncGateway', () => {
               performance: { duration: 5000 },
             }),
           }),
-        })
+        }),
       );
     });
 
@@ -531,7 +543,7 @@ describe('SyncGateway', () => {
             progress: 0,
             message: 'Sync completed successfully', // 使用提供的summary
           }),
-        })
+        }),
       );
     });
 
@@ -551,7 +563,7 @@ describe('SyncGateway', () => {
           data: expect.objectContaining({
             message: 'Sync completed',
           }),
-        })
+        }),
       );
     });
   });
@@ -615,7 +627,9 @@ describe('SyncGateway', () => {
 
   describe('集成测试', () => {
     it('应该完整处理客户端连接到订阅的流程', async () => {
-      jest.spyOn(gateway as any, 'extractUserFromSocket').mockReturnValue(mockUserId);
+      jest
+        .spyOn(gateway as any, 'extractUserFromSocket')
+        .mockReturnValue(mockUserId);
 
       // 1. 处理连接
       await gateway.handleConnection(mockSocket);
@@ -642,7 +656,9 @@ describe('SyncGateway', () => {
     });
 
     it('应该处理错误恢复场景', async () => {
-      jest.spyOn(gateway as any, 'extractUserFromSocket').mockReturnValue(mockUserId);
+      jest
+        .spyOn(gateway as any, 'extractUserFromSocket')
+        .mockReturnValue(mockUserId);
 
       // 模拟连接建立
       await gateway.handleConnection(mockSocket);
@@ -653,8 +669,14 @@ describe('SyncGateway', () => {
       // 模拟连接断开
       gateway.handleDisconnect(mockSocket);
 
-      expect(mockSocket.emit).toHaveBeenCalledWith('connected', expect.any(Object));
-      expect(mockServer.emit).toHaveBeenCalledWith('sync-error', expect.any(Object));
+      expect(mockSocket.emit).toHaveBeenCalledWith(
+        'connected',
+        expect.any(Object),
+      );
+      expect(mockServer.emit).toHaveBeenCalledWith(
+        'sync-error',
+        expect.any(Object),
+      );
     });
   });
 });

@@ -1,6 +1,6 @@
 /**
  * 类型守卫函数统一导出
- * 
+ *
  * @author Claude
  * @date 2025-09-09
  */
@@ -10,7 +10,7 @@ export {
   isUser,
   isUserWithRelations,
   isUserArray,
-  assertIsUser
+  assertIsUser,
 } from './user.type-guards';
 
 // UserCredentials类型守卫
@@ -22,7 +22,7 @@ export {
   hasDoubanCredentials,
   hasFeishuCredentials,
   isUserCredentialsComplete,
-  hasValidEncryptionIv
+  hasValidEncryptionIv,
 } from './user-credentials.type-guards';
 
 // SyncHistory类型守卫
@@ -33,5 +33,5 @@ export {
   assertIsSyncHistory,
   isSyncHistoryCompleted,
   isSyncHistoryRunning,
-  hasValidDuration
+  hasValidDuration,
 } from './sync-history.type-guards';

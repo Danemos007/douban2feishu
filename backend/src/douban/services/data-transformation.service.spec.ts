@@ -34,7 +34,9 @@ import {
 } from '../contract/transformation.schema';
 
 // 兼容性类型别名 - 更新到新的泛型接口
-type TransformationResult<T extends TransformedDataOutput = TransformedDataOutput> = GenericTransformationResult<T>;
+type TransformationResult<
+  T extends TransformedDataOutput = TransformedDataOutput,
+> = GenericTransformationResult<T>;
 
 // 测试用的具体类型
 type TestBookResult = GenericTransformationResult<DoubanBookData>;
@@ -74,7 +76,10 @@ describe('DataTransformationService - Enterprise Data Transformation', () => {
           publishDate: '1996-12',
         };
 
-        const result = await service.transformDoubanData<typeof rawBookData, DoubanBookData>(rawBookData, 'books');
+        const result = await service.transformDoubanData<
+          typeof rawBookData,
+          DoubanBookData
+        >(rawBookData, 'books');
 
         expect(result).toBeDefined();
         expect(result.data).toBeDefined();
@@ -141,7 +146,10 @@ describe('DataTransformationService - Enterprise Data Transformation', () => {
       });
 
       it('应该正确处理null/undefined数据', async () => {
-        const resultNull = await service.transformDoubanData(null as any, 'books');
+        const resultNull = await service.transformDoubanData(
+          null as any,
+          'books',
+        );
         const resultUndefined = await service.transformDoubanData(
           undefined as any,
           'books',

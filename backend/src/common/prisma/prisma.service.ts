@@ -4,27 +4,30 @@ import {
   OnModuleDestroy,
   Logger,
 } from '@nestjs/common';
-import { 
-  PrismaClient, 
+import {
+  PrismaClient,
   User,
-  UserCredentials, 
+  UserCredentials,
   SyncHistory,
-  SyncConfig 
+  SyncConfig,
 } from '../../../generated/prisma';
-import { 
+import {
   isUser,
-  isUserCredentials, 
+  isUserCredentials,
   isSyncHistory,
   assertIsUser,
   assertIsUserCredentials,
-  assertIsSyncHistory
+  assertIsSyncHistory,
 } from '../type-guards';
 
 /**
  * 数据库事务函数类型
  */
 type TransactionFunction<T> = (
-  prisma: Omit<PrismaClient, "$on" | "$connect" | "$disconnect" | "$transaction" | "$extends">
+  prisma: Omit<
+    PrismaClient,
+    '$on' | '$connect' | '$disconnect' | '$transaction' | '$extends'
+  >,
 ) => Promise<T>;
 
 /**
@@ -157,7 +160,7 @@ export class PrismaService
           this.logger.error('Database error:', e.message || e.toString());
         });
 
-        // 信息日志  
+        // 信息日志
         (this as any).$on('info', (e: any) => {
           this.logger.log(`Database info: ${e.message || 'No message'}`);
         });
@@ -178,11 +181,11 @@ export class PrismaService
   async healthCheck(): Promise<HealthCheckResult> {
     const startTime = Date.now();
     const timestamp = new Date();
-    
+
     try {
       await this.$queryRaw`SELECT 1`;
       const responseTime = Date.now() - startTime;
-      
+
       return {
         isHealthy: true,
         timestamp,
@@ -190,10 +193,11 @@ export class PrismaService
       };
     } catch (error) {
       const responseTime = Date.now() - startTime;
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+
       this.logger.error('Database health check failed', errorMessage);
-      
+
       return {
         isHealthy: false,
         timestamp,
@@ -209,14 +213,13 @@ export class PrismaService
    * @param fn 事务函数
    * @returns 事务结果
    */
-  async executeTransaction<T>(
-    fn: TransactionFunction<T>,
-  ): Promise<T> {
+  async executeTransaction<T>(fn: TransactionFunction<T>): Promise<T> {
     try {
       const result = await this.$transaction(fn);
       return result;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Transaction failed';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Transaction failed';
       this.logger.error('Transaction execution failed', errorMessage);
       throw error;
     }
@@ -254,9 +257,10 @@ export class PrismaService
 
       return result;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Cleanup failed';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Cleanup failed';
       this.logger.error('Failed to cleanup expired data', errorMessage);
-      
+
       throw new Error(`Cleanup operation failed: ${errorMessage}`);
     }
   }
@@ -282,8 +286,12 @@ export class PrismaService
       assertIsUser(user);
       return user;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Find user failed';
-      this.logger.error('Failed to find user safely', { userId: id, error: errorMessage });
+      const errorMessage =
+        error instanceof Error ? error.message : 'Find user failed';
+      this.logger.error('Failed to find user safely', {
+        userId: id,
+        error: errorMessage,
+      });
       throw error;
     }
   }
@@ -291,7 +299,9 @@ export class PrismaService
   /**
    * 安全地查找用户凭证（带类型验证）
    */
-  async findUserCredentialsSafely(userId: string): Promise<UserCredentials | null> {
+  async findUserCredentialsSafely(
+    userId: string,
+  ): Promise<UserCredentials | null> {
     try {
       const credentials = await this.userCredentials.findUnique({
         where: { userId },
@@ -305,8 +315,12 @@ export class PrismaService
       assertIsUserCredentials(credentials);
       return credentials;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Find credentials failed';
-      this.logger.error('Failed to find user credentials safely', { userId, error: errorMessage });
+      const errorMessage =
+        error instanceof Error ? error.message : 'Find credentials failed';
+      this.logger.error('Failed to find user credentials safely', {
+        userId,
+        error: errorMessage,
+      });
       throw error;
     }
   }
@@ -328,8 +342,12 @@ export class PrismaService
       assertIsSyncHistory(history);
       return history;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Find sync history failed';
-      this.logger.error('Failed to find sync history safely', { historyId: id, error: errorMessage });
+      const errorMessage =
+        error instanceof Error ? error.message : 'Find sync history failed';
+      this.logger.error('Failed to find sync history safely', {
+        historyId: id,
+        error: errorMessage,
+      });
       throw error;
     }
   }
@@ -355,10 +373,10 @@ export class PrismaService
         try {
           assertIsSyncHistory(history);
         } catch (error) {
-          this.logger.error('Invalid sync history record found', { 
-            userId, 
-            index, 
-            historyId: history.id 
+          this.logger.error('Invalid sync history record found', {
+            userId,
+            index,
+            historyId: history.id,
           });
           throw new Error(`Invalid sync history record at index ${index}`);
         }
@@ -366,8 +384,14 @@ export class PrismaService
 
       return histories;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Find user sync history failed';
-      this.logger.error('Failed to find user sync history safely', { userId, error: errorMessage });
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'Find user sync history failed';
+      this.logger.error('Failed to find user sync history safely', {
+        userId,
+        error: errorMessage,
+      });
       throw error;
     }
   }
@@ -383,7 +407,11 @@ export class PrismaService
     const result: {
       user: { isValid: boolean; error?: string };
       credentials: { isValid: boolean; error?: string };
-      syncHistory: { isValid: boolean; invalidCount: number; totalCount: number };
+      syncHistory: {
+        isValid: boolean;
+        invalidCount: number;
+        totalCount: number;
+      };
     } = {
       user: { isValid: true },
       credentials: { isValid: true },
@@ -398,15 +426,20 @@ export class PrismaService
       }
 
       // 验证凭证数据
-      const credentials = await this.userCredentials.findUnique({ where: { userId } });
+      const credentials = await this.userCredentials.findUnique({
+        where: { userId },
+      });
       if (credentials && !isUserCredentials(credentials)) {
-        result.credentials = { isValid: false, error: 'Invalid credentials data structure' };
+        result.credentials = {
+          isValid: false,
+          error: 'Invalid credentials data structure',
+        };
       }
 
       // 验证同步历史数据
       const histories = await this.syncHistory.findMany({ where: { userId } });
       result.syncHistory.totalCount = histories.length;
-      
+
       histories.forEach((history) => {
         if (!isSyncHistory(history)) {
           result.syncHistory.invalidCount++;
@@ -417,20 +450,24 @@ export class PrismaService
         result.syncHistory.isValid = false;
       }
 
-      this.logger.log('User data integrity check completed', { 
-        userId, 
+      this.logger.log('User data integrity check completed', {
+        userId,
         result: {
           userValid: result.user.isValid,
           credentialsValid: result.credentials.isValid,
           syncHistoryValid: result.syncHistory.isValid,
           invalidSyncRecords: result.syncHistory.invalidCount,
-        }
+        },
       });
 
       return result;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Data integrity check failed';
-      this.logger.error('Failed to validate user data integrity', { userId, error: errorMessage });
+      const errorMessage =
+        error instanceof Error ? error.message : 'Data integrity check failed';
+      this.logger.error('Failed to validate user data integrity', {
+        userId,
+        error: errorMessage,
+      });
       throw error;
     }
   }

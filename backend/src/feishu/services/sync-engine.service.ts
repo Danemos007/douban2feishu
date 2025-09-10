@@ -6,13 +6,13 @@ import { FeishuTableService } from './feishu-table.service';
 import { FieldMappingService } from './field-mapping.service';
 import { FeishuRecordItem } from '../interfaces/feishu.interface';
 import { PrismaService } from '../../common/prisma/prisma.service';
-import { 
+import {
   SyncEngineConfig,
   SyncOptionsConfig,
   SyncResult,
   SyncProgressCallback,
   DoubanDataCategory,
-  SyncPhase 
+  SyncPhase,
 } from '../../sync/interfaces/sync.interface';
 
 /**
@@ -407,7 +407,7 @@ export class SyncEngineService {
         result.summary.failed += createResult.failed;
         result.summary.synced += createResult.success;
         if (result.details) {
-          result.details.createdRecords = createResult.details.map(d => ({
+          result.details.createdRecords = createResult.details.map((d) => ({
             subjectId: d.subjectId,
             recordId: d.recordId || '',
           }));
@@ -433,7 +433,7 @@ export class SyncEngineService {
         result.summary.failed += updateResult.failed;
         result.summary.synced += updateResult.success;
         if (result.details) {
-          result.details.updatedRecords = updateResult.details.map(d => ({
+          result.details.updatedRecords = updateResult.details.map((d) => ({
             subjectId: d.subjectId,
             recordId: d.recordId || '',
           }));
@@ -457,12 +457,14 @@ export class SyncEngineService {
         result.summary.deleted = deleteResult.success;
         result.summary.failed += deleteResult.failed;
         if (result.details) {
-          result.details.failedRecords.push(...deleteResult.details
-            .filter(d => !d.success)
-            .map(d => ({
-              subjectId: d.subjectId,
-              error: d.error || 'Unknown error',
-            })));
+          result.details.failedRecords.push(
+            ...deleteResult.details
+              .filter((d) => !d.success)
+              .map((d) => ({
+                subjectId: d.subjectId,
+                error: d.error || 'Unknown error',
+              })),
+          );
         }
 
         options.onProgress?.({
@@ -477,7 +479,7 @@ export class SyncEngineService {
       result.performance.duration =
         result.performance.endTime.getTime() -
         result.performance.startTime.getTime();
-      
+
       // 更新最终统计
       result.itemsProcessed = result.summary.synced;
       result.success = result.summary.failed === 0;
@@ -501,7 +503,10 @@ export class SyncEngineService {
     options: SyncOptionsConfig,
   ): Promise<BatchOperationResult> {
     const records = createItems.map((item) =>
-      this.transformRecordForFeishu(item.doubanData as Record<string, unknown>, fieldMappings),
+      this.transformRecordForFeishu(
+        item.doubanData as Record<string, unknown>,
+        fieldMappings,
+      ),
     );
 
     const result = await this.tableService.batchCreateRecords(
@@ -540,8 +545,10 @@ export class SyncEngineService {
   ): Promise<BatchOperationResult> {
     const updates = updateItems.map((item) => ({
       recordId: item.recordId!,
-      fields: this.transformRecordForFeishu(item.doubanData as Record<string, unknown>, fieldMappings)
-        .fields,
+      fields: this.transformRecordForFeishu(
+        item.doubanData as Record<string, unknown>,
+        fieldMappings,
+      ).fields,
     }));
 
     const result = await this.tableService.batchUpdateRecords(
@@ -680,12 +687,22 @@ export class SyncEngineService {
   private transformRecordForFeishu(
     record: Record<string, unknown>,
     fieldMappings: Record<string, string>,
-  ): { fields: Record<string, string | number | boolean | null | Array<string | number>> } {
-    const fields: Record<string, string | number | boolean | null | Array<string | number>> = {};
+  ): {
+    fields: Record<
+      string,
+      string | number | boolean | null | Array<string | number>
+    >;
+  } {
+    const fields: Record<
+      string,
+      string | number | boolean | null | Array<string | number>
+    > = {};
 
     Object.entries(fieldMappings).forEach(([doubanField, feishuFieldId]) => {
       if (!doubanField.startsWith('_') && record[doubanField] !== undefined) {
-        fields[feishuFieldId] = this.formatValueForFeishu(record[doubanField]) as (string | number | boolean | null | Array<string | number>);
+        fields[feishuFieldId] = this.formatValueForFeishu(
+          record[doubanField],
+        ) as string | number | boolean | null | Array<string | number>;
       }
     });
 

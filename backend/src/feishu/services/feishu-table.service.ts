@@ -51,9 +51,9 @@ import {
   FieldNotFoundError,
 } from '../schemas/field-operations.schema';
 
-import { 
+import {
   FieldCreationConfig,
-  FieldCreationConfigSchema 
+  FieldCreationConfigSchema,
 } from '../schemas/field-creation.schema';
 import { IFeishuTableFieldOperations } from '../interfaces/table-field-operations.interface';
 
@@ -1130,7 +1130,10 @@ export class FeishuTableService implements IFeishuTableFieldOperations {
     const validatedFieldConfig = FieldCreationConfigSchema.parse(fieldConfig);
     const validatedOptions = FieldOperationOptionsSchema.parse(options);
 
-    const context = this.createOperationContext(validatedFieldConfig, validatedOptions);
+    const context = this.createOperationContext(
+      validatedFieldConfig,
+      validatedOptions,
+    );
 
     if (context.enableDetailedLogging) {
       this.logger.debug(`🎯 智能字段配置确保: "${fieldConfig.field_name}"`, {
@@ -1142,7 +1145,12 @@ export class FeishuTableService implements IFeishuTableFieldOperations {
 
     const result = await this.withRetry(
       () =>
-        this.executeFieldOperation(validatedCredentials, tableId, validatedFieldConfig, context),
+        this.executeFieldOperation(
+          validatedCredentials,
+          tableId,
+          validatedFieldConfig,
+          context,
+        ),
       context.maxRetries,
       context.operationDelay,
     );
@@ -1360,10 +1368,10 @@ export class FeishuTableService implements IFeishuTableFieldOperations {
           tableId,
           existingField.field_id,
           fieldConfig,
-          analysis.differences.map(diff => ({
+          analysis.differences.map((diff) => ({
             property: diff.property,
             from: diff.from ?? 'undefined',
-            to: diff.to ?? 'undefined'
+            to: diff.to ?? 'undefined',
           })),
         );
 
@@ -1403,10 +1411,15 @@ export class FeishuTableService implements IFeishuTableFieldOperations {
   ): Promise<BatchFieldOperationResult> {
     // 🔥 Schema验证批量输入参数
     const validatedCredentials = FeishuCredentialsSchema.parse(credentials);
-    const validatedFieldConfigs = fieldConfigs.map(config => FieldCreationConfigSchema.parse(config));
+    const validatedFieldConfigs = fieldConfigs.map((config) =>
+      FieldCreationConfigSchema.parse(config),
+    );
     const validatedOptions = FieldOperationOptionsSchema.parse(options);
 
-    const batchContext = this.createBatchContext(validatedFieldConfigs, validatedOptions);
+    const batchContext = this.createBatchContext(
+      validatedFieldConfigs,
+      validatedOptions,
+    );
 
     if (batchContext.enableDetailedLogging) {
       this.logger.log(`🔄 智能批量字段配置: ${fieldConfigs.length}个字段`);
@@ -1435,7 +1448,10 @@ export class FeishuTableService implements IFeishuTableFieldOperations {
           }
 
           // 智能延迟控制
-          if (i < validatedFieldConfigs.length - 1 && batchContext.operationDelay > 0) {
+          if (
+            i < validatedFieldConfigs.length - 1 &&
+            batchContext.operationDelay > 0
+          ) {
             await this.delay(batchContext.operationDelay);
           }
         } catch (error) {
@@ -1445,7 +1461,7 @@ export class FeishuTableService implements IFeishuTableFieldOperations {
 
       // 生成完整统计报告
       const result = this.compileBatchResult(batchContext);
-      
+
       // 🔥 Schema验证返回结果
       return BatchFieldOperationResultSchema.parse(result);
     } catch (error) {
@@ -1659,7 +1675,7 @@ export class FeishuTableService implements IFeishuTableFieldOperations {
       matchScore,
       recommendedAction,
     };
-    
+
     // 🔥 Schema验证返回结果
     return FieldMatchAnalysisSchema.parse(result);
   }
@@ -1805,17 +1821,17 @@ export class FeishuTableService implements IFeishuTableFieldOperations {
 
     // 类型检查：确保两个属性都是对象
     if (
-      typeof existingProperty === 'object' && 
+      typeof existingProperty === 'object' &&
       existingProperty !== null &&
-      typeof expectedProperty === 'object' && 
+      typeof expectedProperty === 'object' &&
       expectedProperty !== null
     ) {
       compareObject(
-        existingProperty as Record<string, unknown>, 
-        expectedProperty as Record<string, unknown>
+        existingProperty as Record<string, unknown>,
+        expectedProperty as Record<string, unknown>,
       );
     }
-    
+
     return differences;
   }
 

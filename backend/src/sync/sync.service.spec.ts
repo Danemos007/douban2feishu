@@ -141,8 +141,12 @@ describe('SyncService', () => {
     };
 
     beforeEach(() => {
-      jest.spyOn(prismaService.syncHistory, 'findFirst').mockResolvedValue(null);
-      jest.spyOn(prismaService.syncHistory, 'create').mockResolvedValue(mockSyncHistory);
+      jest
+        .spyOn(prismaService.syncHistory, 'findFirst')
+        .mockResolvedValue(null);
+      jest
+        .spyOn(prismaService.syncHistory, 'create')
+        .mockResolvedValue(mockSyncHistory);
       jest.spyOn(syncQueue, 'add').mockResolvedValue(mockJob as Job);
       jest.spyOn(syncGateway, 'notifyProgress').mockImplementation();
     });
@@ -224,6 +228,11 @@ describe('SyncService', () => {
     });
 
     it('当有正在进行的同步时应该抛出错误', async () => {
+      // Mock logger to suppress expected error logs in tests
+      const loggerErrorSpy = jest
+        .spyOn((service as any).logger, 'error')
+        .mockImplementation();
+
       jest.spyOn(prismaService.syncHistory, 'findFirst').mockResolvedValue({
         ...mockSyncHistory,
         status: 'RUNNING',
@@ -233,26 +242,50 @@ describe('SyncService', () => {
         service.triggerSync(mockUserId, triggerSyncDto),
       ).rejects.toThrow('Another sync is already in progress');
 
+      // Verify error was logged
+      expect(loggerErrorSpy).toHaveBeenCalled();
+      loggerErrorSpy.mockRestore();
+
       expect(prismaService.syncHistory.create).not.toHaveBeenCalled();
       expect(syncQueue.add).not.toHaveBeenCalled();
     });
 
     it('应该正确处理数据库错误', async () => {
+      // Mock logger to suppress expected error logs in tests
+      const loggerErrorSpy = jest
+        .spyOn((service as any).logger, 'error')
+        .mockImplementation();
+
       const databaseError = new Error('Database connection failed');
-      jest.spyOn(prismaService.syncHistory, 'findFirst').mockRejectedValue(databaseError);
+      jest
+        .spyOn(prismaService.syncHistory, 'findFirst')
+        .mockRejectedValue(databaseError);
 
       await expect(
         service.triggerSync(mockUserId, triggerSyncDto),
       ).rejects.toThrow('Database connection failed');
+
+      // Verify error was logged
+      expect(loggerErrorSpy).toHaveBeenCalled();
+      loggerErrorSpy.mockRestore();
     });
 
     it('应该正确处理队列错误', async () => {
+      // Mock logger to suppress expected error logs in tests
+      const loggerErrorSpy = jest
+        .spyOn((service as any).logger, 'error')
+        .mockImplementation();
+
       const queueError = new Error('Queue unavailable');
       jest.spyOn(syncQueue, 'add').mockRejectedValue(queueError);
 
       await expect(
         service.triggerSync(mockUserId, triggerSyncDto),
       ).rejects.toThrow('Queue unavailable');
+
+      // Verify error was logged
+      expect(loggerErrorSpy).toHaveBeenCalled();
+      loggerErrorSpy.mockRestore();
     });
   });
 
@@ -265,9 +298,9 @@ describe('SyncService', () => {
         completedAt: new Date(),
         itemsSynced: 50,
       };
-      jest.spyOn(prismaService.syncHistory, 'findUnique').mockResolvedValue(
-        completedSyncHistory,
-      );
+      jest
+        .spyOn(prismaService.syncHistory, 'findUnique')
+        .mockResolvedValue(completedSyncHistory);
 
       const result = await service.getSyncStatus(mockSyncId);
 
@@ -286,7 +319,9 @@ describe('SyncService', () => {
     });
 
     it('当同步不存在时应该抛出错误', async () => {
-      jest.spyOn(prismaService.syncHistory, 'findUnique').mockResolvedValue(null);
+      jest
+        .spyOn(prismaService.syncHistory, 'findUnique')
+        .mockResolvedValue(null);
 
       await expect(service.getSyncStatus(mockSyncId)).rejects.toThrow(
         'Sync not found',
@@ -295,7 +330,9 @@ describe('SyncService', () => {
 
     it('应该正确处理数据库查询错误', async () => {
       const databaseError = new Error('Database query failed');
-      jest.spyOn(prismaService.syncHistory, 'findUnique').mockRejectedValue(databaseError);
+      jest
+        .spyOn(prismaService.syncHistory, 'findUnique')
+        .mockRejectedValue(databaseError);
 
       await expect(service.getSyncStatus(mockSyncId)).rejects.toThrow(
         'Database query failed',
@@ -331,7 +368,9 @@ describe('SyncService', () => {
           duration: 2000,
         },
       ];
-      jest.spyOn(prismaService.syncHistory, 'findMany').mockResolvedValue(mockHistoryList);
+      jest
+        .spyOn(prismaService.syncHistory, 'findMany')
+        .mockResolvedValue(mockHistoryList);
 
       const result = await service.getSyncHistory(mockUserId);
 
@@ -366,7 +405,9 @@ describe('SyncService', () => {
 
     it('应该正确处理数据库查询错误', async () => {
       const databaseError = new Error('Database query failed');
-      jest.spyOn(prismaService.syncHistory, 'findMany').mockRejectedValue(databaseError);
+      jest
+        .spyOn(prismaService.syncHistory, 'findMany')
+        .mockRejectedValue(databaseError);
 
       await expect(service.getSyncHistory(mockUserId)).rejects.toThrow(
         'Database query failed',
@@ -380,7 +421,9 @@ describe('SyncService', () => {
         ...mockSyncHistory,
         status: 'RUNNING' as const,
       };
-      jest.spyOn(prismaService.syncHistory, 'findFirst').mockResolvedValue(runningSyncHistory);
+      jest
+        .spyOn(prismaService.syncHistory, 'findFirst')
+        .mockResolvedValue(runningSyncHistory);
       jest.spyOn(prismaService.syncHistory, 'update').mockResolvedValue({
         ...runningSyncHistory,
         status: 'CANCELLED' as const,
@@ -421,7 +464,9 @@ describe('SyncService', () => {
     });
 
     it('当同步不在运行状态时应该返回false', async () => {
-      jest.spyOn(prismaService.syncHistory, 'findFirst').mockResolvedValue(null);
+      jest
+        .spyOn(prismaService.syncHistory, 'findFirst')
+        .mockResolvedValue(null);
 
       const result = await service.cancelSync(mockSyncId, mockUserId);
 
@@ -440,6 +485,11 @@ describe('SyncService', () => {
     });
 
     it('应该正确处理取消过程中的错误', async () => {
+      // Mock logger to suppress expected error logs in tests
+      const loggerErrorSpy = jest
+        .spyOn((service as any).logger, 'error')
+        .mockImplementation();
+
       const cancelError = new Error('Failed to remove job');
       (mockJob.remove as jest.Mock).mockRejectedValue(cancelError);
 
@@ -447,6 +497,10 @@ describe('SyncService', () => {
 
       // 即使移除任务失败，也应该返回false（表示取消操作失败）
       expect(result).toBe(false);
+
+      // Verify error was logged
+      expect(loggerErrorSpy).toHaveBeenCalled();
+      loggerErrorSpy.mockRestore();
     });
   });
 
@@ -552,7 +606,9 @@ describe('SyncService', () => {
     });
 
     it('当找不到用户ID时应该跳过WebSocket通知', async () => {
-      jest.spyOn(prismaService.syncHistory, 'findUnique').mockResolvedValue(null);
+      jest
+        .spyOn(prismaService.syncHistory, 'findUnique')
+        .mockResolvedValue(null);
 
       await service.updateSyncProgress(mockProgress);
 
@@ -561,13 +617,24 @@ describe('SyncService', () => {
     });
 
     it('应该正确处理更新过程中的错误', async () => {
+      // Mock logger to suppress expected error logs in tests
+      const loggerErrorSpy = jest
+        .spyOn((service as any).logger, 'error')
+        .mockImplementation();
+
       const updateError = new Error('Database update failed');
-      jest.spyOn(prismaService.syncHistory, 'update').mockRejectedValue(updateError);
+      jest
+        .spyOn(prismaService.syncHistory, 'update')
+        .mockRejectedValue(updateError);
 
       // 不应该抛出错误，只是记录日志
       await expect(
         service.updateSyncProgress(mockProgress),
       ).resolves.not.toThrow();
+
+      // Verify error was logged
+      expect(loggerErrorSpy).toHaveBeenCalled();
+      loggerErrorSpy.mockRestore();
     });
   });
 
@@ -581,14 +648,16 @@ describe('SyncService', () => {
     };
 
     const mockTransformationResult = {
-      rawData: [{ 
-        subjectId: '1', 
-        title: 'Book 1',
-        genres: ['Fiction'],
-        doubanUrl: 'https://book.douban.com/subject/1/',
-        userTags: [],
-        category: 'books' as const,
-      }],
+      rawData: [
+        {
+          subjectId: '1',
+          title: 'Book 1',
+          genres: ['Fiction'],
+          doubanUrl: 'https://book.douban.com/subject/1/',
+          userTags: [],
+          category: 'books' as const,
+        },
+      ],
       transformedData: [{ subjectId: '1', title: 'Book 1' }],
       transformationStats: {
         totalProcessed: 1,
@@ -618,17 +687,19 @@ describe('SyncService', () => {
     };
 
     beforeEach(() => {
-      jest.spyOn(prismaService.syncHistory, 'create').mockResolvedValue(mockSyncHistory);
+      jest
+        .spyOn(prismaService.syncHistory, 'create')
+        .mockResolvedValue(mockSyncHistory);
       jest.spyOn(prismaService.syncHistory, 'update').mockResolvedValue({
         ...mockSyncHistory,
         status: 'SUCCESS',
       });
-      jest.spyOn(doubanService, 'scrapeAndTransform').mockResolvedValue(
-        mockTransformationResult,
-      );
-      jest.spyOn(feishuSyncEngine, 'performIncrementalSync').mockResolvedValue(
-        mockFeishuSyncResult,
-      );
+      jest
+        .spyOn(doubanService, 'scrapeAndTransform')
+        .mockResolvedValue(mockTransformationResult);
+      jest
+        .spyOn(feishuSyncEngine, 'performIncrementalSync')
+        .mockResolvedValue(mockFeishuSyncResult);
       jest.spyOn(syncGateway, 'notifyProgress').mockImplementation();
     });
 
@@ -726,34 +797,57 @@ describe('SyncService', () => {
     });
 
     it('应该正确验证数据架构安全', async () => {
+      // Mock logger to suppress expected error logs in tests
+      const loggerErrorSpy = jest
+        .spyOn((service as any).logger, 'error')
+        .mockImplementation();
+
       const emptyTransformationResult = {
         ...mockTransformationResult,
         transformedData: [],
       };
-      jest.spyOn(doubanService, 'scrapeAndTransform').mockResolvedValue(
-        emptyTransformationResult,
-      );
+      jest
+        .spyOn(doubanService, 'scrapeAndTransform')
+        .mockResolvedValue(emptyTransformationResult);
 
       await expect(
         service.executeIntegratedSync(mockUserId, mockOptions),
       ).rejects.toThrow('Empty data set not allowed for sync');
+
+      // Verify error was logged
+      expect(loggerErrorSpy).toHaveBeenCalled();
+      loggerErrorSpy.mockRestore();
     });
 
     it('应该验证数据结构完整性', async () => {
+      // Mock logger to suppress expected error logs in tests
+      const loggerErrorSpy = jest
+        .spyOn((service as any).logger, 'error')
+        .mockImplementation();
+
       const invalidTransformationResult = {
         ...mockTransformationResult,
         transformedData: [{ title: 'Book without subjectId' }], // 缺少subjectId
       };
-      jest.spyOn(doubanService, 'scrapeAndTransform').mockResolvedValue(
-        invalidTransformationResult,
-      );
+      jest
+        .spyOn(doubanService, 'scrapeAndTransform')
+        .mockResolvedValue(invalidTransformationResult);
 
       await expect(
         service.executeIntegratedSync(mockUserId, mockOptions),
       ).rejects.toThrow('missing subjectId');
+
+      // Verify error was logged
+      expect(loggerErrorSpy).toHaveBeenCalled();
+      loggerErrorSpy.mockRestore();
     });
 
     it('应该正确处理未配置的表格分类', async () => {
+      // Mock logger to suppress expected error logs in tests
+      const loggerErrorSpy = jest
+        .spyOn((service as any).logger, 'error')
+        .mockImplementation();
+
       // 使用一个不存在的category来测试
       const invalidOptions = {
         ...mockOptions,
@@ -762,16 +856,33 @@ describe('SyncService', () => {
 
       await expect(
         service.executeIntegratedSync(mockUserId, invalidOptions),
-      ).rejects.toThrow('No table ID configured for category: invalid-category');
+      ).rejects.toThrow(
+        'No table ID configured for category: invalid-category',
+      );
+
+      // Verify error was logged
+      expect(loggerErrorSpy).toHaveBeenCalled();
+      loggerErrorSpy.mockRestore();
     });
 
     it('应该正确处理豆瓣抓取错误', async () => {
+      // Mock logger to suppress expected error logs in tests
+      const loggerErrorSpy = jest
+        .spyOn((service as any).logger, 'error')
+        .mockImplementation();
+
       const scrapeError = new Error('Douban scraping failed');
-      jest.spyOn(doubanService, 'scrapeAndTransform').mockRejectedValue(scrapeError);
+      jest
+        .spyOn(doubanService, 'scrapeAndTransform')
+        .mockRejectedValue(scrapeError);
 
       await expect(
         service.executeIntegratedSync(mockUserId, mockOptions),
       ).rejects.toThrow('Douban scraping failed');
+
+      // Verify error was logged
+      expect(loggerErrorSpy).toHaveBeenCalled();
+      loggerErrorSpy.mockRestore();
 
       // 验证错误状态更新
       expect(prismaService.syncHistory.update).toHaveBeenCalledWith({
@@ -785,12 +896,23 @@ describe('SyncService', () => {
     });
 
     it('应该正确处理飞书同步错误', async () => {
+      // Mock logger to suppress expected error logs in tests
+      const loggerErrorSpy = jest
+        .spyOn((service as any).logger, 'error')
+        .mockImplementation();
+
       const feishuError = new Error('Feishu sync failed');
-      jest.spyOn(feishuSyncEngine, 'performIncrementalSync').mockRejectedValue(feishuError);
+      jest
+        .spyOn(feishuSyncEngine, 'performIncrementalSync')
+        .mockRejectedValue(feishuError);
 
       await expect(
         service.executeIntegratedSync(mockUserId, mockOptions),
       ).rejects.toThrow('Feishu sync failed');
+
+      // Verify error was logged
+      expect(loggerErrorSpy).toHaveBeenCalled();
+      loggerErrorSpy.mockRestore();
 
       // 验证错误状态更新
       expect(prismaService.syncHistory.update).toHaveBeenCalledWith({
@@ -811,10 +933,18 @@ describe('SyncService', () => {
       const mockCompletedJobs = [{ id: 4 }, { id: 5 }, { id: 6 }];
       const mockFailedJobs = [{ id: 7 }];
 
-      jest.spyOn(syncQueue, 'getActive').mockResolvedValue(mockActiveJobs as Job[]);
-      jest.spyOn(syncQueue, 'getWaiting').mockResolvedValue(mockWaitingJobs as Job[]);
-      jest.spyOn(syncQueue, 'getCompleted').mockResolvedValue(mockCompletedJobs as Job[]);
-      jest.spyOn(syncQueue, 'getFailed').mockResolvedValue(mockFailedJobs as Job[]);
+      jest
+        .spyOn(syncQueue, 'getActive')
+        .mockResolvedValue(mockActiveJobs as Job[]);
+      jest
+        .spyOn(syncQueue, 'getWaiting')
+        .mockResolvedValue(mockWaitingJobs as Job[]);
+      jest
+        .spyOn(syncQueue, 'getCompleted')
+        .mockResolvedValue(mockCompletedJobs as Job[]);
+      jest
+        .spyOn(syncQueue, 'getFailed')
+        .mockResolvedValue(mockFailedJobs as Job[]);
 
       const result = await service.getQueueStats();
 
@@ -875,19 +1005,23 @@ describe('SyncService', () => {
           isEncrypted: false,
         };
 
-        jest.spyOn(prismaService.syncHistory, 'create').mockResolvedValue(mockSyncHistory);
+        jest
+          .spyOn(prismaService.syncHistory, 'create')
+          .mockResolvedValue(mockSyncHistory);
 
         // 测试无效数据验证 - 使用不包含subjectId的对象
         const invalidData = [{ title: 'Invalid Book' }];
         jest.spyOn(doubanService, 'scrapeAndTransform').mockResolvedValue({
-          rawData: [{
-            subjectId: '1',
-            title: 'Book 1',
-            genres: ['Fiction'],
-            doubanUrl: 'https://book.douban.com/subject/1/',
-            userTags: [],
-            category: 'books' as const,
-          }],
+          rawData: [
+            {
+              subjectId: '1',
+              title: 'Book 1',
+              genres: ['Fiction'],
+              doubanUrl: 'https://book.douban.com/subject/1/',
+              userTags: [],
+              category: 'books' as const,
+            },
+          ],
           transformedData: invalidData,
           transformationStats: {
             totalProcessed: 0,
@@ -897,9 +1031,18 @@ describe('SyncService', () => {
           },
         });
 
+        // Mock logger to suppress expected error logs in tests
+        const loggerErrorSpy = jest
+          .spyOn((service as any).logger, 'error')
+          .mockImplementation();
+
         await expect(
           service.executeIntegratedSync(mockUserId, mockOptions),
         ).rejects.toThrow('Data validation failed');
+
+        // Verify error was logged
+        expect(loggerErrorSpy).toHaveBeenCalled();
+        loggerErrorSpy.mockRestore();
       });
     });
   });
@@ -911,8 +1054,12 @@ describe('SyncService', () => {
         options: undefined, // 应该默认为空对象
       };
 
-      jest.spyOn(prismaService.syncHistory, 'findFirst').mockResolvedValue(null);
-      jest.spyOn(prismaService.syncHistory, 'create').mockResolvedValue(mockSyncHistory);
+      jest
+        .spyOn(prismaService.syncHistory, 'findFirst')
+        .mockResolvedValue(null);
+      jest
+        .spyOn(prismaService.syncHistory, 'create')
+        .mockResolvedValue(mockSyncHistory);
       jest.spyOn(syncQueue, 'add').mockResolvedValue(mockJob as Job);
       jest.spyOn(syncGateway, 'notifyProgress').mockImplementation();
 
@@ -931,18 +1078,29 @@ describe('SyncService', () => {
     });
 
     it('应该正确处理非Error类型的异常', async () => {
-      jest.spyOn(prismaService.syncHistory, 'findFirst').mockRejectedValue('String error');
+      // Mock logger to suppress expected error logs in tests
+      const loggerErrorSpy = jest
+        .spyOn((service as any).logger, 'error')
+        .mockImplementation();
+
+      jest
+        .spyOn(prismaService.syncHistory, 'findFirst')
+        .mockRejectedValue('String error');
 
       await expect(
         service.triggerSync(mockUserId, { triggerType: 'MANUAL' }),
       ).rejects.toThrow('String error');
+
+      // Verify error was logged
+      expect(loggerErrorSpy).toHaveBeenCalled();
+      loggerErrorSpy.mockRestore();
     });
 
     it('应该正确处理极大的limit值', async () => {
       jest.spyOn(prismaService.syncHistory, 'findMany').mockResolvedValue([]);
-      
+
       await service.getSyncHistory(mockUserId, 999999);
-      
+
       expect(prismaService.syncHistory.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           take: 999999,

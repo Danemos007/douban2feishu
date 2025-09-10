@@ -1,5 +1,4 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { Logger } from '@nestjs/common';
 import type { Job } from 'bull';
 
 import { SyncProcessor } from './sync.processor';
@@ -22,6 +21,13 @@ describe('SyncProcessor', () => {
   let fieldMappingService: FieldMappingService;
   let prismaService: PrismaService;
   let cryptoService: CryptoService;
+
+  // Spy variables for unbound-method compliance
+  let updateSyncProgressSpy: jest.SpyInstance;
+  let userCredentialsFindUniqueSpy: jest.SpyInstance;
+  let cryptoDecryptSpy: jest.SpyInstance;
+  let doubanFetchUserDataSpy: jest.SpyInstance;
+  let syncEnginePerformIncrementalSyncSpy: jest.SpyInstance;
 
   // Mock数据常量
   const mockUserId = 'user-123';
@@ -54,11 +60,7 @@ describe('SyncProcessor', () => {
     updatedAt: new Date(),
   };
 
-  const mockDecryptedCredentials = {
-    doubanCookie: 'decrypted-douban-cookie',
-    feishuAppId: 'test-app-id',
-    feishuAppSecret: 'decrypted-feishu-secret',
-  };
+  // Removed unused mockDecryptedCredentials
 
   const mockDoubanData: DoubanItem[] = [
     {
@@ -181,19 +183,38 @@ describe('SyncProcessor', () => {
     cryptoService = module.get<CryptoService>(CryptoService);
 
     // 设置基础Mock行为
-    jest.spyOn(syncService, 'updateSyncProgress').mockResolvedValue();
-    jest.spyOn(prismaService.userCredentials, 'findUnique').mockResolvedValue(mockUserCredentials);
-    jest.spyOn(cryptoService, 'decrypt').mockImplementation((encryptedData: string, userId: string) => {
-      if (encryptedData === 'encrypted-douban-cookie') return 'decrypted-douban-cookie';
-      if (encryptedData === 'encrypted-feishu-secret') return 'decrypted-feishu-secret';
-      return 'decrypted-value';
-    });
-    jest.spyOn(doubanService, 'fetchUserData').mockResolvedValue(mockDoubanData);
-    jest.spyOn(prismaService.syncConfig, 'findUnique').mockResolvedValue(mockSyncConfig);
-    jest.spyOn(syncEngineService, 'performIncrementalSync').mockResolvedValue(mockSyncResult);
-    
+    updateSyncProgressSpy = jest
+      .spyOn(syncService, 'updateSyncProgress')
+      .mockResolvedValue();
+    userCredentialsFindUniqueSpy = jest
+      .spyOn(prismaService.userCredentials, 'findUnique')
+      .mockResolvedValue(mockUserCredentials);
+    cryptoDecryptSpy = jest
+      .spyOn(cryptoService, 'decrypt')
+      .mockImplementation((encryptedData: string) => {
+        if (encryptedData === 'encrypted-douban-cookie')
+          return 'decrypted-douban-cookie';
+        if (encryptedData === 'encrypted-feishu-secret')
+          return 'decrypted-feishu-secret';
+        return 'decrypted-value';
+      });
+    doubanFetchUserDataSpy = jest
+      .spyOn(doubanService, 'fetchUserData')
+      .mockResolvedValue(mockDoubanData);
+    jest
+      .spyOn(prismaService.syncConfig, 'findUnique')
+      .mockResolvedValue(mockSyncConfig);
+    syncEnginePerformIncrementalSyncSpy = jest
+      .spyOn(syncEngineService, 'performIncrementalSync')
+      .mockResolvedValue(mockSyncResult);
+
     // Mock delay method to avoid actual delays in tests
-    jest.spyOn(processor as any, 'delay').mockResolvedValue(undefined);
+    jest
+      .spyOn(
+        processor as unknown as { delay: (ms: number) => Promise<void> },
+        'delay',
+      )
+      .mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -221,15 +242,27 @@ describe('SyncProcessor', () => {
       // 重置所有Mock的默认行为
       jest.clearAllMocks();
       jest.spyOn(syncService, 'updateSyncProgress').mockResolvedValue();
-      jest.spyOn(prismaService.userCredentials, 'findUnique').mockResolvedValue(mockUserCredentials);
-      jest.spyOn(cryptoService, 'decrypt').mockImplementation((encryptedData: string, userId: string) => {
-        if (encryptedData === 'encrypted-douban-cookie') return 'decrypted-douban-cookie';
-        if (encryptedData === 'encrypted-feishu-secret') return 'decrypted-feishu-secret';
-        return 'decrypted-value';
-      });
-      jest.spyOn(doubanService, 'fetchUserData').mockResolvedValue(mockDoubanData);
-      jest.spyOn(prismaService.syncConfig, 'findUnique').mockResolvedValue(mockSyncConfig);
-      jest.spyOn(syncEngineService, 'performIncrementalSync').mockResolvedValue(mockSyncResult);
+      jest
+        .spyOn(prismaService.userCredentials, 'findUnique')
+        .mockResolvedValue(mockUserCredentials);
+      jest
+        .spyOn(cryptoService, 'decrypt')
+        .mockImplementation((encryptedData: string) => {
+          if (encryptedData === 'encrypted-douban-cookie')
+            return 'decrypted-douban-cookie';
+          if (encryptedData === 'encrypted-feishu-secret')
+            return 'decrypted-feishu-secret';
+          return 'decrypted-value';
+        });
+      jest
+        .spyOn(doubanService, 'fetchUserData')
+        .mockResolvedValue(mockDoubanData);
+      jest
+        .spyOn(prismaService.syncConfig, 'findUnique')
+        .mockResolvedValue(mockSyncConfig);
+      jest
+        .spyOn(syncEngineService, 'performIncrementalSync')
+        .mockResolvedValue(mockSyncResult);
     });
 
     it('应该成功执行完整的同步流程', async () => {
@@ -251,7 +284,7 @@ describe('SyncProcessor', () => {
       });
 
       // 验证初始状态更新
-      expect(syncService.updateSyncProgress).toHaveBeenCalledWith({
+      expect(updateSyncProgressSpy).toHaveBeenCalledWith({
         syncId: mockSyncId,
         jobId: mockJobId.toString(),
         status: 'RUNNING',
@@ -260,20 +293,26 @@ describe('SyncProcessor', () => {
       });
 
       // 验证凭证获取
-      expect(prismaService.userCredentials.findUnique).toHaveBeenCalledWith({
+      expect(userCredentialsFindUniqueSpy).toHaveBeenCalledWith({
         where: { userId: mockUserId },
       });
 
       // 验证解密操作
-      expect(cryptoService.decrypt).toHaveBeenCalledTimes(2);
-      expect(cryptoService.decrypt).toHaveBeenCalledWith('encrypted-douban-cookie', mockUserId);
-      expect(cryptoService.decrypt).toHaveBeenCalledWith('encrypted-feishu-secret', mockUserId);
+      expect(cryptoDecryptSpy).toHaveBeenCalledTimes(2);
+      expect(cryptoDecryptSpy).toHaveBeenCalledWith(
+        'encrypted-douban-cookie',
+        mockUserId,
+      );
+      expect(cryptoDecryptSpy).toHaveBeenCalledWith(
+        'encrypted-feishu-secret',
+        mockUserId,
+      );
 
       // 验证豆瓣数据抓取
-      expect(doubanService.fetchUserData).toHaveBeenCalledTimes(3); // books, movies, tv
+      expect(doubanFetchUserDataSpy).toHaveBeenCalledTimes(3); // books, movies, tv
 
       // 验证飞书同步
-      expect(syncEngineService.performIncrementalSync).toHaveBeenCalledWith(
+      expect(syncEnginePerformIncrementalSyncSpy).toHaveBeenCalledWith(
         mockUserId,
         expect.objectContaining({
           appId: 'test-app-id',
@@ -286,37 +325,67 @@ describe('SyncProcessor', () => {
         expect.any(Array),
         expect.objectContaining({
           fullSync: false,
-          onProgress: expect.any(Function),
+          onProgress: expect.any(Function) as unknown as (progress: {
+            processed: number;
+            total: number;
+            phase: string;
+          }) => void,
         }),
       );
 
       // 验证最终成功状态更新
-      expect(syncService.updateSyncProgress).toHaveBeenLastCalledWith({
+      expect(updateSyncProgressSpy).toHaveBeenLastCalledWith({
         syncId: mockSyncId,
         jobId: mockJobId.toString(),
         status: 'SUCCESS',
         progress: 100,
-        message: expect.stringContaining('Sync completed successfully'),
+        message: expect.stringContaining(
+          'Sync completed successfully',
+        ) as string,
         itemsProcessed: 2,
       });
     });
 
     it('应该正确处理用户凭证不存在的情况', async () => {
-      jest.spyOn(prismaService.userCredentials, 'findUnique').mockResolvedValue(null);
+      // Mock logger to suppress expected error logs in tests
+      const loggerErrorSpy = jest
+        .spyOn(
+          (processor as unknown as { logger: { error: jest.Mock } }).logger,
+          'error',
+        )
+        .mockImplementation();
+
+      jest
+        .spyOn(prismaService.userCredentials, 'findUnique')
+        .mockResolvedValue(null);
 
       await expect(
         processor.handleSync(mockJob as Job<SyncJobData>),
       ).rejects.toThrow('Failed to retrieve user credentials');
 
-      expect(syncService.updateSyncProgress).toHaveBeenCalledWith(
+      // Verify error was logged
+      expect(loggerErrorSpy).toHaveBeenCalled();
+      loggerErrorSpy.mockRestore();
+
+      expect(updateSyncProgressSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           status: 'FAILED',
-          message: expect.stringContaining('Failed to retrieve user credentials'),
+          message: expect.stringContaining(
+            'Failed to retrieve user credentials',
+          ) as string,
         }),
       );
     });
 
     it('应该正确处理解密失败的情况', async () => {
+      // Mock logger to suppress expected error logs in tests
+      const loggerErrorSpy = jest
+        .spyOn(
+          (processor as unknown as { logger: { error: jest.Mock } }).logger,
+          'error',
+        )
+        .mockImplementation();
+
       const decryptError = new Error('Decryption failed');
       jest.spyOn(cryptoService, 'decrypt').mockImplementation(() => {
         throw decryptError;
@@ -326,34 +395,43 @@ describe('SyncProcessor', () => {
         processor.handleSync(mockJob as Job<SyncJobData>),
       ).rejects.toThrow('Failed to retrieve user credentials');
 
-      expect(syncService.updateSyncProgress).toHaveBeenCalledWith(
+      // Verify error was logged
+      expect(loggerErrorSpy).toHaveBeenCalled();
+      loggerErrorSpy.mockRestore();
+
+      expect(updateSyncProgressSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           status: 'FAILED',
-          message: expect.stringContaining('Failed to retrieve user credentials'),
+          message: expect.stringContaining(
+            'Failed to retrieve user credentials',
+          ) as string,
         }),
       );
     });
 
     it('应该正确处理豆瓣数据抓取失败', async () => {
       const fetchError = new Error('Douban fetch failed');
-      const loggerWarnSpy = jest.spyOn((processor as any).logger, 'warn');
+      const loggerWarnSpy = jest.spyOn(
+        (processor as unknown as { logger: { warn: jest.Mock } }).logger,
+        'warn',
+      );
       jest.spyOn(doubanService, 'fetchUserData').mockRejectedValue(fetchError);
 
       // 应该继续执行并完成，只记录警告
       const result = await processor.handleSync(mockJob as Job<SyncJobData>);
-      
+
       expect(result.success).toBe(true);
       expect(loggerWarnSpy).toHaveBeenCalledWith(
-        'Failed to fetch books: Douban fetch failed'
+        'Failed to fetch books: Douban fetch failed',
       );
       expect(loggerWarnSpy).toHaveBeenCalledWith(
-        'Failed to fetch movies: Douban fetch failed'
+        'Failed to fetch movies: Douban fetch failed',
       );
       expect(loggerWarnSpy).toHaveBeenCalledWith(
-        'Failed to fetch tv: Douban fetch failed'
+        'Failed to fetch tv: Douban fetch failed',
       );
 
-      expect(syncService.updateSyncProgress).toHaveBeenCalledWith(
+      expect(updateSyncProgressSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           status: 'SUCCESS',
         }),
@@ -361,51 +439,105 @@ describe('SyncProcessor', () => {
     });
 
     it('应该正确处理同步配置不存在的情况', async () => {
-      jest.spyOn(prismaService.syncConfig, 'findUnique').mockResolvedValue(null);
+      // Mock logger to suppress expected error logs in tests
+      const loggerErrorSpy = jest
+        .spyOn(
+          (processor as unknown as { logger: { error: jest.Mock } }).logger,
+          'error',
+        )
+        .mockImplementation();
+
+      jest
+        .spyOn(prismaService.syncConfig, 'findUnique')
+        .mockResolvedValue(null);
 
       await expect(
         processor.handleSync(mockJob as Job<SyncJobData>),
       ).rejects.toThrow('Sync configuration not found');
 
-      expect(syncService.updateSyncProgress).toHaveBeenCalledWith(
+      // Verify error was logged
+      expect(loggerErrorSpy).toHaveBeenCalled();
+      loggerErrorSpy.mockRestore();
+
+      expect(updateSyncProgressSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           status: 'FAILED',
-          message: expect.stringContaining('Sync configuration not found'),
+          message: expect.stringContaining(
+            'Sync configuration not found',
+          ) as string,
         }),
       );
     });
 
     it('应该正确处理表格映射配置缺失', async () => {
+      // Mock logger to suppress expected error logs in tests
+      const loggerErrorSpy = jest
+        .spyOn(
+          (processor as unknown as { logger: { error: jest.Mock } }).logger,
+          'error',
+        )
+        .mockImplementation();
+
       jest.spyOn(prismaService.syncConfig, 'findUnique').mockResolvedValue({
         ...mockSyncConfig,
-        tableMappings: null as any,
+        tableMappings: null,
       });
 
       await expect(
         processor.handleSync(mockJob as Job<SyncJobData>),
       ).rejects.toThrow('Sync configuration not found');
+
+      // Verify error was logged
+      expect(loggerErrorSpy).toHaveBeenCalled();
+      loggerErrorSpy.mockRestore();
     });
 
     it('应该正确处理空的表格映射', async () => {
+      // Mock logger to suppress expected error logs in tests
+      const loggerErrorSpy = jest
+        .spyOn(
+          (processor as unknown as { logger: { error: jest.Mock } }).logger,
+          'error',
+        )
+        .mockImplementation();
+
       jest.spyOn(prismaService.syncConfig, 'findUnique').mockResolvedValue({
         ...mockSyncConfig,
-        tableMappings: {},
+        tableMappings: {} as Record<string, unknown>,
       });
 
       await expect(
         processor.handleSync(mockJob as Job<SyncJobData>),
       ).rejects.toThrow('No table mappings configured');
+
+      // Verify error was logged
+      expect(loggerErrorSpy).toHaveBeenCalled();
+      loggerErrorSpy.mockRestore();
     });
 
     it('应该正确处理飞书同步失败', async () => {
+      // Mock logger to suppress expected error logs in tests
+      const loggerErrorSpy = jest
+        .spyOn(
+          (processor as unknown as { logger: { error: jest.Mock } }).logger,
+          'error',
+        )
+        .mockImplementation();
+
       const syncError = new Error('Feishu sync failed');
-      jest.spyOn(syncEngineService, 'performIncrementalSync').mockRejectedValue(syncError);
+      jest
+        .spyOn(syncEngineService, 'performIncrementalSync')
+        .mockRejectedValue(syncError);
 
       await expect(
         processor.handleSync(mockJob as Job<SyncJobData>),
       ).rejects.toThrow('Feishu sync failed');
 
-      expect(syncService.updateSyncProgress).toHaveBeenCalledWith(
+      // Verify error was logged
+      expect(loggerErrorSpy).toHaveBeenCalled();
+      loggerErrorSpy.mockRestore();
+
+      expect(updateSyncProgressSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           status: 'FAILED',
           error: 'Feishu sync failed',
@@ -417,32 +549,43 @@ describe('SyncProcessor', () => {
       // 重置Mock确保前面的测试不会影响这个测试
       jest.clearAllMocks();
       jest.spyOn(syncService, 'updateSyncProgress').mockResolvedValue();
-      jest.spyOn(prismaService.userCredentials, 'findUnique').mockResolvedValue(mockUserCredentials);
-      jest.spyOn(cryptoService, 'decrypt').mockImplementation((encryptedData: string, userId: string) => {
-        if (encryptedData === 'encrypted-douban-cookie') return 'decrypted-douban-cookie';
-        if (encryptedData === 'encrypted-feishu-secret') return 'decrypted-feishu-secret';
-        return 'decrypted-value';
-      });
-      
-      jest.spyOn(doubanService, 'fetchUserData').mockRejectedValue('String error');
+      jest
+        .spyOn(prismaService.userCredentials, 'findUnique')
+        .mockResolvedValue(mockUserCredentials);
+      jest
+        .spyOn(cryptoService, 'decrypt')
+        .mockImplementation((encryptedData: string) => {
+          if (encryptedData === 'encrypted-douban-cookie')
+            return 'decrypted-douban-cookie';
+          if (encryptedData === 'encrypted-feishu-secret')
+            return 'decrypted-feishu-secret';
+          return 'decrypted-value';
+        });
 
-      const loggerWarnSpy = jest.spyOn((processor as any).logger, 'warn');
+      jest
+        .spyOn(doubanService, 'fetchUserData')
+        .mockRejectedValue('String error');
+
+      const loggerWarnSpy = jest.spyOn(
+        (processor as unknown as { logger: { warn: jest.Mock } }).logger,
+        'warn',
+      );
 
       // 应该继续执行并完成，只记录警告
       const result = await processor.handleSync(mockJob as Job<SyncJobData>);
-      
+
       expect(result.success).toBe(true);
       expect(loggerWarnSpy).toHaveBeenCalledWith(
-        'Failed to fetch books: String error'
+        'Failed to fetch books: String error',
       );
       expect(loggerWarnSpy).toHaveBeenCalledWith(
-        'Failed to fetch movies: String error'
+        'Failed to fetch movies: String error',
       );
       expect(loggerWarnSpy).toHaveBeenCalledWith(
-        'Failed to fetch tv: String error'
+        'Failed to fetch tv: String error',
       );
 
-      expect(syncService.updateSyncProgress).toHaveBeenCalledWith(
+      expect(updateSyncProgressSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           status: 'SUCCESS',
         }),
@@ -454,34 +597,56 @@ describe('SyncProcessor', () => {
     it('应该成功获取和解密用户凭证', async () => {
       await processor.handleSync(mockJob as Job<SyncJobData>);
 
-      expect(prismaService.userCredentials.findUnique).toHaveBeenCalledWith({
+      expect(userCredentialsFindUniqueSpy).toHaveBeenCalledWith({
         where: { userId: mockUserId },
       });
 
-      expect(cryptoService.decrypt).toHaveBeenCalledWith('encrypted-douban-cookie', mockUserId);
-      expect(cryptoService.decrypt).toHaveBeenCalledWith('encrypted-feishu-secret', mockUserId);
+      expect(cryptoDecryptSpy).toHaveBeenCalledWith(
+        'encrypted-douban-cookie',
+        mockUserId,
+      );
+      expect(cryptoDecryptSpy).toHaveBeenCalledWith(
+        'encrypted-feishu-secret',
+        mockUserId,
+      );
     });
 
     it('应该正确处理缺失的加密字段', async () => {
-      jest.spyOn(prismaService.userCredentials, 'findUnique').mockResolvedValue({
-        ...mockUserCredentials,
-        doubanCookieEncrypted: null,
-        feishuAppSecretEncrypted: null,
-      });
+      jest
+        .spyOn(prismaService.userCredentials, 'findUnique')
+        .mockResolvedValue({
+          ...mockUserCredentials,
+          doubanCookieEncrypted: null,
+          feishuAppSecretEncrypted: null,
+        });
 
       await processor.handleSync(mockJob as Job<SyncJobData>);
 
       // 不应该调用decrypt，因为字段为null
-      expect(cryptoService.decrypt).not.toHaveBeenCalled();
+      expect(cryptoDecryptSpy).not.toHaveBeenCalled();
     });
 
     it('应该正确处理数据库查询错误', async () => {
+      // Mock logger to suppress expected error logs in tests
+      const loggerErrorSpy = jest
+        .spyOn(
+          (processor as unknown as { logger: { error: jest.Mock } }).logger,
+          'error',
+        )
+        .mockImplementation();
+
       const dbError = new Error('Database connection failed');
-      jest.spyOn(prismaService.userCredentials, 'findUnique').mockRejectedValue(dbError);
+      jest
+        .spyOn(prismaService.userCredentials, 'findUnique')
+        .mockRejectedValue(dbError);
 
       await expect(
         processor.handleSync(mockJob as Job<SyncJobData>),
       ).rejects.toThrow('Failed to retrieve user credentials');
+
+      // Verify error was logged
+      expect(loggerErrorSpy).toHaveBeenCalled();
+      loggerErrorSpy.mockRestore();
     });
   });
 
@@ -490,20 +655,20 @@ describe('SyncProcessor', () => {
       await processor.handleSync(mockJob as Job<SyncJobData>);
 
       // 验证抓取了三个分类
-      expect(doubanService.fetchUserData).toHaveBeenCalledTimes(3);
-      expect(doubanService.fetchUserData).toHaveBeenNthCalledWith(1, {
+      expect(doubanFetchUserDataSpy).toHaveBeenCalledTimes(3);
+      expect(doubanFetchUserDataSpy).toHaveBeenNthCalledWith(1, {
         userId: mockUserId,
         cookie: 'decrypted-douban-cookie',
         category: 'books',
         limit: 100,
       });
-      expect(doubanService.fetchUserData).toHaveBeenNthCalledWith(2, {
+      expect(doubanFetchUserDataSpy).toHaveBeenNthCalledWith(2, {
         userId: mockUserId,
         cookie: 'decrypted-douban-cookie',
         category: 'movies',
         limit: 100,
       });
-      expect(doubanService.fetchUserData).toHaveBeenNthCalledWith(3, {
+      expect(doubanFetchUserDataSpy).toHaveBeenNthCalledWith(3, {
         userId: mockUserId,
         cookie: 'decrypted-douban-cookie',
         category: 'tv',
@@ -512,7 +677,8 @@ describe('SyncProcessor', () => {
     });
 
     it('应该正确处理部分分类抓取失败', async () => {
-      jest.spyOn(doubanService, 'fetchUserData')
+      jest
+        .spyOn(doubanService, 'fetchUserData')
         .mockResolvedValueOnce(mockDoubanData) // books 成功
         .mockRejectedValueOnce(new Error('Movies fetch failed')) // movies 失败
         .mockResolvedValueOnce(mockDoubanData); // tv 成功
@@ -521,7 +687,7 @@ describe('SyncProcessor', () => {
 
       // 应该继续执行，即使部分分类失败
       expect(result.success).toBe(true);
-      expect(doubanService.fetchUserData).toHaveBeenCalledTimes(3);
+      expect(doubanFetchUserDataSpy).toHaveBeenCalledTimes(3);
     });
 
     it('应该使用自定义的limit参数', async () => {
@@ -535,7 +701,7 @@ describe('SyncProcessor', () => {
 
       await processor.handleSync(customJob as Job<SyncJobData>);
 
-      expect(doubanService.fetchUserData).toHaveBeenCalledWith(
+      expect(doubanFetchUserDataSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           limit: 50,
         }),
@@ -553,7 +719,7 @@ describe('SyncProcessor', () => {
 
       await processor.handleSync(customJob as Job<SyncJobData>);
 
-      expect(doubanService.fetchUserData).toHaveBeenCalledWith(
+      expect(doubanFetchUserDataSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           limit: 100, // 默认值
         }),
@@ -565,7 +731,7 @@ describe('SyncProcessor', () => {
     it('应该成功执行增量同步', async () => {
       await processor.handleSync(mockJob as Job<SyncJobData>);
 
-      expect(syncEngineService.performIncrementalSync).toHaveBeenCalledWith(
+      expect(syncEnginePerformIncrementalSyncSpy).toHaveBeenCalledWith(
         mockUserId,
         {
           appId: 'test-app-id',
@@ -578,7 +744,11 @@ describe('SyncProcessor', () => {
         expect.any(Array), // 合并后的所有豆瓣数据
         {
           fullSync: false,
-          onProgress: expect.any(Function),
+          onProgress: expect.any(Function) as unknown as (progress: {
+            processed: number;
+            total: number;
+            phase: string;
+          }) => void,
         },
       );
     });
@@ -594,7 +764,7 @@ describe('SyncProcessor', () => {
 
       await processor.handleSync(fullSyncJob as Job<SyncJobData>);
 
-      expect(syncEngineService.performIncrementalSync).toHaveBeenCalledWith(
+      expect(syncEnginePerformIncrementalSyncSpy).toHaveBeenCalledWith(
         expect.any(String),
         expect.any(Object),
         expect.any(Array),
@@ -605,14 +775,20 @@ describe('SyncProcessor', () => {
     });
 
     it('应该正确处理进度回调', async () => {
-      let progressCallback: Function | undefined;
+      let progressCallback:
+        | ((progress: {
+            processed: number;
+            total: number;
+            phase: string;
+          }) => void)
+        | undefined;
 
-      jest.spyOn(syncEngineService, 'performIncrementalSync').mockImplementation(
-        async (userId, config, data, options) => {
+      jest
+        .spyOn(syncEngineService, 'performIncrementalSync')
+        .mockImplementation((_userId, _config, _data, options) => {
           progressCallback = options?.onProgress;
-          return mockSyncResult;
-        },
-      );
+          return Promise.resolve(mockSyncResult);
+        });
 
       await processor.handleSync(mockJob as Job<SyncJobData>);
 
@@ -626,7 +802,7 @@ describe('SyncProcessor', () => {
           message: 'Creating records',
         });
 
-        expect(syncService.updateSyncProgress).toHaveBeenCalledWith({
+        expect(updateSyncProgressSpy).toHaveBeenCalledWith({
           syncId: mockSyncId,
           jobId: mockJobId.toString(),
           status: 'RUNNING',
@@ -648,11 +824,13 @@ describe('SyncProcessor', () => {
         },
       };
 
-      jest.spyOn(prismaService.syncConfig, 'findUnique').mockResolvedValue(complexMappingConfig);
+      jest
+        .spyOn(prismaService.syncConfig, 'findUnique')
+        .mockResolvedValue(complexMappingConfig);
 
       await processor.handleSync(mockJob as Job<SyncJobData>);
 
-      expect(syncEngineService.performIncrementalSync).toHaveBeenCalledWith(
+      expect(syncEnginePerformIncrementalSyncSpy).toHaveBeenCalledWith(
         mockUserId,
         expect.objectContaining({
           appToken: 'app-token-1',
@@ -673,7 +851,7 @@ describe('SyncProcessor', () => {
       expect(mockJob.progress).toHaveBeenCalled();
 
       // 验证进度更新服务被调用多次
-      expect(syncService.updateSyncProgress).toHaveBeenCalledWith(
+      expect(updateSyncProgressSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           syncId: mockSyncId,
           jobId: mockJobId.toString(),
@@ -686,7 +864,8 @@ describe('SyncProcessor', () => {
       await processor.handleSync(mockJob as Job<SyncJobData>);
 
       // 验证初始进度
-      expect(syncService.updateSyncProgress).toHaveBeenNthCalledWith(1, 
+      expect(updateSyncProgressSpy).toHaveBeenNthCalledWith(
+        1,
         expect.objectContaining({
           progress: 0,
           message: 'Starting synchronization...',
@@ -694,15 +873,15 @@ describe('SyncProcessor', () => {
       );
 
       // 验证中间进度更新（会有多次调用）
-      expect(syncService.updateSyncProgress).toHaveBeenCalledWith(
+      expect(updateSyncProgressSpy).toHaveBeenCalledWith(
         expect.objectContaining({
-          progress: expect.any(Number),
-          message: expect.any(String),
+          progress: expect.any(Number) as number,
+          message: expect.any(String) as string,
         }),
       );
 
       // 验证最终进度
-      expect(syncService.updateSyncProgress).toHaveBeenLastCalledWith(
+      expect(updateSyncProgressSpy).toHaveBeenLastCalledWith(
         expect.objectContaining({
           progress: 100,
           status: 'SUCCESS',
@@ -725,14 +904,17 @@ describe('SyncProcessor', () => {
       it('应该具备延迟功能以避免反爬虫', () => {
         // 验证delay方法存在且为函数
         expect(typeof processor['delay']).toBe('function');
-        
+
         // 验证delay方法能够被正确调用（通过spy验证）
-        const delaySpy = jest.spyOn(processor as any, 'delay');
-        
+        const delaySpy = jest.spyOn(
+          processor as unknown as { delay: (ms: number) => Promise<void> },
+          'delay',
+        );
+
         // 验证delay方法返回Promise
         const delayResult = processor['delay'](1000);
         expect(delayResult).toBeInstanceOf(Promise);
-        
+
         delaySpy.mockRestore();
       });
     });
@@ -745,7 +927,7 @@ describe('SyncProcessor', () => {
       const result = await processor.handleSync(mockJob as Job<SyncJobData>);
 
       expect(result.success).toBe(true);
-      expect(syncEngineService.performIncrementalSync).toHaveBeenCalledWith(
+      expect(syncEnginePerformIncrementalSyncSpy).toHaveBeenCalledWith(
         expect.any(String),
         expect.any(Object),
         [], // 空数据数组
@@ -756,12 +938,12 @@ describe('SyncProcessor', () => {
     it('应该正确处理jobId为null的情况', async () => {
       const jobWithoutId = {
         ...mockJob,
-        id: null as any,
+        id: null as unknown as number,
       };
 
       await processor.handleSync(jobWithoutId as unknown as Job<SyncJobData>);
 
-      expect(syncService.updateSyncProgress).toHaveBeenCalledWith(
+      expect(updateSyncProgressSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           jobId: undefined,
         }),
@@ -771,12 +953,12 @@ describe('SyncProcessor', () => {
     it('应该正确处理jobId为undefined的情况', async () => {
       const jobWithoutId = {
         ...mockJob,
-        id: undefined as any,
+        id: undefined as unknown as number,
       };
 
       await processor.handleSync(jobWithoutId as unknown as Job<SyncJobData>);
 
-      expect(syncService.updateSyncProgress).toHaveBeenCalledWith(
+      expect(updateSyncProgressSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           jobId: undefined,
         }),
@@ -787,35 +969,46 @@ describe('SyncProcessor', () => {
       // 重置Mock确保前面的测试不会影响这个测试
       jest.clearAllMocks();
       jest.spyOn(syncService, 'updateSyncProgress').mockResolvedValue();
-      jest.spyOn(prismaService.userCredentials, 'findUnique').mockResolvedValue(mockUserCredentials);
-      jest.spyOn(cryptoService, 'decrypt').mockImplementation((encryptedData: string, userId: string) => {
-        if (encryptedData === 'encrypted-douban-cookie') return 'decrypted-douban-cookie';
-        if (encryptedData === 'encrypted-feishu-secret') return 'decrypted-feishu-secret';
-        return 'decrypted-value';
-      });
-      
+      jest
+        .spyOn(prismaService.userCredentials, 'findUnique')
+        .mockResolvedValue(mockUserCredentials);
+      jest
+        .spyOn(cryptoService, 'decrypt')
+        .mockImplementation((encryptedData: string) => {
+          if (encryptedData === 'encrypted-douban-cookie')
+            return 'decrypted-douban-cookie';
+          if (encryptedData === 'encrypted-feishu-secret')
+            return 'decrypted-feishu-secret';
+          return 'decrypted-value';
+        });
+
       const nestedError = new Error('Root cause');
-      (nestedError as any).cause = new Error('Nested cause');
-      
+      (nestedError as unknown as { cause: Error }).cause = new Error(
+        'Nested cause',
+      );
+
       jest.spyOn(doubanService, 'fetchUserData').mockRejectedValue(nestedError);
 
-      const loggerWarnSpy = jest.spyOn((processor as any).logger, 'warn');
+      const loggerWarnSpy = jest.spyOn(
+        (processor as unknown as { logger: { warn: jest.Mock } }).logger,
+        'warn',
+      );
 
       // 应该继续执行并完成，只记录警告
       const result = await processor.handleSync(mockJob as Job<SyncJobData>);
-      
+
       expect(result.success).toBe(true);
       expect(loggerWarnSpy).toHaveBeenCalledWith(
-        'Failed to fetch books: Root cause'
+        'Failed to fetch books: Root cause',
       );
       expect(loggerWarnSpy).toHaveBeenCalledWith(
-        'Failed to fetch movies: Root cause'
+        'Failed to fetch movies: Root cause',
       );
       expect(loggerWarnSpy).toHaveBeenCalledWith(
-        'Failed to fetch tv: Root cause'
+        'Failed to fetch tv: Root cause',
       );
 
-      expect(syncService.updateSyncProgress).toHaveBeenCalledWith(
+      expect(updateSyncProgressSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           status: 'SUCCESS',
         }),
@@ -834,11 +1027,13 @@ describe('SyncProcessor', () => {
         }),
       };
 
-      jest.spyOn(prismaService.syncConfig, 'findUnique').mockResolvedValue(configWithoutMetadata);
+      jest
+        .spyOn(prismaService.syncConfig, 'findUnique')
+        .mockResolvedValue(configWithoutMetadata);
 
       await processor.handleSync(mockJob as Job<SyncJobData>);
 
-      expect(syncEngineService.performIncrementalSync).toHaveBeenCalledWith(
+      expect(syncEnginePerformIncrementalSyncSpy).toHaveBeenCalledWith(
         mockUserId,
         expect.objectContaining({
           dataType: 'books', // 应该使用默认值
@@ -849,21 +1044,26 @@ describe('SyncProcessor', () => {
     });
 
     it('应该正确处理极大的数据量', async () => {
-      const largeDataSet: DoubanItem[] = Array.from({ length: 1000 }, (_, i) => ({
-        subjectId: `${i + 1}`,
-        title: `Item ${i + 1}`,
-        category: 'books' as const,
-        genres: ['Fiction'],
-        doubanUrl: `https://book.douban.com/subject/${i + 1}/`,
-        userTags: [],
-      }));
+      const largeDataSet: DoubanItem[] = Array.from(
+        { length: 1000 },
+        (_, i) => ({
+          subjectId: `${i + 1}`,
+          title: `Item ${i + 1}`,
+          category: 'books' as const,
+          genres: ['Fiction'],
+          doubanUrl: `https://book.douban.com/subject/${i + 1}/`,
+          userTags: [],
+        }),
+      );
 
-      jest.spyOn(doubanService, 'fetchUserData').mockResolvedValue(largeDataSet);
+      jest
+        .spyOn(doubanService, 'fetchUserData')
+        .mockResolvedValue(largeDataSet);
 
       const result = await processor.handleSync(mockJob as Job<SyncJobData>);
 
       expect(result.success).toBe(true);
-      expect(syncEngineService.performIncrementalSync).toHaveBeenCalledWith(
+      expect(syncEnginePerformIncrementalSyncSpy).toHaveBeenCalledWith(
         expect.any(String),
         expect.any(Object),
         expect.arrayContaining(largeDataSet),
@@ -883,7 +1083,9 @@ describe('SyncProcessor', () => {
         },
       };
 
-      jest.spyOn(syncEngineService, 'performIncrementalSync').mockResolvedValue(customSyncResult);
+      jest
+        .spyOn(syncEngineService, 'performIncrementalSync')
+        .mockResolvedValue(customSyncResult);
 
       const result = await processor.handleSync(mockJob as Job<SyncJobData>);
 
@@ -903,7 +1105,9 @@ describe('SyncProcessor', () => {
         performance: performanceStats,
       };
 
-      jest.spyOn(syncEngineService, 'performIncrementalSync').mockResolvedValue(syncResultWithPerformance);
+      jest
+        .spyOn(syncEngineService, 'performIncrementalSync')
+        .mockResolvedValue(syncResultWithPerformance);
 
       const result = await processor.handleSync(mockJob as Job<SyncJobData>);
 

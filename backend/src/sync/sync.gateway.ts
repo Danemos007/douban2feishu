@@ -11,12 +11,12 @@ import { Logger, UseGuards } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { 
-  SyncProgress, 
+import {
+  SyncProgress,
   WebSocketEvent,
   SyncProgressEvent,
   SyncErrorEvent,
-  SystemMessageEvent 
+  SystemMessageEvent,
 } from './interfaces/sync.interface';
 
 /**
@@ -114,7 +114,7 @@ export class SyncGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('subscribe-sync')
   async handleSubscribeSync(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { syncIds?: string[]; categories?: string[]; },
+    @MessageBody() data: { syncIds?: string[]; categories?: string[] },
   ): Promise<void> {
     try {
       const userId = this.extractUserFromSocket(client);
@@ -150,7 +150,7 @@ export class SyncGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('unsubscribe-sync')
   async handleUnsubscribeSync(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { syncIds?: string[]; },
+    @MessageBody() data: { syncIds?: string[] },
   ): Promise<void> {
     try {
       if (data.syncIds?.length) {
@@ -201,10 +201,7 @@ export class SyncGateway implements OnGatewayConnection, OnGatewayDisconnect {
   /**
    * 发送错误通知 - 强类型版本
    */
-  notifyError(
-    userId: string,
-    error: SyncErrorEvent['data'],
-  ): void {
+  notifyError(userId: string, error: SyncErrorEvent['data']): void {
     try {
       this.server.to(`user:${userId}`).emit('sync-error', {
         ...error,
@@ -256,7 +253,7 @@ export class SyncGateway implements OnGatewayConnection, OnGatewayDisconnect {
     };
 
     this.server.to(`user:${userId}`).emit(event.type, eventData);
-    
+
     if (event.type === 'sync-progress' && event.data.syncId) {
       this.server.to(`sync:${event.data.syncId}`).emit(event.type, eventData);
     }
@@ -282,7 +279,9 @@ export class SyncGateway implements OnGatewayConnection, OnGatewayDisconnect {
         syncId: syncData.syncId,
         status: syncData.success ? 'SUCCESS' : 'FAILED',
         progress: syncData.success ? 100 : 0,
-        message: syncData.summary || `Sync ${syncData.success ? 'completed' : 'failed'}`,
+        message:
+          syncData.summary ||
+          `Sync ${syncData.success ? 'completed' : 'failed'}`,
         itemsProcessed: syncData.itemsProcessed,
         metadata: {
           performance: {

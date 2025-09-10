@@ -1,12 +1,17 @@
 /**
  * SyncHistory模型类型守卫函数
  * 用于运行时验证同步历史数据的类型安全性
- * 
+ *
  * @author Claude
  * @date 2025-09-09
  */
 
-import { SyncHistory, User, TriggerType, SyncStatus } from '../../../generated/prisma';
+import {
+  SyncHistory,
+  User,
+  TriggerType,
+  SyncStatus,
+} from '../../../generated/prisma';
 
 /**
  * 有效的触发类型枚举值
@@ -18,10 +23,10 @@ const VALID_TRIGGER_TYPES: TriggerType[] = ['MANUAL', 'AUTO'];
  */
 const VALID_SYNC_STATUSES: SyncStatus[] = [
   'PENDING',
-  'RUNNING', 
+  'RUNNING',
   'SUCCESS',
   'FAILED',
-  'CANCELLED'
+  'CANCELLED',
 ];
 
 /**
@@ -40,25 +45,24 @@ export function isSyncHistory(obj: unknown): obj is SyncHistory {
     // 基础字段验证
     typeof history.id === 'string' &&
     typeof history.userId === 'string' &&
-    
     // 枚举类型验证
     isValidTriggerType(history.triggerType) &&
     isValidSyncStatus(history.status) &&
-    
     // 日期字段验证
     history.startedAt instanceof Date &&
     (history.completedAt === null || history.completedAt instanceof Date) &&
-    
     // 数值和可选字段验证
     typeof history.itemsSynced === 'number' &&
     history.itemsSynced >= 0 &&
-    (history.errorMessage === null || typeof history.errorMessage === 'string') &&
-    (history.duration === null || history.duration === undefined || 
-     (typeof history.duration === 'number' && history.duration >= 0)) &&
-    
+    (history.errorMessage === null ||
+      typeof history.errorMessage === 'string') &&
+    (history.duration === null ||
+      history.duration === undefined ||
+      (typeof history.duration === 'number' && history.duration >= 0)) &&
     // 元数据验证 (可以是任何JSON值)
-    (history.metadata === null || history.metadata === undefined || 
-     isValidJsonValue(history.metadata))
+    (history.metadata === null ||
+      history.metadata === undefined ||
+      isValidJsonValue(history.metadata))
   );
 }
 
@@ -67,13 +71,15 @@ export function isSyncHistory(obj: unknown): obj is SyncHistory {
  * @param obj 待验证的对象
  * @returns 如果是包含User关联的SyncHistory类型返回true
  */
-export function isSyncHistoryWithUser(obj: unknown): obj is SyncHistory & { user: User } {
+export function isSyncHistoryWithUser(
+  obj: unknown,
+): obj is SyncHistory & { user: User } {
   if (!isSyncHistory(obj)) {
     return false;
   }
 
   const history = obj as Record<string, unknown>;
-  
+
   // 验证User关联是否存在且有效
   return history.user !== undefined && isUser(history.user);
 }
@@ -95,7 +101,7 @@ export function isSyncHistoryArray(arr: unknown): arr is SyncHistory[] {
 export function assertIsSyncHistory(obj: unknown): asserts obj is SyncHistory {
   if (!isSyncHistory(obj)) {
     throw new Error(
-      `Object is not a valid SyncHistory type. Received: ${JSON.stringify(obj, null, 2)}`
+      `Object is not a valid SyncHistory type. Received: ${JSON.stringify(obj, null, 2)}`,
     );
   }
 }
@@ -106,9 +112,11 @@ export function assertIsSyncHistory(obj: unknown): asserts obj is SyncHistory {
  * @returns 如果同步已完成返回true
  */
 export function isSyncHistoryCompleted(history: SyncHistory): boolean {
-  return history.status === 'SUCCESS' || 
-         history.status === 'FAILED' || 
-         history.status === 'CANCELLED';
+  return (
+    history.status === 'SUCCESS' ||
+    history.status === 'FAILED' ||
+    history.status === 'CANCELLED'
+  );
 }
 
 /**
@@ -129,12 +137,15 @@ export function hasValidDuration(history: SyncHistory): boolean {
   if (!history.completedAt || !history.startedAt) {
     return false;
   }
-  
-  const calculatedDuration = history.completedAt.getTime() - history.startedAt.getTime();
-  return calculatedDuration >= 0 && 
-         (history.duration === null || 
-          history.duration === undefined || 
-          Math.abs(calculatedDuration - history.duration) < 1000); // 允许1秒误差
+
+  const calculatedDuration =
+    history.completedAt.getTime() - history.startedAt.getTime();
+  return (
+    calculatedDuration >= 0 &&
+    (history.duration === null ||
+      history.duration === undefined ||
+      Math.abs(calculatedDuration - history.duration) < 1000)
+  ); // 允许1秒误差
 }
 
 // 辅助函数
@@ -143,14 +154,20 @@ export function hasValidDuration(history: SyncHistory): boolean {
  * 检查值是否为有效的TriggerType
  */
 function isValidTriggerType(value: unknown): value is TriggerType {
-  return typeof value === 'string' && VALID_TRIGGER_TYPES.includes(value as TriggerType);
+  return (
+    typeof value === 'string' &&
+    VALID_TRIGGER_TYPES.includes(value as TriggerType)
+  );
 }
 
 /**
  * 检查值是否为有效的SyncStatus
  */
 function isValidSyncStatus(value: unknown): value is SyncStatus {
-  return typeof value === 'string' && VALID_SYNC_STATUSES.includes(value as SyncStatus);
+  return (
+    typeof value === 'string' &&
+    VALID_SYNC_STATUSES.includes(value as SyncStatus)
+  );
 }
 
 /**

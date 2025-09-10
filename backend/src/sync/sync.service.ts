@@ -1,14 +1,23 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
-import type { Queue } from 'bull';
+import type { Queue, Job } from 'bull';
 
 import { PrismaService } from '../common/prisma/prisma.service';
 import { SyncGateway } from './sync.gateway';
 import { TriggerSyncDto } from './dto/sync.dto';
-import { SyncJobData, SyncProgress } from './interfaces/sync.interface';
+import {
+  SyncJobData,
+  SyncProgress,
+  QueueStats,
+} from './interfaces/sync.interface';
 import { DoubanService } from '../douban/douban.service';
 import { FetchUserDataDto } from '../douban/dto/douban.dto';
 import { SyncEngineService } from '../feishu/services/sync-engine.service';
+import type {
+  SyncHistory,
+  TriggerType,
+  SyncStatus,
+} from '../../generated/prisma';
 
 /**
  * 同步服务 - 核心同步业务逻辑
@@ -26,7 +35,7 @@ export class SyncService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly syncGateway: SyncGateway,
-    @InjectQueue('sync-queue') private readonly syncQueue: Queue,
+    @InjectQueue('sync-queue') private readonly syncQueue: Queue<SyncJobData>,
     private readonly doubanService: DoubanService,
     private readonly feishuSyncEngine: SyncEngineService,
   ) {}
@@ -52,11 +61,11 @@ export class SyncService {
       }
 
       // 创建同步历史记录
-      const syncHistory = await this.prisma.syncHistory.create({
+      const syncHistory: SyncHistory = await this.prisma.syncHistory.create({
         data: {
           userId,
-          triggerType: triggerSyncDto.triggerType || 'MANUAL',
-          status: 'PENDING',
+          triggerType: (triggerSyncDto.triggerType || 'MANUAL') as TriggerType,
+          status: 'PENDING' as SyncStatus,
           metadata: JSON.stringify({
             options: triggerSyncDto.options || {},
             requestedAt: new Date().toISOString(),
@@ -107,10 +116,19 @@ export class SyncService {
   /**
    * 获取同步状态
    */
-  async getSyncStatus(syncId: string): Promise<any> {
-    const syncHistory = await this.prisma.syncHistory.findUnique({
-      where: { id: syncId },
-    });
+  async getSyncStatus(syncId: string): Promise<{
+    syncId: string;
+    status: SyncStatus;
+    startedAt: Date | null;
+    completedAt: Date | null;
+    itemsSynced: number | null;
+    errorMessage: string | null;
+    metadata: any;
+  } | null> {
+    const syncHistory: SyncHistory | null =
+      await this.prisma.syncHistory.findUnique({
+        where: { id: syncId },
+      });
 
     if (!syncHistory) {
       throw new Error('Sync not found');
@@ -165,7 +183,10 @@ export class SyncService {
       }
 
       // 查找并取消队列中的任务
-      const jobs = await this.syncQueue.getJobs(['active', 'waiting']);
+      const jobs: Job<SyncJobData>[] = await this.syncQueue.getJobs([
+        'active',
+        'waiting',
+      ]);
       const targetJob = jobs.find((job) => job.data.syncId === syncId);
 
       if (targetJob) {
@@ -205,8 +226,14 @@ export class SyncService {
   async updateSyncProgress(progress: SyncProgress): Promise<void> {
     try {
       // 更新数据库
-      const updateData: any = {
-        status: progress.status,
+      const updateData: Partial<{
+        status: SyncStatus;
+        startedAt: Date;
+        completedAt: Date;
+        itemsSynced: number;
+        errorMessage: string | null;
+      }> = {
+        status: progress.status as SyncStatus,
       };
 
       if (progress.status === 'RUNNING') {
@@ -223,10 +250,11 @@ export class SyncService {
       });
 
       // 发送WebSocket更新
-      const syncHistory = await this.prisma.syncHistory.findUnique({
-        where: { id: progress.syncId },
-        select: { userId: true },
-      });
+      const syncHistory: { userId: string } | null =
+        await this.prisma.syncHistory.findUnique({
+          where: { id: progress.syncId },
+          select: { userId: true },
+        });
 
       if (syncHistory?.userId) {
         this.syncGateway.notifyProgress(syncHistory.userId, progress);
@@ -263,7 +291,7 @@ export class SyncService {
       };
     };
   }> {
-    let syncHistory: any = null;
+    let syncHistory: SyncHistory | null = null;
 
     try {
       this.logger.log(
@@ -274,8 +302,8 @@ export class SyncService {
       syncHistory = await this.prisma.syncHistory.create({
         data: {
           userId,
-          triggerType: 'MANUAL',
-          status: 'RUNNING',
+          triggerType: 'MANUAL' as TriggerType,
+          status: 'RUNNING' as SyncStatus,
           metadata: JSON.stringify({
             options: {
               category: options.category,
@@ -309,7 +337,9 @@ export class SyncService {
         await this.doubanService.scrapeAndTransform(fetchDto);
 
       // [ARCHITECTURE-SAFETY] 验证转换后的数据结构完整性
-      this.validateArchitectureSafety(transformationResult.transformedData);
+      this.validateArchitectureSafety(
+        transformationResult.transformedData as Record<string, unknown>[],
+      );
 
       // 发送转换完成通知
       this.syncGateway.notifyProgress(userId, {
@@ -353,11 +383,13 @@ export class SyncService {
       await this.prisma.syncHistory.update({
         where: { id: syncHistory.id },
         data: {
-          status: 'SUCCESS',
+          status: 'SUCCESS' as SyncStatus,
           completedAt: new Date(),
           itemsSynced: feishuSyncResult.summary.total || 0,
           metadata: JSON.stringify({
-            ...(syncHistory.metadata ? JSON.parse(syncHistory.metadata as string) : {}),
+            ...(syncHistory.metadata
+              ? JSON.parse(syncHistory.metadata as string)
+              : {}),
             transformationStats: transformationResult.transformationStats,
             feishuSyncStats: {
               total: feishuSyncResult.summary.total || 0,
@@ -396,16 +428,16 @@ export class SyncService {
 
       // 更新同步状态为失败
       try {
-        await this.prisma.syncHistory.update({
-          where: { id: syncHistory?.id },
-          data: {
-            status: 'FAILED',
-            completedAt: new Date(),
-            errorMessage,
-          },
-        });
-
         if (syncHistory?.id) {
+          await this.prisma.syncHistory.update({
+            where: { id: syncHistory.id },
+            data: {
+              status: 'FAILED' as SyncStatus,
+              completedAt: new Date(),
+              errorMessage,
+            },
+          });
+
           this.syncGateway.notifyProgress(userId, {
             syncId: syncHistory.id,
             status: 'FAILED',
@@ -448,7 +480,7 @@ export class SyncService {
   /**
    * 架构安全约束验证
    */
-  private validateArchitectureSafety(data: any[]): void {
+  private validateArchitectureSafety(data: Record<string, unknown>[]): void {
     // [ARCHITECTURE-SAFETY] 确保数据已经过转换服务处理
     if (!data || data.length === 0) {
       throw new Error('Empty data set not allowed for sync');
@@ -457,7 +489,7 @@ export class SyncService {
     // [ARCHITECTURE-SAFETY] 验证数据结构完整性
     for (const item of data.slice(0, 5)) {
       // 检查前5条记录
-      if (!item.subjectId) {
+      if (!('subjectId' in item) || !item.subjectId) {
         throw new Error(
           'Data validation failed: missing subjectId (required for sync)',
         );
@@ -476,7 +508,7 @@ export class SyncService {
   /**
    * 获取队列统计信息
    */
-  async getQueueStats() {
+  async getQueueStats(): Promise<QueueStats> {
     const [active, waiting, completed, failed] = await Promise.all([
       this.syncQueue.getActive(),
       this.syncQueue.getWaiting(),
