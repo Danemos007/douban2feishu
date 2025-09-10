@@ -15,44 +15,85 @@ import { Logger } from '@nestjs/common';
 
 import { FieldMappingService } from './field-mapping.service';
 import { FeishuTableService } from './feishu-table.service';
+import { FeishuField } from '../schemas/field.schema';
 import { FieldAutoCreationServiceV2 } from './field-auto-creation.service';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import {
-  VERIFIED_FIELD_MAPPINGS,
   getVerifiedFieldMapping,
   VerifiedFieldMappingConfig,
 } from '../config/douban-field-mapping.config';
 
+// 测试辅助类型 - 用于访问私有方法
+type ServiceWithPrivateMethods = {
+  extractNestedValue: (
+    data: Record<string, unknown> | null | undefined,
+    fieldConfig: VerifiedFieldMappingConfig,
+  ) => unknown;
+  validateFieldMappingsEnhanced: (
+    mappings: Record<string, string>,
+    contentType: string,
+    appId?: string | null,
+    appSecret?: string | null,
+    appToken?: string | null,
+    tableId?: string | null,
+    options?: { strict?: boolean },
+  ) => Promise<{
+    isValid: boolean;
+    errors?: string[];
+    validatedFields?: string[];
+    nestedPathFields?: string[];
+    statistics?: {
+      totalFields: number;
+      validFields: number;
+      invalidFields: number;
+      missingRequiredFields: number;
+      fieldsWithNestedPath: number;
+    };
+    warnings?: string[];
+    processingNotes?: Record<string, string>;
+  }>;
+};
+
 describe('FieldMappingService - Phase 2 TDD Enhancement', () => {
   let service: FieldMappingService;
   let mockTableService: jest.Mocked<FeishuTableService>;
-  let mockFieldAutoCreationService: jest.Mocked<FieldAutoCreationServiceV2>;
-  let mockPrismaService: jest.Mocked<PrismaService>;
-  let mockRedis: any;
 
   beforeEach(async () => {
-    // Mock dependencies
-    const mockTableServiceObj = {
-      getTableFields: jest.fn(),
-      batchCreateFields: jest.fn(),
+    // 强类型Mock - 只包含实际使用的服务
+    const mockTableServiceObj: Partial<FeishuTableService> = {
+      getTableFields: jest.fn<
+        Promise<FeishuField[]>,
+        [string, string, string, string]
+      >(),
+      batchCreateFields: jest.fn<
+        Promise<FeishuField[]>,
+        [
+          string,
+          string,
+          string,
+          string,
+          Array<{ fieldName: string; fieldType: number; description?: string }>,
+        ]
+      >(),
     };
 
-    const mockFieldAutoCreationServiceObj = {
-      createFieldCreator: jest.fn(),
-      batchCreateFields: jest.fn(),
+    const mockRedisObj: Partial<RedisService> = {
+      get: jest.fn<Promise<string | null>, [string]>(),
+      setex: jest.fn<Promise<'OK'>, [string, number, string]>(),
+      del: jest.fn<Promise<number>, [string]>(),
     };
+
+    // 添加缺失的Mock对象
+    const mockFieldAutoCreationServiceObj: Partial<FieldAutoCreationServiceV2> =
+      {
+        // 只Mock必要的方法，其他保持undefined
+      };
 
     const mockPrismaServiceObj = {
       syncConfig: {
         findUnique: jest.fn(),
         upsert: jest.fn(),
       },
-    };
-
-    const mockRedisObj = {
-      get: jest.fn(),
-      setex: jest.fn(),
-      del: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -79,9 +120,6 @@ describe('FieldMappingService - Phase 2 TDD Enhancement', () => {
 
     service = module.get<FieldMappingService>(FieldMappingService);
     mockTableService = module.get(FeishuTableService);
-    mockFieldAutoCreationService = module.get(FieldAutoCreationServiceV2);
-    mockPrismaService = module.get(PrismaService);
-    mockRedis = module.get(RedisService);
 
     // 禁用日志输出
     jest.spyOn(Logger.prototype, 'log').mockImplementation();
@@ -110,10 +148,9 @@ describe('FieldMappingService - Phase 2 TDD Enhancement', () => {
           verifiedSource: ['sync-all-movies-fixed.ts'],
         } as VerifiedFieldMappingConfig;
 
-        const result = await (service as any).extractNestedValue(
-          data,
-          fieldConfig,
-        );
+        const result = await (
+          service as unknown as ServiceWithPrivateMethods
+        ).extractNestedValue(data, fieldConfig);
 
         expect(result).toBe('肖申克的救赎');
       });
@@ -140,10 +177,9 @@ describe('FieldMappingService - Phase 2 TDD Enhancement', () => {
           verifiedSource: ['sync-from-cache.ts'],
         } as VerifiedFieldMappingConfig;
 
-        const result = await (service as any).extractNestedValue(
-          data,
-          fieldConfig,
-        );
+        const result = await (
+          service as unknown as ServiceWithPrivateMethods
+        ).extractNestedValue(data, fieldConfig);
 
         expect(result).toBe(9.6);
       });
@@ -172,10 +208,9 @@ describe('FieldMappingService - Phase 2 TDD Enhancement', () => {
           verifiedSource: ['test-config.ts'],
         } as VerifiedFieldMappingConfig;
 
-        const result = await (service as any).extractNestedValue(
-          data,
-          fieldConfig,
-        );
+        const result = await (
+          service as unknown as ServiceWithPrivateMethods
+        ).extractNestedValue(data, fieldConfig);
 
         expect(result).toBe(8.7);
       });
@@ -198,10 +233,9 @@ describe('FieldMappingService - Phase 2 TDD Enhancement', () => {
           verifiedSource: ['sync-from-cache.ts'],
         } as VerifiedFieldMappingConfig;
 
-        const result = await (service as any).extractNestedValue(
-          data,
-          fieldConfig,
-        );
+        const result = await (
+          service as unknown as ServiceWithPrivateMethods
+        ).extractNestedValue(data, fieldConfig);
 
         expect(result).toBeUndefined();
       });
@@ -220,10 +254,9 @@ describe('FieldMappingService - Phase 2 TDD Enhancement', () => {
           verifiedSource: ['sync-all-movies-fixed.ts'],
         } as VerifiedFieldMappingConfig;
 
-        const result = await (service as any).extractNestedValue(
-          data,
-          fieldConfig,
-        );
+        const result = await (
+          service as unknown as ServiceWithPrivateMethods
+        ).extractNestedValue(data, fieldConfig);
 
         expect(result).toBe('弗兰克·德拉邦特');
       });
@@ -243,10 +276,9 @@ describe('FieldMappingService - Phase 2 TDD Enhancement', () => {
           verifiedSource: ['sync-all-movies-fixed.ts'],
         } as VerifiedFieldMappingConfig;
 
-        const result = await (service as any).extractNestedValue(
-          data,
-          fieldConfig,
-        );
+        const result = await (
+          service as unknown as ServiceWithPrivateMethods
+        ).extractNestedValue(data, fieldConfig);
 
         expect(result).toBeUndefined();
       });
@@ -264,10 +296,9 @@ describe('FieldMappingService - Phase 2 TDD Enhancement', () => {
           verifiedSource: ['sync-all-movies-fixed.ts'],
         } as VerifiedFieldMappingConfig;
 
-        const result = await (service as any).extractNestedValue(
-          data,
-          fieldConfig,
-        );
+        const result = await (
+          service as unknown as ServiceWithPrivateMethods
+        ).extractNestedValue(data, fieldConfig);
 
         expect(result).toBeUndefined();
       });
@@ -286,10 +317,9 @@ describe('FieldMappingService - Phase 2 TDD Enhancement', () => {
           verifiedSource: ['sync-all-movies-fixed.ts'],
         } as VerifiedFieldMappingConfig;
 
-        const result = await (service as any).extractNestedValue(
-          data,
-          fieldConfig,
-        );
+        const result = await (
+          service as unknown as ServiceWithPrivateMethods
+        ).extractNestedValue(data, fieldConfig);
 
         expect(result).toBe('测试电影');
       });
@@ -308,10 +338,9 @@ describe('FieldMappingService - Phase 2 TDD Enhancement', () => {
           verifiedSource: ['sync-all-movies-fixed.ts'],
         } as VerifiedFieldMappingConfig;
 
-        const result = await (service as any).extractNestedValue(
-          data,
-          fieldConfig,
-        );
+        const result = await (
+          service as unknown as ServiceWithPrivateMethods
+        ).extractNestedValue(data, fieldConfig);
 
         expect(result).toBe('测试电影');
       });
@@ -327,10 +356,9 @@ describe('FieldMappingService - Phase 2 TDD Enhancement', () => {
           title: 'fldDEF123456789012',
         };
 
-        const result = await (service as any).validateFieldMappingsEnhanced(
-          mappings,
-          'movies',
-        );
+        const result = await (
+          service as unknown as ServiceWithPrivateMethods
+        ).validateFieldMappingsEnhanced(mappings, 'movies');
 
         expect(result.isValid).toBe(true);
         expect(result.errors).toEqual([]);
@@ -342,10 +370,9 @@ describe('FieldMappingService - Phase 2 TDD Enhancement', () => {
           title: 'fldDEF123456789012',
         };
 
-        const result = await (service as any).validateFieldMappingsEnhanced(
-          mappings,
-          'movies',
-        );
+        const result = await (
+          service as unknown as ServiceWithPrivateMethods
+        ).validateFieldMappingsEnhanced(mappings, 'movies');
 
         expect(result.isValid).toBe(false);
         expect(result.errors).toContain('未知字段: unknownField');
@@ -357,7 +384,7 @@ describe('FieldMappingService - Phase 2 TDD Enhancement', () => {
         };
 
         // Mock飞书API返回的字段信息
-        const mockFields = [
+        const mockFields: FeishuField[] = [
           {
             field_id: 'fldABC123456789012',
             field_name: '错误的中文名', // 与配置中的'电影名'不匹配
@@ -371,7 +398,9 @@ describe('FieldMappingService - Phase 2 TDD Enhancement', () => {
 
         mockTableService.getTableFields.mockResolvedValue(mockFields);
 
-        const result = await (service as any).validateFieldMappingsEnhanced(
+        const result = await (
+          service as unknown as ServiceWithPrivateMethods
+        ).validateFieldMappingsEnhanced(
           mappings,
           'movies',
           'test_app_id',
@@ -392,10 +421,9 @@ describe('FieldMappingService - Phase 2 TDD Enhancement', () => {
           director: 'fldABC123456789012',
         };
 
-        const result = await (service as any).validateFieldMappingsEnhanced(
-          mappings,
-          'movies',
-        );
+        const result = await (
+          service as unknown as ServiceWithPrivateMethods
+        ).validateFieldMappingsEnhanced(mappings, 'movies');
 
         expect(result.isValid).toBe(false);
         expect(result.errors).toContain('缺少必需字段: subjectId');
@@ -408,10 +436,9 @@ describe('FieldMappingService - Phase 2 TDD Enhancement', () => {
           subjectId: 'fldABC123456789012',
         };
 
-        const result = await (service as any).validateFieldMappingsEnhanced(
-          mappings,
-          'movies',
-        );
+        const result = await (
+          service as unknown as ServiceWithPrivateMethods
+        ).validateFieldMappingsEnhanced(mappings, 'movies');
 
         expect(result.isValid).toBe(false);
         expect(result.errors).toContain('Field ID格式错误: invalid-field-id');
@@ -427,10 +454,9 @@ describe('FieldMappingService - Phase 2 TDD Enhancement', () => {
           coverImage: 'fldCOVER1234567890',
         };
 
-        const result = await (service as any).validateFieldMappingsEnhanced(
-          validMovieMapping,
-          'movies',
-        );
+        const result = await (
+          service as unknown as ServiceWithPrivateMethods
+        ).validateFieldMappingsEnhanced(validMovieMapping, 'movies');
 
         expect(result.isValid).toBe(true);
         expect(result.validatedFields).toEqual([
@@ -447,7 +473,9 @@ describe('FieldMappingService - Phase 2 TDD Enhancement', () => {
           author: 'fldAUTHOR123456789',
         };
 
-        const result = await (service as any).validateFieldMappingsEnhanced(
+        const result = await (
+          service as unknown as ServiceWithPrivateMethods
+        ).validateFieldMappingsEnhanced(
           validBookMapping,
           'books', // 书籍类型
         );
@@ -467,10 +495,9 @@ describe('FieldMappingService - Phase 2 TDD Enhancement', () => {
           doubanRating: 'fldRATING123456789', // 这个字段有nestedPath: 'rating.average'
         };
 
-        const result = await (service as any).validateFieldMappingsEnhanced(
-          mappingWithNestedPath,
-          'books',
-        );
+        const result = await (
+          service as unknown as ServiceWithPrivateMethods
+        ).validateFieldMappingsEnhanced(mappingWithNestedPath, 'books');
 
         expect(result.isValid).toBe(true);
         expect(result.nestedPathFields).toContain('doubanRating');
@@ -486,10 +513,9 @@ describe('FieldMappingService - Phase 2 TDD Enhancement', () => {
           director: 'invalid-format', // Field ID格式错误
         };
 
-        const result = await (service as any).validateFieldMappingsEnhanced(
-          mixedMapping,
-          'movies',
-        );
+        const result = await (
+          service as unknown as ServiceWithPrivateMethods
+        ).validateFieldMappingsEnhanced(mixedMapping, 'movies');
 
         expect(result.isValid).toBe(false);
         expect(result.statistics).toEqual({
@@ -508,7 +534,9 @@ describe('FieldMappingService - Phase 2 TDD Enhancement', () => {
           // 在严格模式下，应该包含所有18个电影字段
         };
 
-        const result = await (service as any).validateFieldMappingsEnhanced(
+        const result = await (
+          service as unknown as ServiceWithPrivateMethods
+        ).validateFieldMappingsEnhanced(
           mappings,
           'movies',
           null,
@@ -537,10 +565,9 @@ describe('FieldMappingService - Phase 2 TDD Enhancement', () => {
       const verifiedConfig = getVerifiedFieldMapping('books');
       const ratingConfig = verifiedConfig['doubanRating']; // 应该有nestedPath: 'rating.average'
 
-      const result = await (service as any).extractNestedValue(
-        data,
-        ratingConfig,
-      );
+      const result = await (
+        service as unknown as ServiceWithPrivateMethods
+      ).extractNestedValue(data, ratingConfig);
 
       expect(result).toBe(9.6);
       expect(ratingConfig.nestedPath).toBe('rating.average');
@@ -553,13 +580,12 @@ describe('FieldMappingService - Phase 2 TDD Enhancement', () => {
         markDate: 'fldMARKDATE123456789', // 这个字段应该有时间戳处理说明
       };
 
-      const result = await (service as any).validateFieldMappingsEnhanced(
-        mappings,
-        'movies',
-      );
+      const result = await (
+        service as unknown as ServiceWithPrivateMethods
+      ).validateFieldMappingsEnhanced(mappings, 'movies');
 
       expect(result.isValid).toBe(true);
-      expect(result.processingNotes['markDate']).toContain('时间戳');
+      expect(result.processingNotes?.['markDate']).toContain('时间戳');
     });
   });
 });
