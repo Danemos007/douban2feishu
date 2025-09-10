@@ -143,9 +143,10 @@ export class DoubanService {
             fetchDto.category,
             transformationOptions,
           );
-        
+
         transformedData.push(transformationResult.data);
-        totalRepairsApplied += transformationResult.statistics?.repairedFields || 0;
+        totalRepairsApplied +=
+          transformationResult.statistics?.repairedFields || 0;
         totalValidationWarnings += transformationResult.warnings?.length || 0;
       }
 

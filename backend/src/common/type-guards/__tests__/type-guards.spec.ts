@@ -1,6 +1,6 @@
 /**
  * 类型守卫函数单元测试
- * 
+ *
  * @author Claude
  * @date 2025-09-09
  */
@@ -71,7 +71,9 @@ describe('User类型守卫测试', () => {
     });
 
     it('应该对无效User对象抛出错误', () => {
-      expect(() => assertIsUser(invalidUser)).toThrow('Object is not a valid User type');
+      expect(() => assertIsUser(invalidUser)).toThrow(
+        'Object is not a valid User type',
+      );
     });
   });
 });
@@ -124,28 +126,30 @@ describe('UserCredentials类型守卫测试', () => {
     });
 
     it('应该对无效UserCredentials对象抛出错误', () => {
-      expect(() => assertIsUserCredentials(invalidCredentials)).toThrow('Object is not a valid UserCredentials type');
+      expect(() => assertIsUserCredentials(invalidCredentials)).toThrow(
+        'Object is not a valid UserCredentials type',
+      );
     });
   });
 
   describe('凭证完整性检查', () => {
     it('hasDoubanCredentials应该正确检查豆瓣配置', () => {
       expect(hasDoubanCredentials(validCredentials)).toBe(true);
-      
+
       const noDouban = { ...validCredentials, doubanCookieEncrypted: null };
       expect(hasDoubanCredentials(noDouban)).toBe(false);
     });
 
     it('hasFeishuCredentials应该正确检查飞书配置', () => {
       expect(hasFeishuCredentials(validCredentials)).toBe(true);
-      
+
       const noFeishu = { ...validCredentials, feishuAppId: null };
       expect(hasFeishuCredentials(noFeishu)).toBe(false);
     });
 
     it('isUserCredentialsComplete应该检查完整配置', () => {
       expect(isUserCredentialsComplete(validCredentials)).toBe(true);
-      
+
       const incomplete = { ...validCredentials, doubanCookieEncrypted: null };
       expect(isUserCredentialsComplete(incomplete)).toBe(false);
     });
@@ -204,23 +208,41 @@ describe('SyncHistory类型守卫测试', () => {
     });
 
     it('应该对无效SyncHistory对象抛出错误', () => {
-      expect(() => assertIsSyncHistory(invalidSyncHistory)).toThrow('Object is not a valid SyncHistory type');
+      expect(() => assertIsSyncHistory(invalidSyncHistory)).toThrow(
+        'Object is not a valid SyncHistory type',
+      );
     });
   });
 
   describe('同步状态检查', () => {
     it('isSyncHistoryCompleted应该正确识别完成状态', () => {
-      expect(isSyncHistoryCompleted({ ...validSyncHistory, status: 'SUCCESS' })).toBe(true);
-      expect(isSyncHistoryCompleted({ ...validSyncHistory, status: 'FAILED' })).toBe(true);
-      expect(isSyncHistoryCompleted({ ...validSyncHistory, status: 'CANCELLED' })).toBe(true);
-      expect(isSyncHistoryCompleted({ ...validSyncHistory, status: 'RUNNING' })).toBe(false);
-      expect(isSyncHistoryCompleted({ ...validSyncHistory, status: 'PENDING' })).toBe(false);
+      expect(
+        isSyncHistoryCompleted({ ...validSyncHistory, status: 'SUCCESS' }),
+      ).toBe(true);
+      expect(
+        isSyncHistoryCompleted({ ...validSyncHistory, status: 'FAILED' }),
+      ).toBe(true);
+      expect(
+        isSyncHistoryCompleted({ ...validSyncHistory, status: 'CANCELLED' }),
+      ).toBe(true);
+      expect(
+        isSyncHistoryCompleted({ ...validSyncHistory, status: 'RUNNING' }),
+      ).toBe(false);
+      expect(
+        isSyncHistoryCompleted({ ...validSyncHistory, status: 'PENDING' }),
+      ).toBe(false);
     });
 
     it('isSyncHistoryRunning应该正确识别运行状态', () => {
-      expect(isSyncHistoryRunning({ ...validSyncHistory, status: 'RUNNING' })).toBe(true);
-      expect(isSyncHistoryRunning({ ...validSyncHistory, status: 'SUCCESS' })).toBe(false);
-      expect(isSyncHistoryRunning({ ...validSyncHistory, status: 'PENDING' })).toBe(false);
+      expect(
+        isSyncHistoryRunning({ ...validSyncHistory, status: 'RUNNING' }),
+      ).toBe(true);
+      expect(
+        isSyncHistoryRunning({ ...validSyncHistory, status: 'SUCCESS' }),
+      ).toBe(false);
+      expect(
+        isSyncHistoryRunning({ ...validSyncHistory, status: 'PENDING' }),
+      ).toBe(false);
     });
   });
 });

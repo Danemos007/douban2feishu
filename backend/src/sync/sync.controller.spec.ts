@@ -1,5 +1,4 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { HttpStatus } from '@nestjs/common';
 
 import { SyncController } from './sync.controller';
 import { SyncService } from './sync.service';
@@ -10,7 +9,7 @@ import { TriggerType, SyncStatus } from '../../generated/prisma';
 
 /**
  * SyncController 测试套件
- * 
+ *
  * 测试覆盖范围:
  * - Controller基础功能验证
  * - REST API端点测试 (POST/GET/DELETE)
@@ -18,17 +17,24 @@ import { TriggerType, SyncStatus } from '../../generated/prisma';
  * - 用户身份认证和授权
  * - 异常处理和错误响应
  * - HTTP状态码正确性
- * 
+ *
  * 遵循与sync.service.spec.ts相同的Mock风格和测试规范
  */
 describe('SyncController', () => {
   let controller: SyncController;
   let syncService: SyncService;
 
+  // Spy variables for unbound-method compliance
+  let triggerSyncSpy: jest.SpyInstance;
+  let getSyncStatusSpy: jest.SpyInstance;
+  let getSyncHistorySpy: jest.SpyInstance;
+  let cancelSyncSpy: jest.SpyInstance;
+  let getQueueStatsSpy: jest.SpyInstance;
+
   // Mock数据常量
   const mockUserId = 'user-123';
   const mockSyncId = 'sync-456';
-  
+
   const mockTriggerSyncDto: TriggerSyncDto = {
     triggerType: 'MANUAL' as TriggerType,
     options: {
@@ -62,7 +68,7 @@ describe('SyncController', () => {
       errorMessage: null,
     },
     {
-      id: 'history-2', 
+      id: 'history-2',
       triggerType: 'AUTO' as TriggerType,
       status: 'FAILED' as SyncStatus,
       startedAt: new Date('2025-09-09T08:00:00Z'),
@@ -107,11 +113,21 @@ describe('SyncController', () => {
     syncService = module.get<SyncService>(SyncService);
 
     // 设置默认Mock行为
-    jest.spyOn(syncService, 'triggerSync').mockResolvedValue(mockSyncId);
-    jest.spyOn(syncService, 'getSyncStatus').mockResolvedValue(mockSyncStatus);
-    jest.spyOn(syncService, 'getSyncHistory').mockResolvedValue(mockSyncHistory);
-    jest.spyOn(syncService, 'cancelSync').mockResolvedValue(true);
-    jest.spyOn(syncService, 'getQueueStats').mockResolvedValue(mockQueueStats);
+    triggerSyncSpy = jest
+      .spyOn(syncService, 'triggerSync')
+      .mockResolvedValue(mockSyncId);
+    getSyncStatusSpy = jest
+      .spyOn(syncService, 'getSyncStatus')
+      .mockResolvedValue(mockSyncStatus);
+    getSyncHistorySpy = jest
+      .spyOn(syncService, 'getSyncHistory')
+      .mockResolvedValue(mockSyncHistory);
+    cancelSyncSpy = jest
+      .spyOn(syncService, 'cancelSync')
+      .mockResolvedValue(true);
+    getQueueStatsSpy = jest
+      .spyOn(syncService, 'getQueueStats')
+      .mockResolvedValue(mockQueueStats);
   });
 
   afterEach(() => {
@@ -132,9 +148,15 @@ describe('SyncController', () => {
 
   describe('POST /sync/trigger - 触发同步任务', () => {
     it('应该成功创建同步任务', async () => {
-      const result = await controller.triggerSync(mockUserId, mockTriggerSyncDto);
+      const result = await controller.triggerSync(
+        mockUserId,
+        mockTriggerSyncDto,
+      );
 
-      expect(syncService.triggerSync).toHaveBeenCalledWith(mockUserId, mockTriggerSyncDto);
+      expect(triggerSyncSpy).toHaveBeenCalledWith(
+        mockUserId,
+        mockTriggerSyncDto,
+      );
       expect(result).toEqual({
         syncId: mockSyncId,
         message: 'Sync task created successfully',
@@ -151,8 +173,8 @@ describe('SyncController', () => {
 
       await controller.triggerSync('custom-user-id', customDto);
 
-      expect(syncService.triggerSync).toHaveBeenCalledWith('custom-user-id', customDto);
-      expect(syncService.triggerSync).toHaveBeenCalledTimes(1);
+      expect(triggerSyncSpy).toHaveBeenCalledWith('custom-user-id', customDto);
+      expect(triggerSyncSpy).toHaveBeenCalledTimes(1);
     });
 
     it('应该处理SyncService抛出的异常', async () => {
@@ -160,10 +182,13 @@ describe('SyncController', () => {
       jest.spyOn(syncService, 'triggerSync').mockRejectedValue(serviceError);
 
       await expect(
-        controller.triggerSync(mockUserId, mockTriggerSyncDto)
+        controller.triggerSync(mockUserId, mockTriggerSyncDto),
       ).rejects.toThrow('Another sync is already in progress');
 
-      expect(syncService.triggerSync).toHaveBeenCalledWith(mockUserId, mockTriggerSyncDto);
+      expect(triggerSyncSpy).toHaveBeenCalledWith(
+        mockUserId,
+        mockTriggerSyncDto,
+      );
     });
 
     it('应该处理空的options字段', async () => {
@@ -174,7 +199,10 @@ describe('SyncController', () => {
 
       await controller.triggerSync(mockUserId, dtoWithoutOptions);
 
-      expect(syncService.triggerSync).toHaveBeenCalledWith(mockUserId, dtoWithoutOptions);
+      expect(triggerSyncSpy).toHaveBeenCalledWith(
+        mockUserId,
+        dtoWithoutOptions,
+      );
     });
 
     it('应该处理特殊字符的用户ID', async () => {
@@ -182,7 +210,10 @@ describe('SyncController', () => {
 
       await controller.triggerSync(specialUserId, mockTriggerSyncDto);
 
-      expect(syncService.triggerSync).toHaveBeenCalledWith(specialUserId, mockTriggerSyncDto);
+      expect(triggerSyncSpy).toHaveBeenCalledWith(
+        specialUserId,
+        mockTriggerSyncDto,
+      );
     });
   });
 
@@ -190,7 +221,7 @@ describe('SyncController', () => {
     it('应该成功获取同步状态', async () => {
       const result = await controller.getSyncStatus(mockSyncId);
 
-      expect(syncService.getSyncStatus).toHaveBeenCalledWith(mockSyncId);
+      expect(getSyncStatusSpy).toHaveBeenCalledWith(mockSyncId);
       expect(result).toEqual(mockSyncStatus);
     });
 
@@ -199,8 +230,8 @@ describe('SyncController', () => {
 
       await controller.getSyncStatus(customSyncId);
 
-      expect(syncService.getSyncStatus).toHaveBeenCalledWith(customSyncId);
-      expect(syncService.getSyncStatus).toHaveBeenCalledTimes(1);
+      expect(getSyncStatusSpy).toHaveBeenCalledWith(customSyncId);
+      expect(getSyncStatusSpy).toHaveBeenCalledTimes(1);
     });
 
     it('应该处理不存在的同步任务', async () => {
@@ -208,10 +239,10 @@ describe('SyncController', () => {
       jest.spyOn(syncService, 'getSyncStatus').mockRejectedValue(notFoundError);
 
       await expect(
-        controller.getSyncStatus('non-existent-sync')
+        controller.getSyncStatus('non-existent-sync'),
       ).rejects.toThrow('Sync not found');
 
-      expect(syncService.getSyncStatus).toHaveBeenCalledWith('non-existent-sync');
+      expect(getSyncStatusSpy).toHaveBeenCalledWith('non-existent-sync');
     });
 
     it('应该处理UUID格式的syncId', async () => {
@@ -219,7 +250,7 @@ describe('SyncController', () => {
 
       await controller.getSyncStatus(uuidSyncId);
 
-      expect(syncService.getSyncStatus).toHaveBeenCalledWith(uuidSyncId);
+      expect(getSyncStatusSpy).toHaveBeenCalledWith(uuidSyncId);
     });
 
     it('应该处理service返回的复杂状态数据', async () => {
@@ -242,8 +273,11 @@ describe('SyncController', () => {
 
       const result = await controller.getSyncStatus(mockSyncId);
 
+      expect(result).not.toBeNull();
       expect(result).toEqual(complexStatus);
-      expect(result.metadata.performance).toBeDefined();
+      if (result) {
+        expect(result.metadata).toHaveProperty('performance');
+      }
     });
   });
 
@@ -251,7 +285,7 @@ describe('SyncController', () => {
     it('应该成功获取同步历史', async () => {
       const result = await controller.getSyncHistory(mockUserId);
 
-      expect(syncService.getSyncHistory).toHaveBeenCalledWith(mockUserId, 10);
+      expect(getSyncHistorySpy).toHaveBeenCalledWith(mockUserId, 10);
       expect(result).toEqual(mockSyncHistory);
     });
 
@@ -260,7 +294,7 @@ describe('SyncController', () => {
 
       await controller.getSyncHistory(mockUserId, customLimit);
 
-      expect(syncService.getSyncHistory).toHaveBeenCalledWith(mockUserId, 20);
+      expect(getSyncHistorySpy).toHaveBeenCalledWith(mockUserId, 20);
     });
 
     it('应该处理无效的limit参数', async () => {
@@ -269,19 +303,19 @@ describe('SyncController', () => {
       await controller.getSyncHistory(mockUserId, invalidLimit);
 
       // parseInt('invalid') 返回 NaN，传递给service
-      expect(syncService.getSyncHistory).toHaveBeenCalledWith(mockUserId, NaN);
+      expect(getSyncHistorySpy).toHaveBeenCalledWith(mockUserId, NaN);
     });
 
     it('应该处理limit为0的情况', async () => {
       await controller.getSyncHistory(mockUserId, '0');
 
-      expect(syncService.getSyncHistory).toHaveBeenCalledWith(mockUserId, 0);
+      expect(getSyncHistorySpy).toHaveBeenCalledWith(mockUserId, 0);
     });
 
     it('应该处理负数limit', async () => {
       await controller.getSyncHistory(mockUserId, '-5');
 
-      expect(syncService.getSyncHistory).toHaveBeenCalledWith(mockUserId, -5);
+      expect(getSyncHistorySpy).toHaveBeenCalledWith(mockUserId, -5);
     });
 
     it('应该处理service返回空历史', async () => {
@@ -297,7 +331,7 @@ describe('SyncController', () => {
 
       await controller.getSyncHistory(customUserId, '15');
 
-      expect(syncService.getSyncHistory).toHaveBeenCalledWith(customUserId, 15);
+      expect(getSyncHistorySpy).toHaveBeenCalledWith(customUserId, 15);
     });
   });
 
@@ -305,7 +339,7 @@ describe('SyncController', () => {
     it('应该成功取消同步任务', async () => {
       const result = await controller.cancelSync(mockSyncId, mockUserId);
 
-      expect(syncService.cancelSync).toHaveBeenCalledWith(mockSyncId, mockUserId);
+      expect(cancelSyncSpy).toHaveBeenCalledWith(mockSyncId, mockUserId);
       expect(result).toEqual({
         message: 'Sync cancelled successfully',
       });
@@ -316,7 +350,7 @@ describe('SyncController', () => {
 
       const result = await controller.cancelSync(mockSyncId, mockUserId);
 
-      expect(syncService.cancelSync).toHaveBeenCalledWith(mockSyncId, mockUserId);
+      expect(cancelSyncSpy).toHaveBeenCalledWith(mockSyncId, mockUserId);
       expect(result).toEqual({
         message: 'Sync not found or cannot be cancelled',
       });
@@ -328,7 +362,7 @@ describe('SyncController', () => {
 
       await controller.cancelSync(customSyncId, customUserId);
 
-      expect(syncService.cancelSync).toHaveBeenCalledWith(customSyncId, customUserId);
+      expect(cancelSyncSpy).toHaveBeenCalledWith(customSyncId, customUserId);
     });
 
     it('应该处理service抛出的异常', async () => {
@@ -336,21 +370,27 @@ describe('SyncController', () => {
       jest.spyOn(syncService, 'cancelSync').mockRejectedValue(serviceError);
 
       await expect(
-        controller.cancelSync(mockSyncId, mockUserId)
+        controller.cancelSync(mockSyncId, mockUserId),
       ).rejects.toThrow('Database connection failed');
 
-      expect(syncService.cancelSync).toHaveBeenCalledWith(mockSyncId, mockUserId);
+      expect(cancelSyncSpy).toHaveBeenCalledWith(mockSyncId, mockUserId);
     });
 
     it('应该处理不同用户尝试取消其他用户的任务', async () => {
       jest.spyOn(syncService, 'cancelSync').mockResolvedValue(false);
 
-      const result = await controller.cancelSync(mockSyncId, 'unauthorized-user');
+      const result = await controller.cancelSync(
+        mockSyncId,
+        'unauthorized-user',
+      );
 
       expect(result).toEqual({
         message: 'Sync not found or cannot be cancelled',
       });
-      expect(syncService.cancelSync).toHaveBeenCalledWith(mockSyncId, 'unauthorized-user');
+      expect(cancelSyncSpy).toHaveBeenCalledWith(
+        mockSyncId,
+        'unauthorized-user',
+      );
     });
   });
 
@@ -358,12 +398,12 @@ describe('SyncController', () => {
     it('应该成功获取队列统计信息', async () => {
       const result = await controller.getQueueStats();
 
-      expect(syncService.getQueueStats).toHaveBeenCalled();
+      expect(getQueueStatsSpy).toHaveBeenCalled();
       expect(result).toEqual(mockQueueStats);
     });
 
     it('应该处理service返回的详细统计信息', async () => {
-      const detailedStats = {
+      const detailedStats: QueueStats = {
         active: 2,
         waiting: 5,
         completed: 100,
@@ -380,16 +420,16 @@ describe('SyncController', () => {
       const result = await controller.getQueueStats();
 
       expect(result).toEqual(detailedStats);
-      expect((result as any).totalProcessed).toBe(103);
+      expect(result.totalProcessed).toBe(103);
     });
 
     it('应该处理service抛出的异常', async () => {
       const serviceError = new Error('Queue connection failed');
       jest.spyOn(syncService, 'getQueueStats').mockRejectedValue(serviceError);
 
-      await expect(
-        controller.getQueueStats()
-      ).rejects.toThrow('Queue connection failed');
+      await expect(controller.getQueueStats()).rejects.toThrow(
+        'Queue connection failed',
+      );
     });
 
     it('应该处理空的统计信息', async () => {
@@ -411,7 +451,7 @@ describe('SyncController', () => {
       await controller.getQueueStats();
 
       // 验证getQueueStats被调用时没有传递任何参数
-      expect(syncService.getQueueStats).toHaveBeenCalledWith();
+      expect(getQueueStatsSpy).toHaveBeenCalledWith();
     });
   });
 
@@ -421,13 +461,16 @@ describe('SyncController', () => {
 
       await controller.triggerSync(longUserId, mockTriggerSyncDto);
 
-      expect(syncService.triggerSync).toHaveBeenCalledWith(longUserId, mockTriggerSyncDto);
+      expect(triggerSyncSpy).toHaveBeenCalledWith(
+        longUserId,
+        mockTriggerSyncDto,
+      );
     });
 
     it('应该处理空字符串参数', async () => {
       await controller.getSyncStatus('');
 
-      expect(syncService.getSyncStatus).toHaveBeenCalledWith('');
+      expect(getSyncStatusSpy).toHaveBeenCalledWith('');
     });
 
     it('应该处理特殊字符在syncId中', async () => {
@@ -435,20 +478,20 @@ describe('SyncController', () => {
 
       await controller.getSyncStatus(specialSyncId);
 
-      expect(syncService.getSyncStatus).toHaveBeenCalledWith(specialSyncId);
+      expect(getSyncStatusSpy).toHaveBeenCalledWith(specialSyncId);
     });
 
     it('应该处理undefined limit参数', async () => {
       await controller.getSyncHistory(mockUserId, undefined);
 
       // undefined时使用默认值'10'，parseInt('10') = 10
-      expect(syncService.getSyncHistory).toHaveBeenCalledWith(mockUserId, 10);
+      expect(getSyncHistorySpy).toHaveBeenCalledWith(mockUserId, 10);
     });
 
     it('应该处理null参数', async () => {
-      await controller.getSyncStatus(null as any);
+      await controller.getSyncStatus(null as string);
 
-      expect(syncService.getSyncStatus).toHaveBeenCalledWith(null);
+      expect(getSyncStatusSpy).toHaveBeenCalledWith(null);
     });
   });
 
@@ -464,7 +507,7 @@ describe('SyncController', () => {
         jest.spyOn(syncService, 'triggerSync').mockRejectedValue(error);
 
         await expect(
-          controller.triggerSync(mockUserId, mockTriggerSyncDto)
+          controller.triggerSync(mockUserId, mockTriggerSyncDto),
         ).rejects.toThrow(error);
       }
     });
@@ -478,7 +521,9 @@ describe('SyncController', () => {
     });
 
     it('应该处理service返回undefined的情况', async () => {
-      jest.spyOn(syncService, 'getQueueStats').mockResolvedValue(undefined as any);
+      jest
+        .spyOn(syncService, 'getQueueStats')
+        .mockResolvedValue(undefined as unknown as QueueStats);
 
       const result = await controller.getQueueStats();
 
@@ -489,24 +534,33 @@ describe('SyncController', () => {
       const rejectionReason = 'Promise rejected without Error object';
       jest.spyOn(syncService, 'cancelSync').mockRejectedValue(rejectionReason);
 
-      await expect(
-        controller.cancelSync(mockSyncId, mockUserId)
-      ).rejects.toBe(rejectionReason);
+      await expect(controller.cancelSync(mockSyncId, mockUserId)).rejects.toBe(
+        rejectionReason,
+      );
     });
   });
 
   describe('认证和权限验证', () => {
     it('应该被JwtAuthGuard保护', () => {
       // 验证Controller类上有UseGuards装饰器
-      const metadata = Reflect.getMetadata('__guards__', SyncController);
+      const metadata = Reflect.getMetadata(
+        '__guards__',
+        SyncController,
+      ) as unknown[];
       expect(metadata).toContain(JwtAuthGuard);
     });
 
     it('应该在所有路由上应用认证', () => {
       // 验证每个方法都需要通过认证
-      const methodNames = ['triggerSync', 'getSyncStatus', 'getSyncHistory', 'cancelSync', 'getQueueStats'];
-      
-      methodNames.forEach(methodName => {
+      const methodNames = [
+        'triggerSync',
+        'getSyncStatus',
+        'getSyncHistory',
+        'cancelSync',
+        'getQueueStats',
+      ];
+
+      methodNames.forEach((methodName) => {
         expect(controller[methodName]).toBeDefined();
       });
     });
@@ -515,26 +569,32 @@ describe('SyncController', () => {
       // 模拟CurrentUser装饰器行为
       await controller.triggerSync(mockUserId, mockTriggerSyncDto);
 
-      expect(syncService.triggerSync).toHaveBeenCalledWith(mockUserId, expect.any(Object));
+      expect(triggerSyncSpy).toHaveBeenCalledWith(
+        mockUserId,
+        expect.any(Object),
+      );
     });
 
     it('应该区分需要用户ID和不需要用户ID的端点', async () => {
       // triggerSync需要用户ID
       await controller.triggerSync(mockUserId, mockTriggerSyncDto);
-      expect(syncService.triggerSync).toHaveBeenCalledWith(
+      expect(triggerSyncSpy).toHaveBeenCalledWith(
         expect.stringContaining('user'),
-        expect.any(Object)
+        expect.any(Object),
       );
 
       // getQueueStats不需要用户ID
       await controller.getQueueStats();
-      expect(syncService.getQueueStats).toHaveBeenCalledWith();
+      expect(getQueueStatsSpy).toHaveBeenCalledWith();
     });
   });
 
   describe('HTTP状态码和响应格式', () => {
     it('应该为triggerSync返回正确的响应格式', async () => {
-      const result = await controller.triggerSync(mockUserId, mockTriggerSyncDto);
+      const result = await controller.triggerSync(
+        mockUserId,
+        mockTriggerSyncDto,
+      );
 
       expect(result).toHaveProperty('syncId');
       expect(result).toHaveProperty('message');
@@ -562,7 +622,7 @@ describe('SyncController', () => {
       expect(statusResult).toHaveProperty('syncId');
       expect(statusResult).toHaveProperty('status');
 
-      // getSyncHistory  
+      // getSyncHistory
       const historyResult = await controller.getSyncHistory(mockUserId);
       expect(Array.isArray(historyResult)).toBe(true);
 
@@ -576,12 +636,18 @@ describe('SyncController', () => {
   describe('集成测试场景', () => {
     it('应该支持完整的同步工作流', async () => {
       // 1. 触发同步
-      const triggerResult = await controller.triggerSync(mockUserId, mockTriggerSyncDto);
+      const triggerResult = await controller.triggerSync(
+        mockUserId,
+        mockTriggerSyncDto,
+      );
       expect(triggerResult.syncId).toBe(mockSyncId);
 
       // 2. 检查状态
       const statusResult = await controller.getSyncStatus(mockSyncId);
-      expect(statusResult.syncId).toBe(mockSyncId);
+      expect(statusResult).not.toBeNull();
+      if (statusResult) {
+        expect(statusResult.syncId).toBe(mockSyncId);
+      }
 
       // 3. 检查历史
       const historyResult = await controller.getSyncHistory(mockUserId);
@@ -617,9 +683,17 @@ describe('SyncController', () => {
       await controller.triggerSync(user1, mockTriggerSyncDto);
       await controller.triggerSync(user2, mockTriggerSyncDto);
 
-      expect(syncService.triggerSync).toHaveBeenCalledTimes(2);
-      expect(syncService.triggerSync).toHaveBeenNthCalledWith(1, user1, mockTriggerSyncDto);
-      expect(syncService.triggerSync).toHaveBeenNthCalledWith(2, user2, mockTriggerSyncDto);
+      expect(triggerSyncSpy).toHaveBeenCalledTimes(2);
+      expect(triggerSyncSpy).toHaveBeenNthCalledWith(
+        1,
+        user1,
+        mockTriggerSyncDto,
+      );
+      expect(triggerSyncSpy).toHaveBeenNthCalledWith(
+        2,
+        user2,
+        mockTriggerSyncDto,
+      );
     });
   });
 });

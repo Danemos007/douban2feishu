@@ -26,12 +26,7 @@ import { PrismaModule } from '../common/prisma/prisma.module';
  * - 错误恢复和重试机制
  */
 @Module({
-  imports: [
-    ConfigModule,
-    CryptoModule,
-    PrismaModule,
-    RedisModule,
-  ],
+  imports: [ConfigModule, CryptoModule, PrismaModule, RedisModule],
   providers: [
     FeishuService,
     FeishuAuthService,

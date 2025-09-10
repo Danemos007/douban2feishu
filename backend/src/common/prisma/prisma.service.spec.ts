@@ -1,7 +1,7 @@
 /**
  * PrismaService 单元测试
  * 验证类型安全和运行时验证功能
- * 
+ *
  * @author Claude
  * @date 2025-09-09
  */
@@ -49,7 +49,7 @@ describe('PrismaService', () => {
       // 生命周期方法
       onModuleInit: jest.fn().mockResolvedValue(undefined),
       onModuleDestroy: jest.fn().mockResolvedValue(undefined),
-      // 核心方法  
+      // 核心方法
       healthCheck: jest.fn().mockResolvedValue({
         isHealthy: true,
         timestamp: new Date(),
@@ -84,7 +84,7 @@ describe('PrismaService', () => {
     it('应该成功初始化模块', async () => {
       // 由于是mock对象，onModuleInit已经被mock了
       await service.onModuleInit();
-      
+
       expect(service.onModuleInit).toHaveBeenCalled();
     });
 
@@ -98,7 +98,7 @@ describe('PrismaService', () => {
 
     it('应该成功销毁模块', async () => {
       await service.onModuleDestroy();
-      
+
       expect(service.onModuleDestroy).toHaveBeenCalled();
     });
   });
@@ -142,7 +142,9 @@ describe('PrismaService', () => {
       const result = await service.executeTransaction(mockTransactionFn);
 
       expect(result).toEqual(mockResult);
-      expect(service.executeTransaction).toHaveBeenCalledWith(mockTransactionFn);
+      expect(service.executeTransaction).toHaveBeenCalledWith(
+        mockTransactionFn,
+      );
     });
 
     it('应该处理事务失败', async () => {
@@ -150,8 +152,12 @@ describe('PrismaService', () => {
       const mockTransactionFn = jest.fn();
       service.executeTransaction.mockRejectedValue(error);
 
-      await expect(service.executeTransaction(mockTransactionFn)).rejects.toThrow(error);
-      expect(service.executeTransaction).toHaveBeenCalledWith(mockTransactionFn);
+      await expect(
+        service.executeTransaction(mockTransactionFn),
+      ).rejects.toThrow(error);
+      expect(service.executeTransaction).toHaveBeenCalledWith(
+        mockTransactionFn,
+      );
     });
   });
 
@@ -237,19 +243,26 @@ describe('PrismaService', () => {
       it('应该返回有效的凭证数据', async () => {
         service.findUserCredentialsSafely.mockResolvedValue(validCredentials);
 
-        const result = await service.findUserCredentialsSafely(validCredentials.userId);
+        const result = await service.findUserCredentialsSafely(
+          validCredentials.userId,
+        );
 
         expect(result).toEqual(validCredentials);
-        expect(service.findUserCredentialsSafely).toHaveBeenCalledWith(validCredentials.userId);
+        expect(service.findUserCredentialsSafely).toHaveBeenCalledWith(
+          validCredentials.userId,
+        );
       });
 
       it('应该返回null当凭证不存在', async () => {
         service.findUserCredentialsSafely.mockResolvedValue(null);
 
-        const result = await service.findUserCredentialsSafely('non-existent-id');
+        const result =
+          await service.findUserCredentialsSafely('non-existent-id');
 
         expect(result).toBeNull();
-        expect(service.findUserCredentialsSafely).toHaveBeenCalledWith('non-existent-id');
+        expect(service.findUserCredentialsSafely).toHaveBeenCalledWith(
+          'non-existent-id',
+        );
       });
     });
 
@@ -261,7 +274,9 @@ describe('PrismaService', () => {
         const result = await service.findUserSyncHistorySafely(validUser.id);
 
         expect(result).toEqual(histories);
-        expect(service.findUserSyncHistorySafely).toHaveBeenCalledWith(validUser.id);
+        expect(service.findUserSyncHistorySafely).toHaveBeenCalledWith(
+          validUser.id,
+        );
       });
 
       it('应该支持分页参数', async () => {
@@ -269,7 +284,11 @@ describe('PrismaService', () => {
 
         await service.findUserSyncHistorySafely(validUser.id, 10, 20);
 
-        expect(service.findUserSyncHistorySafely).toHaveBeenCalledWith(validUser.id, 10, 20);
+        expect(service.findUserSyncHistorySafely).toHaveBeenCalledWith(
+          validUser.id,
+          10,
+          20,
+        );
       });
     });
 
@@ -289,7 +308,9 @@ describe('PrismaService', () => {
         expect(result.syncHistory.isValid).toBe(true);
         expect(result.syncHistory.totalCount).toBe(1);
         expect(result.syncHistory.invalidCount).toBe(0);
-        expect(service.validateUserDataIntegrity).toHaveBeenCalledWith(validUser.id);
+        expect(service.validateUserDataIntegrity).toHaveBeenCalledWith(
+          validUser.id,
+        );
       });
 
       it('应该检测无效数据', async () => {
@@ -306,7 +327,9 @@ describe('PrismaService', () => {
         expect(result.user.error).toBe('Invalid user data structure');
         expect(result.credentials.isValid).toBe(true);
         expect(result.syncHistory.isValid).toBe(true);
-        expect(service.validateUserDataIntegrity).toHaveBeenCalledWith(validUser.id);
+        expect(service.validateUserDataIntegrity).toHaveBeenCalledWith(
+          validUser.id,
+        );
       });
     });
   });

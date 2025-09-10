@@ -210,10 +210,16 @@ export type WebSocketEvent =
  * 任务队列状态统计接口
  */
 export interface QueueStats {
+  // 基础统计字段（所有实现都应包含）
   active: number;
   waiting: number;
   completed: number;
   failed: number;
-  delayed: number;
-  paused: number;
+
+  // 扩展统计字段（可选，根据具体实现决定）
+  delayed?: number;
+  paused?: number;
+  totalProcessed?: number;
+  averageProcessingTime?: number;
+  lastProcessedAt?: Date;
 }

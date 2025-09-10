@@ -1,4 +1,9 @@
-import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  OnModuleInit,
+  OnModuleDestroy,
+  Logger,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 
@@ -138,7 +143,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   async getJSON<T>(key: string): Promise<T | null> {
     const value = await this.get(key);
     if (!value) return null;
-    
+
     try {
       return JSON.parse(value) as T;
     } catch (error) {
@@ -176,11 +181,15 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     return this.client.keys(pattern);
   }
 
-  async scan(cursor: number, pattern?: string, count?: number): Promise<[string, string[]]> {
+  async scan(
+    cursor: number,
+    pattern?: string,
+    count?: number,
+  ): Promise<[string, string[]]> {
     const options: any = { cursor };
     if (pattern) options.match = pattern;
     if (count) options.count = count;
-    
+
     return this.client.scan(cursor, options);
   }
 }

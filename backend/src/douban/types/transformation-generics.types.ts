@@ -1,18 +1,18 @@
 /**
  * 数据转换服务泛型类型定义
- * 
+ *
  * 提供严格的泛型接口，提升复用性和类型安全性
- * 
+ *
  * 设计原则：
  * 1. 泛型优先 - 所有核心函数使用泛型
  * 2. 类型约束 - 明确输入输出边界
  * 3. 复用性 - 支持多种数据类型转换
  */
 
-import { 
-  DoubanDataType, 
+import {
+  DoubanDataType,
   TransformationOptions,
-  TransformationStatistics 
+  TransformationStatistics,
 } from '../contract/transformation.schema';
 import { VerifiedFieldMappingConfig } from '../../feishu/config/douban-field-mapping.config';
 
@@ -34,7 +34,9 @@ export interface TransformedDataOutput {
 /**
  * 泛型转换结果接口
  */
-export interface GenericTransformationResult<TOutput extends TransformedDataOutput = TransformedDataOutput> {
+export interface GenericTransformationResult<
+  TOutput extends TransformedDataOutput = TransformedDataOutput,
+> {
   data: TOutput;
   statistics: TransformationStatistics;
   warnings: string[];
@@ -44,14 +46,17 @@ export interface GenericTransformationResult<TOutput extends TransformedDataOutp
 /**
  * 泛型转换器接口
  */
-export interface GenericTransformer<TInput extends RawDataInput, TOutput extends TransformedDataOutput> {
+export interface GenericTransformer<
+  TInput extends RawDataInput,
+  TOutput extends TransformedDataOutput,
+> {
   /**
    * 执行数据转换
    */
   transform(
     input: TInput,
     dataType: DoubanDataType,
-    options?: TransformationOptions
+    options?: TransformationOptions,
   ): Promise<GenericTransformationResult<TOutput>>;
 }
 
@@ -64,77 +69,86 @@ export interface FieldTransformer<TInput = unknown, TOutput = unknown> {
    */
   transformField(
     value: TInput,
-    fieldConfig: VerifiedFieldMappingConfig
+    fieldConfig: VerifiedFieldMappingConfig,
   ): Promise<TOutput>;
 }
 
 /**
  * 嵌套值提取器泛型接口
  */
-export interface NestedValueExtractor<TInput extends RawDataInput = RawDataInput, TOutput = unknown> {
+export interface NestedValueExtractor<
+  TInput extends RawDataInput = RawDataInput,
+  TOutput = unknown,
+> {
   /**
    * 提取嵌套属性值
    */
   extractValue(
     data: TInput,
-    fieldConfig: VerifiedFieldMappingConfig
+    fieldConfig: VerifiedFieldMappingConfig,
   ): Promise<TOutput>;
 }
 
 /**
  * 数组处理器泛型接口
  */
-export interface ArrayProcessor<TInput = unknown[], TOutput = string | unknown[]> {
+export interface ArrayProcessor<
+  TInput = unknown[],
+  TOutput = string | unknown[],
+> {
   /**
    * 处理数组字段
    */
   processArray(
     value: TInput,
-    fieldConfig: VerifiedFieldMappingConfig
+    fieldConfig: VerifiedFieldMappingConfig,
   ): Promise<TOutput>;
 }
 
 /**
  * 智能修复器泛型接口
  */
-export interface IntelligentRepairer<TData extends TransformedDataOutput = TransformedDataOutput> {
+export interface IntelligentRepairer<
+  TData extends TransformedDataOutput = TransformedDataOutput,
+> {
   /**
    * 应用智能修复
    */
   applyRepairs(
     data: TData,
     dataType: DoubanDataType,
-    options?: { enableIntelligentRepairs?: boolean }
+    options?: { enableIntelligentRepairs?: boolean },
   ): Promise<TData>;
 }
 
 /**
  * 数据验证器泛型接口
  */
-export interface DataValidator<TData extends TransformedDataOutput = TransformedDataOutput> {
+export interface DataValidator<
+  TData extends TransformedDataOutput = TransformedDataOutput,
+> {
   /**
    * 验证转换后的数据
    */
-  validateData(
-    data: TData,
-    dataType: DoubanDataType
-  ): Promise<TData>;
+  validateData(data: TData, dataType: DoubanDataType): Promise<TData>;
 }
 
 /**
  * 统计收集器泛型接口
  */
-export interface StatisticsCollector<TStats extends TransformationStatistics = TransformationStatistics> {
+export interface StatisticsCollector<
+  TStats extends TransformationStatistics = TransformationStatistics,
+> {
   /**
    * 生成统计信息
    */
   generateStats(): TStats;
-  
+
   /**
    * 重置统计
    */
   resetStats(): void;
-  
+
   /**
    * 更新统计
    */
@@ -187,7 +201,7 @@ export type TransformedDoubanData = DoubanBookData | DoubanMovieData;
  * 字段修复器泛型类型
  */
 export type FieldRepairer<TInput = string, TOutput = string> = (
-  value: TInput
+  value: TInput,
 ) => TOutput | Promise<TOutput>;
 
 /**
@@ -207,7 +221,9 @@ export interface RepairerMap {
 /**
  * 泛型转换上下文
  */
-export interface TransformationContext<TInput extends RawDataInput = RawDataInput> {
+export interface TransformationContext<
+  TInput extends RawDataInput = RawDataInput,
+> {
   rawData: TInput;
   dataType: DoubanDataType;
   options: TransformationOptions;
