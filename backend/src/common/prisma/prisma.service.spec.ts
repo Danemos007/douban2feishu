@@ -6,9 +6,130 @@
  * @date 2025-09-09
  */
 
-import { Test, TestingModule } from '@nestjs/testing';
 import { Logger } from '@nestjs/common';
-import { PrismaService } from './prisma.service';
+
+// Types for Mock interfaces
+interface HealthCheckResult {
+  isHealthy: boolean;
+  timestamp: Date;
+  responseTime: number;
+  error?: string;
+}
+
+interface CleanupResult {
+  deletedCount: number;
+  operation: string;
+  timestamp: Date;
+}
+
+interface UserDataIntegrityResult {
+  user: { isValid: boolean; error?: string };
+  credentials: { isValid: boolean; error?: string };
+  syncHistory: { isValid: boolean; invalidCount: number; totalCount: number };
+}
+
+interface MockUser {
+  id: string;
+  email: string;
+  createdAt: Date;
+  lastSyncAt: Date | null;
+}
+
+interface MockUserCredentials {
+  userId: string;
+  doubanCookieEncrypted: string;
+  feishuAppId: string;
+  feishuAppSecretEncrypted: string;
+  encryptionIv: string;
+  updatedAt: Date;
+  createdAt: Date;
+}
+
+interface MockSyncHistory {
+  id: string;
+  userId: string;
+  triggerType: 'MANUAL' | 'AUTO';
+  status: 'PENDING' | 'RUNNING' | 'SUCCESS' | 'FAILED' | 'CANCELLED';
+  startedAt: Date;
+  completedAt: Date | null;
+  itemsSynced: number | null;
+  errorMessage: string | null;
+  metadata: Record<string, unknown> | null;
+  duration: number | null;
+}
+
+// Complete Mock PrismaService interface
+interface MockPrismaService {
+  // Prisma Client methods
+  $connect: jest.MockedFunction<() => Promise<void>>;
+  $disconnect: jest.MockedFunction<() => Promise<void>>;
+  $queryRaw: jest.MockedFunction<(query: unknown) => Promise<unknown>>;
+  $transaction: jest.MockedFunction<
+    (fn: (prisma: unknown) => Promise<unknown>) => Promise<unknown>
+  >;
+  $on: jest.MockedFunction<
+    (event: string, callback: (event: unknown) => void) => void
+  >;
+
+  // Model access
+  user: {
+    findUnique: jest.MockedFunction<
+      (args: { where: { id: string } }) => Promise<MockUser | null>
+    >;
+  };
+  userCredentials: {
+    findUnique: jest.MockedFunction<
+      (args: {
+        where: { userId: string };
+      }) => Promise<MockUserCredentials | null>
+    >;
+  };
+  syncHistory: {
+    findUnique: jest.MockedFunction<
+      (args: { where: { id: string } }) => Promise<MockSyncHistory | null>
+    >;
+    findMany: jest.MockedFunction<
+      (args?: {
+        where?: { userId: string };
+        orderBy?: Record<string, 'asc' | 'desc'>;
+        take?: number;
+        skip?: number;
+      }) => Promise<MockSyncHistory[]>
+    >;
+    deleteMany: jest.MockedFunction<
+      (args: { where: Record<string, unknown> }) => Promise<{ count: number }>
+    >;
+  };
+
+  // Logger
+  logger: jest.Mocked<Logger>;
+
+  // Lifecycle methods
+  onModuleInit: jest.MockedFunction<() => Promise<void>>;
+  onModuleDestroy: jest.MockedFunction<() => Promise<void>>;
+
+  // Core service methods
+  healthCheck: jest.MockedFunction<() => Promise<HealthCheckResult>>;
+  executeTransaction: jest.MockedFunction<
+    (fn: (prisma: unknown) => Promise<unknown>) => Promise<unknown>
+  >;
+  cleanupExpiredData: jest.MockedFunction<() => Promise<CleanupResult>>;
+
+  // Type-safe data access methods
+  findUserSafely: jest.MockedFunction<(id: string) => Promise<MockUser | null>>;
+  findUserCredentialsSafely: jest.MockedFunction<
+    (userId: string) => Promise<MockUserCredentials | null>
+  >;
+  findSyncHistorySafely: jest.MockedFunction<
+    (id: string) => Promise<MockSyncHistory | null>
+  >;
+  findUserSyncHistorySafely: jest.MockedFunction<
+    (userId: string, take?: number, skip?: number) => Promise<MockSyncHistory[]>
+  >;
+  validateUserDataIntegrity: jest.MockedFunction<
+    (userId: string) => Promise<UserDataIntegrityResult>
+  >;
+}
 
 // Mock Prisma Client
 const mockPrismaClient = {
@@ -31,16 +152,21 @@ const mockPrismaClient = {
 };
 
 describe('PrismaService', () => {
-  let service: any; // 使用any类型因为这是一个mock对象
+  let service: MockPrismaService;
   let mockLogger: jest.Mocked<Logger>;
 
-  beforeEach(async () => {
-    mockLogger = {
-      log: jest.fn(),
-      error: jest.fn(),
-      warn: jest.fn(),
-      debug: jest.fn(),
-    } as any;
+  beforeEach(() => {
+    // 使用jest.mocked()创建类型安全的Logger Mock
+    const loggerInstance = new Logger('PrismaService');
+    mockLogger = jest.mocked(loggerInstance, { shallow: false });
+
+    // 重置所有公共方法为jest.fn()
+    mockLogger.log = jest.fn();
+    mockLogger.error = jest.fn();
+    mockLogger.warn = jest.fn();
+    mockLogger.debug = jest.fn();
+    mockLogger.verbose = jest.fn();
+    mockLogger.fatal = jest.fn();
 
     // 创建一个完整的mock服务对象
     service = {
@@ -67,13 +193,7 @@ describe('PrismaService', () => {
       findSyncHistorySafely: jest.fn(),
       findUserSyncHistorySafely: jest.fn(),
       validateUserDataIntegrity: jest.fn(),
-    };
-
-    // 设置private属性访问
-    Object.defineProperty(service, 'logger', {
-      get: () => mockLogger,
-      configurable: true,
-    });
+    } as MockPrismaService;
   });
 
   afterEach(() => {
@@ -115,7 +235,7 @@ describe('PrismaService', () => {
     });
 
     it('应该处理健康检查失败', async () => {
-      const failureResult = {
+      const failureResult: HealthCheckResult = {
         isHealthy: false,
         timestamp: new Date(),
         responseTime: 50,
@@ -136,7 +256,10 @@ describe('PrismaService', () => {
   describe('事务执行', () => {
     it('应该成功执行事务', async () => {
       const mockResult = { id: 'test-result' };
-      const mockTransactionFn = jest.fn();
+      const mockTransactionFn = jest.fn(
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        (prisma: unknown) => Promise.resolve({ id: 'test-result' }),
+      );
       service.executeTransaction.mockResolvedValue(mockResult);
 
       const result = await service.executeTransaction(mockTransactionFn);
@@ -149,7 +272,10 @@ describe('PrismaService', () => {
 
     it('应该处理事务失败', async () => {
       const error = new Error('Transaction failed');
-      const mockTransactionFn = jest.fn();
+      const mockTransactionFn = jest.fn(
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        (prisma: unknown) => Promise.reject(error),
+      );
       service.executeTransaction.mockRejectedValue(error);
 
       await expect(
@@ -181,14 +307,14 @@ describe('PrismaService', () => {
   });
 
   describe('类型安全的数据访问', () => {
-    const validUser = {
+    const validUser: MockUser = {
       id: '123e4567-e89b-12d3-a456-426614174000',
       email: 'test@example.com',
       createdAt: new Date(),
       lastSyncAt: null,
     };
 
-    const validCredentials = {
+    const validCredentials: MockUserCredentials = {
       userId: '123e4567-e89b-12d3-a456-426614174000',
       doubanCookieEncrypted: 'encrypted_data',
       feishuAppId: 'cli_123456',
@@ -198,11 +324,11 @@ describe('PrismaService', () => {
       createdAt: new Date(),
     };
 
-    const validSyncHistory = {
+    const validSyncHistory: MockSyncHistory = {
       id: '123e4567-e89b-12d3-a456-426614174001',
       userId: '123e4567-e89b-12d3-a456-426614174000',
-      triggerType: 'MANUAL' as const,
-      status: 'SUCCESS' as const,
+      triggerType: 'MANUAL',
+      status: 'SUCCESS',
       startedAt: new Date(),
       completedAt: new Date(),
       itemsSynced: 10,
@@ -294,7 +420,7 @@ describe('PrismaService', () => {
 
     describe('validateUserDataIntegrity', () => {
       it('应该验证所有数据完整性', async () => {
-        const mockResult = {
+        const mockResult: UserDataIntegrityResult = {
           user: { isValid: true },
           credentials: { isValid: true },
           syncHistory: { isValid: true, invalidCount: 0, totalCount: 1 },
@@ -314,7 +440,7 @@ describe('PrismaService', () => {
       });
 
       it('应该检测无效数据', async () => {
-        const mockResult = {
+        const mockResult: UserDataIntegrityResult = {
           user: { isValid: false, error: 'Invalid user data structure' },
           credentials: { isValid: true },
           syncHistory: { isValid: true, invalidCount: 0, totalCount: 0 },
@@ -336,7 +462,7 @@ describe('PrismaService', () => {
 
   describe('错误处理', () => {
     it('应该正确处理非Error类型的异常', async () => {
-      const errorResult = {
+      const errorResult: HealthCheckResult = {
         isHealthy: false,
         timestamp: new Date(),
         responseTime: 30,
@@ -352,7 +478,7 @@ describe('PrismaService', () => {
     });
 
     it('应该处理未知错误类型', async () => {
-      const errorResult = {
+      const errorResult: HealthCheckResult = {
         isHealthy: false,
         timestamp: new Date(),
         responseTime: 30,
