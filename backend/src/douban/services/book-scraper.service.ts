@@ -1,4 +1,19 @@
 import { Injectable, Logger } from '@nestjs/common';
+
+// 类型守护函数：安全转换InfoValue到具体类型
+function toStringOrUndefined(
+  value: string | string[] | undefined,
+): string | undefined {
+  if (typeof value === 'string') return value;
+  if (Array.isArray(value)) return value[0]; // 取数组第一个元素
+  return undefined;
+}
+
+function toStringArray(value: string | string[] | undefined): string[] {
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string') return [value];
+  return [];
+}
 import * as cheerio from 'cheerio';
 import { AntiSpiderService } from './anti-spider.service';
 import {
@@ -204,23 +219,25 @@ export class BookScraperService {
         subjectId: bookId,
         url: url,
         title: structuredData?.name || metaTags.title || '',
-        subTitle: infoData.subTitle,
-        originalTitle: infoData.originalTitle,
+        subTitle: toStringOrUndefined(infoData.subTitle),
+        originalTitle: toStringOrUndefined(infoData.originalTitle),
         score: basicInfo.score,
         desc: basicInfo.desc || metaTags.description,
         image: metaTags.image,
 
         // 书籍特有字段
         author: this.extractAuthors(structuredData, infoData),
-        translator: infoData.translator || [],
-        publisher: infoData.publisher,
-        datePublished: this.parsePublishDate(infoData.datePublished),
-        isbn: structuredData?.isbn || infoData.isbn,
-        totalPage: this.parseNumber(infoData.totalPage),
-        series: infoData.series,
-        price: this.parsePrice(infoData.price),
-        binding: infoData.binding,
-        producer: infoData.producer,
+        translator: toStringArray(infoData.translator),
+        publisher: toStringOrUndefined(infoData.publisher),
+        datePublished: this.parsePublishDate(
+          toStringOrUndefined(infoData.datePublished),
+        ),
+        isbn: structuredData?.isbn || toStringOrUndefined(infoData.isbn),
+        totalPage: this.parseNumber(toStringOrUndefined(infoData.totalPage)),
+        series: toStringOrUndefined(infoData.series),
+        price: this.parsePrice(toStringOrUndefined(infoData.price)),
+        binding: toStringOrUndefined(infoData.binding),
+        producer: toStringOrUndefined(infoData.producer),
 
         // 用户数据
         myRating: userState.rating,
@@ -266,7 +283,7 @@ export class BookScraperService {
   /**
    * 解析出版日期
    */
-  private parsePublishDate(dateStr: string): Date | undefined {
+  private parsePublishDate(dateStr: string | undefined): Date | undefined {
     if (!dateStr) return undefined;
 
     try {
@@ -301,7 +318,7 @@ export class BookScraperService {
   /**
    * 解析数字字段
    */
-  private parseNumber(value: string): number | undefined {
+  private parseNumber(value: string | undefined): number | undefined {
     if (!value) return undefined;
 
     const num = parseInt(value.replace(/[^\d]/g, ''));
@@ -311,7 +328,7 @@ export class BookScraperService {
   /**
    * 解析价格
    */
-  private parsePrice(priceStr: string): number | undefined {
+  private parsePrice(priceStr: string | undefined): number | undefined {
     if (!priceStr) return undefined;
 
     try {

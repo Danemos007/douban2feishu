@@ -50,6 +50,7 @@ interface StructuredData {
   author?: (string | StructuredPerson)[];
   director?: (string | StructuredPerson)[];
   actor?: (string | StructuredPerson)[];
+  isbn?: string; // 书籍ISBN字段
 }
 
 /**
