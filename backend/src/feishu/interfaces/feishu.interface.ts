@@ -116,6 +116,16 @@ export interface FeishuApiResponse<T = any> {
 }
 
 /**
+ * 飞书表格字段查询响应
+ */
+export interface FeishuTableFieldsResponse {
+  has_more: boolean;
+  page_token?: string;
+  total: number;
+  items: FeishuField[];
+}
+
+/**
  * 飞书记录查询响应
  */
 export interface FeishuRecordsResponse {

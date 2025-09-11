@@ -5,7 +5,13 @@ import axios, { AxiosInstance } from 'axios';
 import { BatchCreateRecordsDto } from './dto/feishu.dto';
 import {
   FeishuRecord,
+  FeishuApiResponse,
   FeishuTokenResponse,
+  FeishuRecordData,
+  FeishuTableFieldsResponse,
+  FeishuRecordsResponse,
+  FeishuField,
+  FeishuRecordItem,
 } from './interfaces/feishu.interface';
 
 /**
@@ -60,20 +66,19 @@ export class FeishuService {
     }
 
     try {
-      const response = (await this.httpClient.post(
-        '/open-apis/auth/v3/tenant_access_token/internal',
-        {
-          app_id: appId,
-          app_secret: appSecret,
-        },
-      )) as any;
+      const response = await this.httpClient.post<
+        FeishuApiResponse<FeishuTokenResponse>
+      >('/open-apis/auth/v3/tenant_access_token/internal', {
+        app_id: appId,
+        app_secret: appSecret,
+      });
 
       if (response.data.code !== 0) {
         throw new Error(`Failed to get access token: ${response.data.msg}`);
       }
 
-      const token = response.data.tenant_access_token;
-      const expiresAt = Date.now() + (response.data.expire - 300) * 1000; // 提前5分钟
+      const token = response.data.data.tenant_access_token;
+      const expiresAt = Date.now() + (response.data.data.expire - 300) * 1000; // 提前5分钟
 
       this.tokenCache.set(cacheKey, { token, expiresAt });
 
@@ -142,7 +147,7 @@ export class FeishuService {
     accessToken: string,
     appToken: string,
     tableId: string,
-    records: any[],
+    records: FeishuRecordData[],
     tableMapping?: Record<string, string>,
   ): Promise<void> {
     // 转换记录格式
@@ -150,7 +155,7 @@ export class FeishuService {
       this.transformRecord(record, tableMapping),
     );
 
-    const response = await this.httpClient.post(
+    const response = await this.httpClient.post<FeishuApiResponse<void>>(
       `/open-apis/bitable/v1/apps/${appToken}/tables/${tableId}/records/batch_create`,
       {
         records: feishuRecords,
@@ -171,12 +176,22 @@ export class FeishuService {
    * 转换记录格式 - 映射字段名到Field ID
    */
   private transformRecord(
-    record: any,
+    record: FeishuRecordData,
     tableMapping?: Record<string, string>,
   ): FeishuRecord {
-    const fields: Record<string, any> = {};
+    const fields: Record<
+      string,
+      string | number | boolean | null | Array<string | number>
+    > = {};
 
-    for (const [key, value] of Object.entries(record)) {
+    // 处理FeishuRecordData的两种格式
+    const recordFields = 'fields' in record ? record.fields : record;
+
+    if (!recordFields || typeof recordFields !== 'object') {
+      return { fields: {} };
+    }
+
+    for (const [key, value] of Object.entries(recordFields)) {
       // 使用映射表转换字段名为Field ID
       const fieldId = tableMapping?.[key] || key;
       fields[fieldId] = this.formatFieldValue(value);
@@ -188,7 +203,9 @@ export class FeishuService {
   /**
    * 格式化字段值 - 根据飞书字段类型
    */
-  private formatFieldValue(value: any): any {
+  private formatFieldValue(
+    value: string | number | boolean | null | Array<string | number>,
+  ): string | number | boolean | null | Array<string | number> {
     if (value === null || value === undefined) {
       return null;
     }
@@ -229,18 +246,17 @@ export class FeishuService {
     appSecret: string,
     appToken: string,
     tableId: string,
-  ) {
+  ): Promise<FeishuField[]> {
     try {
       const token = await this.getAccessToken(appId, appSecret);
 
-      const response = await this.httpClient.get(
-        `/open-apis/bitable/v1/apps/${appToken}/tables/${tableId}/fields`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+      const response = await this.httpClient.get<
+        FeishuApiResponse<FeishuTableFieldsResponse>
+      >(`/open-apis/bitable/v1/apps/${appToken}/tables/${tableId}/fields`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
         },
-      );
+      });
 
       if (response.data.code !== 0) {
         throw new Error(`Failed to get table fields: ${response.data.msg}`);
@@ -263,11 +279,13 @@ export class FeishuService {
     tableId: string,
     subjectId: string,
     subjectIdFieldId: string,
-  ) {
+  ): Promise<FeishuRecordItem[]> {
     try {
       const token = await this.getAccessToken(appId, appSecret);
 
-      const response = await this.httpClient.post(
+      const response = await this.httpClient.post<
+        FeishuApiResponse<FeishuRecordsResponse>
+      >(
         `/open-apis/bitable/v1/apps/${appToken}/tables/${tableId}/records/search`,
         {
           filter: {
@@ -307,12 +325,15 @@ export class FeishuService {
     appToken: string,
     tableId: string,
     recordId: string,
-    fields: Record<string, any>,
+    fields: Record<
+      string,
+      string | number | boolean | null | Array<string | number>
+    >,
   ): Promise<void> {
     try {
       const token = await this.getAccessToken(appId, appSecret);
 
-      const response = await this.httpClient.put(
+      const response = await this.httpClient.put<FeishuApiResponse<void>>(
         `/open-apis/bitable/v1/apps/${appToken}/tables/${tableId}/records/${recordId}`,
         { fields },
         {
