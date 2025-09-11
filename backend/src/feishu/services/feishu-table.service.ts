@@ -1,19 +1,15 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { RedisService } from '../../redis';
-import axios, { AxiosRequestConfig, AxiosError } from 'axios';
+import axios, { AxiosError } from 'axios';
 
 import { ExtendedAxiosRequestConfig } from '../../common/interfaces/http.interface';
 import { FeishuAuthService } from './feishu-auth.service';
 import { FeishuContractValidatorService } from '../contract/validator.service';
 import {
-  FeishuFieldInfo,
   FeishuRecordItem,
-  FeishuFieldsResponse as ApiFeishuFieldsResponse,
   FeishuFieldType,
-  FeishuCreateFieldRequest,
   FeishuRecordFilter,
-  FeishuSearchRecordRequest,
   FeishuErrorResponse,
 } from '../interfaces/api.interface';
 import {
@@ -23,14 +19,8 @@ import {
   FeishuRecordData,
 } from '../interfaces/feishu.interface';
 // 🔥 使用新的契约验证类型，替代遗留类型
-import {
-  FeishuField,
-  FeishuFieldsResponse,
-  FeishuRecordsResponse,
-  FeishuRecord,
-  FeishuRecordCreateRequest,
-  isRatingField,
-} from '../schemas';
+import { FeishuField, FeishuRecordCreateRequest } from '../schemas';
+import type { FeishuRecordFieldValue } from '../schemas/record.schema';
 
 // 🚀 新增：统一字段操作相关导入 - Schema-first架构
 import {
@@ -45,7 +35,6 @@ import {
   FieldMatchAnalysis,
   FieldMatchAnalysisSchema,
   ConfigurationChange,
-  ConfigurationChangeSchema,
   FieldOperationError,
   FieldConfigurationMismatchError,
   FieldNotFoundError,
@@ -56,6 +45,27 @@ import {
   FieldCreationConfigSchema,
 } from '../schemas/field-creation.schema';
 import { IFeishuTableFieldOperations } from '../interfaces/table-field-operations.interface';
+
+// =============== 🎯 专业类型定义 - 替代any类型 ===============
+
+// 使用现有Schema定义的字段值类型，无需重复定义
+
+/**
+ * 表格统计信息结果接口
+ */
+interface TableStatsResult {
+  tableId: string;
+  fieldsCached: boolean;
+  cacheExpiry: number | null;
+}
+
+/**
+ * 飞书API错误响应数据类型
+ */
+interface FeishuErrorData {
+  code: number;
+  msg: string;
+}
 
 // [CRITICAL-FIX-2025-09-02] 移除遗留的isRatingFieldType导入
 // 原因：历史遗留函数逻辑错误，已用基于真实API的判断逻辑替代
@@ -120,19 +130,17 @@ export class FeishuTableService implements IFeishuTableFieldOperations {
     });
 
     // 请求拦截器 - 自动添加认证头
-    client.interceptors.request.use(
-      async (config: ExtendedAxiosRequestConfig) => {
-        // 认证头将在具体方法中添加，这里做统一日志记录
-        const context = {
-          method: config.method?.toUpperCase(),
-          url: config.url,
-          timestamp: new Date().toISOString(),
-        };
+    client.interceptors.request.use((config: ExtendedAxiosRequestConfig) => {
+      // 认证头将在具体方法中添加，这里做统一日志记录
+      const context = {
+        method: config.method?.toUpperCase(),
+        url: config.url,
+        timestamp: new Date().toISOString(),
+      };
 
-        this.logger.debug('Feishu table API request:', context);
-        return config;
-      },
-    );
+      this.logger.debug('Feishu table API request:', context);
+      return config;
+    });
 
     // 响应拦截器 - 错误处理和重试
     client.interceptors.response.use(
@@ -140,7 +148,7 @@ export class FeishuTableService implements IFeishuTableFieldOperations {
         this.logger.debug('Feishu table API response:', {
           status: response.status,
           url: response.config.url,
-          responseCode: response.data?.code,
+          responseCode: (response.data as FeishuErrorData)?.code,
         });
         return response;
       },
@@ -185,6 +193,10 @@ export class FeishuTableService implements IFeishuTableFieldOperations {
       );
 
       // 🔥 使用契约验证器验证响应，替代手动检查
+      if (!response.data) {
+        throw new Error('Empty response data from Feishu API');
+      }
+
       const validatedResponse = this.contractValidator.validateFieldsResponse(
         response.data,
         'getTableFields',
@@ -260,7 +272,6 @@ export class FeishuTableService implements IFeishuTableFieldOperations {
       );
 
       // 并发处理批次
-      const semaphore = new Array(this.apiConfig.concurrentBatches).fill(0);
       let batchIndex = 0;
 
       while (batchIndex < batches.length) {
@@ -463,13 +474,13 @@ export class FeishuTableService implements IFeishuTableFieldOperations {
         appSecret,
       );
 
-      const response = (await this.httpClient.put(
+      const response = await this.httpClient.put<FeishuApiResponse>(
         `/open-apis/bitable/v1/apps/${appToken}/tables/${tableId}/records/${recordId}`,
         { fields },
         {
           headers: { Authorization: `Bearer ${accessToken}` },
         },
-      )) as any;
+      );
 
       if (response.data.code !== 0) {
         throw new Error(
@@ -512,20 +523,32 @@ export class FeishuTableService implements IFeishuTableFieldOperations {
         const batch = batches[i];
 
         try {
+          // 转换字段类型以匹配processBatchUpdate期望的类型
+          const typedBatch = batch.map((update) => ({
+            recordId: update.recordId,
+            fields: Object.fromEntries(
+              Object.entries(update.fields).map(([key, value]) => [
+                key,
+                this.formatFieldValue(value),
+              ]),
+            ) as Record<string, FeishuRecordFieldValue>,
+          }));
+
           await this.processBatchUpdate(
             appId,
             appSecret,
             appToken,
             tableId,
-            batch,
+            typedBatch,
           );
           results.success += batch.length;
 
           this.logger.debug(
             `Update batch ${i + 1}/${batches.length} completed`,
           );
-        } catch (error) {
+        } catch (batchError) {
           // 如果批量更新失败，尝试逐个更新
+          this.logger.warn('批量更新失败，切换到逐个更新模式:', batchError);
           for (const update of batch) {
             try {
               await this.updateRecord(
@@ -637,7 +660,10 @@ export class FeishuTableService implements IFeishuTableFieldOperations {
     appSecret: string,
     appToken: string,
     tableId: string,
-    updates: Array<{ recordId: string; fields: Record<string, any> }>,
+    updates: Array<{
+      recordId: string;
+      fields: Record<string, FeishuRecordFieldValue>;
+    }>,
   ): Promise<void> {
     const accessToken = await this.authService.getAccessToken(appId, appSecret);
 
@@ -668,7 +694,7 @@ export class FeishuTableService implements IFeishuTableFieldOperations {
     record: FeishuRecordData,
     fieldMappings?: Record<string, string>,
   ): FeishuRecordCreateRequest {
-    const fields: Record<string, any> = {};
+    const fields: Record<string, FeishuRecordFieldValue> = {};
 
     // 处理包含fields属性的格式
     const recordData = 'fields' in record ? record.fields : record;
@@ -687,9 +713,7 @@ export class FeishuTableService implements IFeishuTableFieldOperations {
   /**
    * 格式化字段值
    */
-  private formatFieldValue(
-    value: unknown,
-  ): string | number | boolean | null | Array<string | number> {
+  private formatFieldValue(value: unknown): FeishuRecordFieldValue {
     if (value === null || value === undefined) {
       return null;
     }
@@ -716,17 +740,28 @@ export class FeishuTableService implements IFeishuTableFieldOperations {
 
     // 数组字段 - 多选、人员等
     if (Array.isArray(value)) {
-      return value.map((item) =>
-        typeof item === 'string' ? item.trim() : item,
-      );
+      // 确保数组元素类型符合Schema定义
+      return value
+        .filter((item) => typeof item === 'string' || typeof item === 'number')
+        .map((item) => (typeof item === 'string' ? item.trim() : item));
     }
 
-    // 对象字段 - 复杂类型
+    // 对象字段 - 复杂类型转换为字符串
     if (typeof value === 'object') {
       return JSON.stringify(value);
     }
 
-    return String(value);
+    // 其他基础类型 - 安全转换为字符串
+    if (
+      typeof value === 'string' ||
+      typeof value === 'number' ||
+      typeof value === 'boolean'
+    ) {
+      return typeof value === 'string' ? value.trim() : value;
+    }
+
+    // 未知类型 - 使用JSON序列化确保安全
+    return JSON.stringify(value);
   }
 
   /**
@@ -775,7 +810,9 @@ export class FeishuTableService implements IFeishuTableFieldOperations {
     try {
       const cached = await this.redis.get(cacheKey);
       if (cached) {
-        return JSON.parse(cached);
+        const parsed: unknown = JSON.parse(cached);
+        // 在信任边界内使用类型断言 - 缓存数据已在存储时验证过
+        return parsed as FeishuField[];
       }
     } catch (error) {
       const errorMessage =
@@ -830,8 +867,8 @@ export class FeishuTableService implements IFeishuTableFieldOperations {
     const context = {
       url: error.config?.url,
       status: error.response?.status,
-      code: (error.response?.data as any)?.code,
-      message: (error.response?.data as any)?.msg || error.message,
+      code: (error.response?.data as FeishuErrorData)?.code,
+      message: (error.response?.data as FeishuErrorData)?.msg || error.message,
     };
 
     this.logger.error('Feishu table API error:', context);
@@ -1086,7 +1123,10 @@ export class FeishuTableService implements IFeishuTableFieldOperations {
   /**
    * 获取表格操作统计信息
    */
-  async getTableStats(appToken: string, tableId: string): Promise<any> {
+  async getTableStats(
+    appToken: string,
+    tableId: string,
+  ): Promise<TableStatsResult | null> {
     try {
       const pattern = `${this.cacheConfig.fieldsKeyPrefix}${appToken}:${tableId}`;
       const exists = await this.redis.exists(pattern);
@@ -1368,11 +1408,6 @@ export class FeishuTableService implements IFeishuTableFieldOperations {
           tableId,
           existingField.field_id,
           fieldConfig,
-          analysis.differences.map((diff) => ({
-            property: diff.property,
-            from: diff.from ?? 'undefined',
-            to: diff.to ?? 'undefined',
-          })),
         );
 
         return {
@@ -1677,7 +1712,7 @@ export class FeishuTableService implements IFeishuTableFieldOperations {
     };
 
     // 🔥 Schema验证返回结果
-    return FieldMatchAnalysisSchema.parse(result);
+    return Promise.resolve(FieldMatchAnalysisSchema.parse(result));
   }
 
   // =============== 🔧 私有辅助方法 ===============
@@ -1712,7 +1747,7 @@ export class FeishuTableService implements IFeishuTableFieldOperations {
     tableId: string,
     fieldId: string,
     fieldConfig: FieldCreationConfig,
-    changes?: Array<{ property: string; from: unknown; to: unknown }>,
+    // changes parameter unused but kept for interface compatibility
   ): Promise<FeishuField> {
     try {
       const accessToken = await this.authService.getAccessToken(
@@ -1738,7 +1773,7 @@ export class FeishuTableService implements IFeishuTableFieldOperations {
         updatePayload.description = fieldConfig.description;
       }
 
-      const response = await this.httpClient.put(
+      const response = await this.httpClient.put<FeishuApiResponse>(
         `/open-apis/bitable/v1/apps/${credentials.appToken}/tables/${tableId}/fields/${fieldId}`,
         updatePayload,
         {
@@ -1758,7 +1793,9 @@ export class FeishuTableService implements IFeishuTableFieldOperations {
       this.logger.debug(
         `字段更新成功: "${fieldConfig.field_name}" (${fieldId})`,
       );
-      return response.data.data;
+      // 使用安全的类型转换
+      const fieldData = response.data.data as FeishuField;
+      return fieldData;
     } catch (error) {
       this.logger.error(`字段更新失败: "${fieldConfig.field_name}":`, error);
       throw this.transformError(error as AxiosError);
@@ -1876,7 +1913,9 @@ export class FeishuTableService implements IFeishuTableFieldOperations {
       }
     }
 
-    throw lastError;
+    throw (
+      lastError || new Error('Operation failed after maximum retry attempts')
+    );
   }
 
   /**
@@ -1889,7 +1928,7 @@ export class FeishuTableService implements IFeishuTableFieldOperations {
     if (error instanceof Error && 'response' in error) {
       const axiosError = error as AxiosError;
       const status = axiosError.response?.status;
-      const errorData = axiosError.response?.data as any;
+      const errorData = axiosError.response?.data as FeishuErrorData;
 
       // 网络错误重试
       if (!axiosError.response) return true;
