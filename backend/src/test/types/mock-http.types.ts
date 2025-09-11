@@ -1,6 +1,6 @@
 /**
  * Mock HTTP Client Type Definitions
- * 
+ *
  * 提供类型安全的HTTP客户端Mock，支持完整的Axios响应类型
  */
 
@@ -23,7 +23,10 @@ export interface MockHttpResponse<T = unknown> {
  * ConfigService Mock函数类型定义
  * 为Mock函数提供完整的类型约束
  */
-type MockGetFunction = (key: string, defaultValue?: string | number) => string | number | undefined;
+type MockGetFunction = (
+  key: string,
+  defaultValue?: string | number,
+) => string | number | undefined;
 
 /**
  * ConfigService Mock接口
@@ -42,7 +45,7 @@ export interface MockConfigService {
 export function createMockHttpResponse<T>(
   data: T,
   status: number = 200,
-  statusText: string = 'OK'
+  statusText: string = 'OK',
 ): MockHttpResponse<T> {
   return {
     data,
@@ -84,7 +87,7 @@ export function createMockConfigService(): MockConfigService {
  * 提供与真实Axios响应兼容的类型转换
  */
 export function createAxiosCompatibleResponse<T>(
-  mockResponse: MockHttpResponse<T>
+  mockResponse: MockHttpResponse<T>,
 ): AxiosResponse<T> {
   return {
     ...mockResponse,
@@ -121,11 +124,13 @@ export interface MockContractValidatorService {
   validateAuthResponse: jest.Mock<MockValidateFunction<unknown>>;
   validateRecordsResponse: jest.Mock<MockValidateFunction<unknown>>;
   isRatingFieldValidation: jest.Mock<MockFieldValidationFunction>;
-  getValidationStats: jest.Mock<() => {
-    totalValidations: number;
-    successCount: number;
-    failureCount: number;
-  }>;
+  getValidationStats: jest.Mock<
+    () => {
+      totalValidations: number;
+      successCount: number;
+      failureCount: number;
+    }
+  >;
   resetStats: jest.Mock<() => void>;
 }
 
@@ -145,14 +150,17 @@ export function createMockContractValidator(): MockContractValidatorService {
 
   const isRatingFieldValidation = jest.fn<MockFieldValidationFunction>();
   isRatingFieldValidation.mockImplementation(
-    (field) => field.field_name?.includes('我的评分') === true && field.type === 2,
+    (field) =>
+      field.field_name?.includes('我的评分') === true && field.type === 2,
   );
 
-  const getValidationStats = jest.fn<() => {
-    totalValidations: number;
-    successCount: number;
-    failureCount: number;
-  }>();
+  const getValidationStats = jest.fn<
+    () => {
+      totalValidations: number;
+      successCount: number;
+      failureCount: number;
+    }
+  >();
   getValidationStats.mockReturnValue({
     totalValidations: 0,
     successCount: 0,
@@ -176,10 +184,17 @@ export function createMockContractValidator(): MockContractValidatorService {
  */
 type MockRedisGetFunction = (key: string) => Promise<string | null>;
 type MockRedisSetFunction = (key: string, value: string) => Promise<string>;
-type MockRedisSetexFunction = (key: string, seconds: number, value: string) => Promise<string>;
+type MockRedisSetexFunction = (
+  key: string,
+  seconds: number,
+  value: string,
+) => Promise<string>;
 type MockRedisDelFunction = (key: string) => Promise<number>;
 type MockRedisExistsFunction = (key: string) => Promise<number>;
-type MockRedisExpireFunction = (key: string, seconds: number) => Promise<number>;
+type MockRedisExpireFunction = (
+  key: string,
+  seconds: number,
+) => Promise<number>;
 type MockRedisKeysFunction = (pattern: string) => Promise<string[]>;
 
 /**
@@ -236,8 +251,15 @@ export function createMockRedisService(): MockRedisService {
 /**
  * 类型安全的Axios Mock函数类型定义
  */
-type MockAxiosGetFunction = (url: string, config?: Record<string, unknown>) => Promise<AxiosResponse<unknown>>;
-type MockAxiosPostFunction = (url: string, data?: unknown, config?: Record<string, unknown>) => Promise<AxiosResponse<unknown>>;
+type MockAxiosGetFunction = (
+  url: string,
+  config?: Record<string, unknown>,
+) => Promise<AxiosResponse<unknown>>;
+type MockAxiosPostFunction = (
+  url: string,
+  data?: unknown,
+  config?: Record<string, unknown>,
+) => Promise<AxiosResponse<unknown>>;
 
 /**
  * Axios Mock实例接口
@@ -286,7 +308,7 @@ export function createMockAxiosInstance(): MockAxiosInstance {
  * 适配当前Jest版本 (单泛型参数) + 类型安全的泛型约束
  */
 export function getLastMockCall<TArgs extends any[]>(
-  mockFn: jest.Mock<any>
+  mockFn: jest.Mock<any>,
 ): TArgs | undefined {
   const calls = mockFn.mock.calls;
   return calls.length > 0 ? (calls[calls.length - 1] as TArgs) : undefined;
@@ -297,7 +319,7 @@ export function getLastMockCall<TArgs extends any[]>(
  * 通过泛型约束保证类型正确性，使用安全的类型断言
  */
 export function getFirstMockCall<TArgs extends any[]>(
-  mockFn: jest.Mock<any>
+  mockFn: jest.Mock<any>,
 ): TArgs | undefined {
   const calls = mockFn.mock.calls;
   return calls.length > 0 ? (calls[0] as TArgs) : undefined;

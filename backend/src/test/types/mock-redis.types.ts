@@ -1,6 +1,6 @@
 /**
  * Mock Redis Client Type Definitions
- * 
+ *
  * 这个文件定义了测试环境下Redis客户端的Mock类型，
  * 确保测试代码具有完整的类型安全性
  */
@@ -19,7 +19,7 @@ export interface MockRedisPipeline {
 
 /**
  * Mock Redis Client Interface (简化版本)
- * 
+ *
  * 基于RedisService的完整接口，为测试环境提供类型安全的Mock对象
  * 使用简化的jest.Mock类型避免复杂的泛型冲突
  */
@@ -74,7 +74,7 @@ export interface MockRedisClient {
 
 /**
  * 创建类型安全的Mock Redis Client的工厂函数
- * 
+ *
  * @returns 完全类型化的MockRedisClient实例
  */
 export function createMockRedisClient(): MockRedisClient {
