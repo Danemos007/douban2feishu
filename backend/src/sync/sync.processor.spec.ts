@@ -635,7 +635,7 @@ describe('SyncProcessor', () => {
 
       // 不应该调用decrypt，因为字段为null
       expect(cryptoDecryptSpy).not.toHaveBeenCalled();
-      
+
       // Verify error was logged
       expect(loggerErrorSpy).toHaveBeenCalled();
       loggerErrorSpy.mockRestore();

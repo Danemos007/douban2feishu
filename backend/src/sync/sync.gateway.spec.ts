@@ -39,13 +39,7 @@ describe('SyncGateway', () => {
   let loggerErrorSpy: jest.SpyInstance;
   let loggerDebugSpy: jest.SpyInstance;
 
-  // Mock方法引用 - 解决unbound-method问题
-  let mockSocketJoin: jest.MockedFunction<(...args: any[]) => any>;
-  let mockSocketEmit: jest.MockedFunction<(...args: any[]) => any>;
-  let mockSocketDisconnect: jest.MockedFunction<(...args: any[]) => any>;
-  let mockSocketLeave: jest.MockedFunction<(...args: any[]) => any>;
-  let mockServerTo: jest.MockedFunction<(...args: any[]) => any>;
-  let mockServerEmit: jest.MockedFunction<(...args: any[]) => any>;
+  // Mock方法的类型安全引用将在beforeEach中初始化
 
   // Gateway spy引用 - 解决unbound-method问题
   let emitTypedEventSpy: jest.SpyInstance;
@@ -145,25 +139,7 @@ describe('SyncGateway', () => {
     loggerErrorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation();
     loggerDebugSpy = jest.spyOn(Logger.prototype, 'debug').mockImplementation();
 
-    // 初始化Mock方法引用 - 解决unbound-method问题
-    mockSocketJoin = mockSocket.join as jest.MockedFunction<
-      (...args: any[]) => any
-    >;
-    mockSocketEmit = mockSocket.emit as jest.MockedFunction<
-      (...args: any[]) => any
-    >;
-    mockSocketDisconnect = mockSocket.disconnect as jest.MockedFunction<
-      (...args: any[]) => any
-    >;
-    mockSocketLeave = mockSocket.leave as jest.MockedFunction<
-      (...args: any[]) => any
-    >;
-    mockServerTo = mockServer.to as jest.MockedFunction<
-      (...args: any[]) => any
-    >;
-    mockServerEmit = mockServer.emit as jest.MockedFunction<
-      (...args: any[]) => any
-    >;
+    // Mock方法已在mockSocket和mockServer对象中定义为jest.fn()
   });
 
   afterEach(() => {
@@ -184,8 +160,11 @@ describe('SyncGateway', () => {
     it('应该成功处理客户端连接', async () => {
       await gateway.handleConnection(mockSocket);
 
-      expect(mockSocketJoin).toHaveBeenCalledWith(`user:${mockUserId}`);
-      expect(mockSocketEmit).toHaveBeenCalledWith('connected', {
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- Jest mock functions are safe to reference
+      expect(mockSocket.join).toHaveBeenCalledWith(`user:${mockUserId}`);
+
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- Jest mock functions are safe to reference
+      expect(mockSocket.emit).toHaveBeenCalledWith('connected', {
         message: 'WebSocket connected successfully',
         userId: mockUserId,
         timestamp: createTypeSafeMatchers.any(String),
@@ -208,8 +187,12 @@ describe('SyncGateway', () => {
       expect(loggerWarnSpy).toHaveBeenCalledWith(
         'Connection rejected: No valid user ID',
       );
-      expect(mockSocketDisconnect).toHaveBeenCalled();
-      expect(mockSocketJoin).not.toHaveBeenCalled();
+
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- Jest mock functions are safe to reference
+      expect(mockSocket.disconnect).toHaveBeenCalled();
+
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- Jest mock functions are safe to reference
+      expect(mockSocket.join).not.toHaveBeenCalled();
     });
 
     it('应该处理连接过程中的错误', async () => {
@@ -229,7 +212,9 @@ describe('SyncGateway', () => {
         'Connection error:',
         'Connection error',
       );
-      expect(mockSocketDisconnect).toHaveBeenCalled();
+
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- Jest mock functions are safe to reference
+      expect(mockSocket.disconnect).toHaveBeenCalled();
     });
 
     it('应该管理用户连接记录', async () => {
@@ -330,9 +315,14 @@ describe('SyncGateway', () => {
 
       await gateway.handleSubscribeSync(mockSocket, subscribeData);
 
-      expect(mockSocketJoin).toHaveBeenCalledWith(`sync:${mockSyncId}`);
-      expect(mockSocketJoin).toHaveBeenCalledWith('sync:another-sync-id');
-      expect(mockSocketEmit).toHaveBeenCalledWith('subscribed', {
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- Jest mock functions are safe to reference
+      expect(mockSocket.join).toHaveBeenCalledWith(`sync:${mockSyncId}`);
+
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- Jest mock functions are safe to reference
+      expect(mockSocket.join).toHaveBeenCalledWith('sync:another-sync-id');
+
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- Jest mock functions are safe to reference
+      expect(mockSocket.emit).toHaveBeenCalledWith('subscribed', {
         message: 'Subscribed to sync updates',
         syncIds: subscribeData.syncIds,
         timestamp: createTypeSafeMatchers.any(String),
@@ -342,8 +332,11 @@ describe('SyncGateway', () => {
     it('应该处理没有指定syncIds的订阅', async () => {
       await gateway.handleSubscribeSync(mockSocket, {});
 
-      expect(mockSocketJoin).not.toHaveBeenCalled();
-      expect(mockSocketEmit).toHaveBeenCalledWith('subscribed', {
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- Jest mock functions are safe to reference
+      expect(mockSocket.join).not.toHaveBeenCalled();
+
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- Jest mock functions are safe to reference
+      expect(mockSocket.emit).toHaveBeenCalledWith('subscribed', {
         message: 'Subscribed to sync updates',
         syncIds: [],
         timestamp: createTypeSafeMatchers.any(String),
@@ -360,10 +353,13 @@ describe('SyncGateway', () => {
 
       await gateway.handleSubscribeSync(mockSocket, { syncIds: [mockSyncId] });
 
-      expect(mockSocketEmit).toHaveBeenCalledWith('error', {
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- Jest mock functions are safe to reference
+      expect(mockSocket.emit).toHaveBeenCalledWith('error', {
         message: 'Authentication required',
       });
-      expect(mockSocketJoin).not.toHaveBeenCalled();
+
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- Jest mock functions are safe to reference
+      expect(mockSocket.join).not.toHaveBeenCalled();
     });
 
     it('应该处理订阅过程中的错误', async () => {
@@ -376,7 +372,9 @@ describe('SyncGateway', () => {
         'Subscribe error:',
         'Subscribe error',
       );
-      expect(mockSocketEmit).toHaveBeenCalledWith('error', {
+
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- Jest mock functions are safe to reference
+      expect(mockSocket.emit).toHaveBeenCalledWith('error', {
         message: 'Subscription failed',
       });
     });
@@ -390,9 +388,14 @@ describe('SyncGateway', () => {
 
       await gateway.handleUnsubscribeSync(mockSocket, unsubscribeData);
 
-      expect(mockSocketLeave).toHaveBeenCalledWith(`sync:${mockSyncId}`);
-      expect(mockSocketLeave).toHaveBeenCalledWith('sync:another-sync-id');
-      expect(mockSocketEmit).toHaveBeenCalledWith('unsubscribed', {
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- Jest mock functions are safe to reference
+      expect(mockSocket.leave).toHaveBeenCalledWith(`sync:${mockSyncId}`);
+
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- Jest mock functions are safe to reference
+      expect(mockSocket.leave).toHaveBeenCalledWith('sync:another-sync-id');
+
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- Jest mock functions are safe to reference
+      expect(mockSocket.emit).toHaveBeenCalledWith('unsubscribed', {
         message: 'Unsubscribed from sync updates',
         syncIds: unsubscribeData.syncIds,
         timestamp: createTypeSafeMatchers.any(String),
@@ -402,8 +405,11 @@ describe('SyncGateway', () => {
     it('应该处理没有指定syncIds的取消订阅', async () => {
       await gateway.handleUnsubscribeSync(mockSocket, {});
 
-      expect(mockSocketLeave).not.toHaveBeenCalled();
-      expect(mockSocketEmit).toHaveBeenCalledWith('unsubscribed', {
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- Jest mock functions are safe to reference
+      expect(mockSocket.leave).not.toHaveBeenCalled();
+
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- Jest mock functions are safe to reference
+      expect(mockSocket.emit).toHaveBeenCalledWith('unsubscribed', {
         message: 'Unsubscribed from sync updates',
         syncIds: [],
         timestamp: createTypeSafeMatchers.any(String),
@@ -429,8 +435,11 @@ describe('SyncGateway', () => {
     it('应该发送同步进度更新到用户房间', () => {
       gateway.notifyProgress(mockUserId, mockSyncProgress);
 
-      expect(mockServerTo).toHaveBeenCalledWith(`user:${mockUserId}`);
-      expect(mockServerEmit).toHaveBeenCalledWith('sync-progress', {
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- Jest mock functions are safe to reference
+      expect(mockServer.to).toHaveBeenCalledWith(`user:${mockUserId}`);
+
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- Jest mock functions are safe to reference
+      expect(mockServer.emit).toHaveBeenCalledWith('sync-progress', {
         ...mockSyncProgress,
         timestamp: createTypeSafeMatchers.any(String),
       });
@@ -439,7 +448,8 @@ describe('SyncGateway', () => {
     it('应该同时发送到同步ID房间', () => {
       gateway.notifyProgress(mockUserId, mockSyncProgress);
 
-      expect(mockServerTo).toHaveBeenCalledWith(`sync:${mockSyncId}`);
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- Jest mock functions are safe to reference
+      expect(mockServer.to).toHaveBeenCalledWith(`sync:${mockSyncId}`);
     });
 
     it('应该处理没有syncId的进度更新', () => {
@@ -450,8 +460,11 @@ describe('SyncGateway', () => {
 
       gateway.notifyProgress(mockUserId, progressWithoutSyncId);
 
-      expect(mockServerTo).toHaveBeenCalledWith(`user:${mockUserId}`);
-      expect(mockServerTo).toHaveBeenCalledTimes(1); // 不应该调用sync房间
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- Jest mock functions are safe to reference
+      expect(mockServer.to).toHaveBeenCalledWith(`user:${mockUserId}`);
+
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- Jest mock functions are safe to reference
+      expect(mockServer.to).toHaveBeenCalledTimes(1); // 不应该调用sync房间
     });
 
     it('应该记录调试日志', () => {
@@ -481,8 +494,11 @@ describe('SyncGateway', () => {
     it('应该发送错误通知到用户房间', () => {
       gateway.notifyError(mockUserId, mockSyncErrorData);
 
-      expect(mockServerTo).toHaveBeenCalledWith(`user:${mockUserId}`);
-      expect(mockServerEmit).toHaveBeenCalledWith('sync-error', {
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- Jest mock functions are safe to reference
+      expect(mockServer.to).toHaveBeenCalledWith(`user:${mockUserId}`);
+
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- Jest mock functions are safe to reference
+      expect(mockServer.emit).toHaveBeenCalledWith('sync-error', {
         ...mockSyncErrorData,
         timestamp: createTypeSafeMatchers.any(String),
       });
@@ -510,7 +526,8 @@ describe('SyncGateway', () => {
 
       gateway.broadcastSystemMessage(message, level);
 
-      expect(mockServerEmit).toHaveBeenCalledWith('system-message', {
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- Jest mock functions are safe to reference
+      expect(mockServer.emit).toHaveBeenCalledWith('system-message', {
         message,
         level,
         timestamp: createTypeSafeMatchers.any(String),
@@ -522,7 +539,8 @@ describe('SyncGateway', () => {
 
       gateway.broadcastSystemMessage(message);
 
-      expect(mockServerEmit).toHaveBeenCalledWith('system-message', {
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- Jest mock functions are safe to reference
+      expect(mockServer.emit).toHaveBeenCalledWith('system-message', {
         message,
         level: 'info',
         timestamp: createTypeSafeMatchers.any(String),
@@ -611,8 +629,11 @@ describe('SyncGateway', () => {
         mockProgressEvent,
       );
 
-      expect(mockServerTo).toHaveBeenCalledWith(`user:${mockUserId}`);
-      expect(mockServerEmit).toHaveBeenCalledWith('sync-progress', {
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- Jest mock functions are safe to reference
+      expect(mockServer.to).toHaveBeenCalledWith(`user:${mockUserId}`);
+
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- Jest mock functions are safe to reference
+      expect(mockServer.emit).toHaveBeenCalledWith('sync-progress', {
         ...mockProgressEvent,
         timestamp: createTypeSafeMatchers.any(String),
         eventId: createTypeSafeMatchers.any(String),
@@ -625,17 +646,18 @@ describe('SyncGateway', () => {
         mockProgressEvent,
       );
 
-      expect(mockServerTo).toHaveBeenCalledWith(`sync:${mockSyncId}`);
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- Jest mock functions are safe to reference
+      expect(mockServer.to).toHaveBeenCalledWith(`sync:${mockSyncId}`);
     });
 
     it('应该生成唯一的eventId', () => {
       const calls: Array<[string, { eventId: string }]> = [];
-      mockServerEmit.mockImplementation(
-        (...args: [string, { eventId: string }]) => {
-          calls.push(args);
-          return true;
-        },
-      );
+      (
+        mockServer.emit as jest.MockedFunction<Server['emit']>
+      ).mockImplementation((...args: [string, { eventId: string }]) => {
+        calls.push(args);
+        return true;
+      });
 
       (gateway as unknown as SyncGatewayTestAccess).emitTypedEvent(
         mockUserId,
@@ -815,10 +837,17 @@ describe('SyncGateway', () => {
       });
 
       // 验证完整流程
-      expect(mockSocketJoin).toHaveBeenCalledWith(`user:${mockUserId}`);
-      expect(mockSocketJoin).toHaveBeenCalledWith(`sync:${mockSyncId}`);
-      expect(mockServerTo).toHaveBeenCalledWith(`user:${mockUserId}`);
-      expect(mockServerTo).toHaveBeenCalledWith(`sync:${mockSyncId}`);
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- Jest mock functions are safe to reference
+      expect(mockSocket.join).toHaveBeenCalledWith(`user:${mockUserId}`);
+
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- Jest mock functions are safe to reference
+      expect(mockSocket.join).toHaveBeenCalledWith(`sync:${mockSyncId}`);
+
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- Jest mock functions are safe to reference
+      expect(mockServer.to).toHaveBeenCalledWith(`user:${mockUserId}`);
+
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- Jest mock functions are safe to reference
+      expect(mockServer.to).toHaveBeenCalledWith(`sync:${mockSyncId}`);
     });
 
     it('应该处理错误恢复场景', async () => {
@@ -838,11 +867,14 @@ describe('SyncGateway', () => {
       // 模拟连接断开
       gateway.handleDisconnect(mockSocket);
 
-      expect(mockSocketEmit).toHaveBeenCalledWith(
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- Jest mock functions are safe to reference
+      expect(mockSocket.emit).toHaveBeenCalledWith(
         'connected',
         expect.any(Object),
       );
-      expect(mockServerEmit).toHaveBeenCalledWith(
+
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- Jest mock functions are safe to reference
+      expect(mockServer.emit).toHaveBeenCalledWith(
         'sync-error',
         expect.any(Object),
       );
