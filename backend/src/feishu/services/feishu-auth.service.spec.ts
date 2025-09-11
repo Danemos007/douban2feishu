@@ -1,27 +1,34 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { RedisService } from '../../redis';
+// Note: axios is mocked below, import not needed
 
 import { FeishuAuthService } from './feishu-auth.service';
 import { CryptoService } from '../../common/crypto/crypto.service';
 import { FeishuContractValidatorService } from '../contract/validator.service';
 import { FeishuTokenResponse } from '../schemas/auth.schema';
+import {
+  MockRedisClient,
+  createMockRedisClient,
+  FeishuAuthServiceTestInterface,
+} from '../../test/types/mock-redis.types';
 
-// Mock axios
+// Mock axios with proper typing
+const mockAxiosInstance = {
+  post: jest.fn(),
+  interceptors: {
+    response: { use: jest.fn() },
+  },
+  defaults: {},
+};
+
 jest.mock('axios', () => ({
-  create: jest.fn(() => ({
-    post: jest.fn(),
-    interceptors: {
-      response: { use: jest.fn() },
-    },
-    defaults: {},
-  })),
+  create: jest.fn(() => mockAxiosInstance),
 }));
 
 describe('FeishuAuthService - Basic Integration', () => {
   let service: FeishuAuthService;
-  let mockRedis: any;
-  let contractValidator: FeishuContractValidatorService;
+  let mockRedis: MockRedisClient;
 
   // Test fixtures
   const validTokenResponse: FeishuTokenResponse = {
@@ -35,19 +42,7 @@ describe('FeishuAuthService - Basic Integration', () => {
   const testAppSecret = 'your_app_secret_here';
 
   beforeEach(async () => {
-    mockRedis = {
-      hgetall: jest.fn(),
-      hset: jest.fn(),
-      expire: jest.fn(),
-      del: jest.fn(),
-      keys: jest.fn(),
-      incr: jest.fn(),
-      pipeline: jest.fn(() => ({
-        hset: jest.fn().mockReturnThis(),
-        expire: jest.fn().mockReturnThis(),
-        exec: jest.fn().mockResolvedValue([]),
-      })),
-    };
+    mockRedis = createMockRedisClient();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -55,13 +50,15 @@ describe('FeishuAuthService - Basic Integration', () => {
         {
           provide: ConfigService,
           useValue: {
-            get: jest.fn((key: string, defaultValue?: any) => {
-              const config = {
-                APP_VERSION: '1.0.0',
-                NODE_ENV: 'test',
-              };
-              return config[key] || defaultValue;
-            }),
+            get: jest.fn(
+              <T = string>(key: string, defaultValue?: T): T | undefined => {
+                const config: Record<string, string> = {
+                  APP_VERSION: '1.0.0',
+                  NODE_ENV: 'test',
+                };
+                return (config[key] as T) ?? defaultValue;
+              },
+            ),
           },
         },
         {
@@ -84,9 +81,6 @@ describe('FeishuAuthService - Basic Integration', () => {
     }).compile();
 
     service = module.get<FeishuAuthService>(FeishuAuthService);
-    contractValidator = module.get<FeishuContractValidatorService>(
-      FeishuContractValidatorService,
-    );
   });
 
   it('should be defined', () => {
@@ -94,10 +88,10 @@ describe('FeishuAuthService - Basic Integration', () => {
   });
 
   it('should have basic methods available', () => {
-    expect(service.getAccessToken).toBeDefined();
-    expect(service.validateCredentials).toBeDefined();
-    expect(service.getTokenStats).toBeDefined();
-    expect(service.clearTokenCache).toBeDefined();
+    expect(typeof service.getAccessToken).toBe('function');
+    expect(typeof service.validateCredentials).toBe('function');
+    expect(typeof service.getTokenStats).toBe('function');
+    expect(typeof service.clearTokenCache).toBe('function');
   });
 
   describe('getTokenStats with Schema validation', () => {
@@ -109,8 +103,8 @@ describe('FeishuAuthService - Basic Integration', () => {
         expiresAt: (Date.now() + 3600000).toString(), // 1 hour from now
       };
 
-      mockRedis.keys.mockResolvedValue(mockKeys);
-      mockRedis.hgetall.mockResolvedValue(mockTokenData);
+      (mockRedis.keys as jest.Mock).mockResolvedValue(mockKeys);
+      (mockRedis.hgetall as jest.Mock).mockResolvedValue(mockTokenData);
 
       // Act
       const stats = await service.getTokenStats();
@@ -137,13 +131,15 @@ describe('FeishuAuthService - Basic Integration', () => {
           {
             provide: ConfigService,
             useValue: {
-              get: jest.fn((key: string, defaultValue?: any) => {
-                const config = {
-                  APP_VERSION: '1.0.0',
-                  NODE_ENV: 'test',
-                };
-                return config[key] || defaultValue;
-              }),
+              get: jest.fn(
+                <T = string>(key: string, defaultValue?: T): T | undefined => {
+                  const config: Record<string, string> = {
+                    APP_VERSION: '1.0.0',
+                    NODE_ENV: 'test',
+                  };
+                  return (config[key] as T) ?? defaultValue;
+                },
+              ),
             },
           },
           {
@@ -179,17 +175,15 @@ describe('FeishuAuthService - Basic Integration', () => {
   describe('getAccessToken with request validation', () => {
     it('should validate request parameters and get token successfully', async () => {
       // Arrange
-      mockRedis.hgetall.mockResolvedValue({}); // No cached token
-      const mockHttpClient = {
-        post: jest.fn().mockResolvedValue({ data: validTokenResponse }),
-        interceptors: {
-          response: { use: jest.fn() },
-        },
-        defaults: {},
-      };
+      (mockRedis.hgetall as jest.Mock).mockResolvedValue({}); // No cached token
 
-      // Create a fresh service instance with the mocked axios
-      require('axios').create.mockReturnValue(mockHttpClient);
+      // Configure axios mock to return validTokenResponse
+      mockAxiosInstance.post.mockResolvedValue({ data: validTokenResponse });
+
+      // Extract mock function for direct assertion
+      const mockValidateAuthResponse = jest
+        .fn()
+        .mockReturnValue(validTokenResponse);
 
       const freshModule: TestingModule = await Test.createTestingModule({
         providers: [
@@ -197,13 +191,15 @@ describe('FeishuAuthService - Basic Integration', () => {
           {
             provide: ConfigService,
             useValue: {
-              get: jest.fn((key: string, defaultValue?: any) => {
-                const config = {
-                  APP_VERSION: '1.0.0',
-                  NODE_ENV: 'test',
-                };
-                return config[key] || defaultValue;
-              }),
+              get: jest.fn(
+                <T = string>(key: string, defaultValue?: T): T | undefined => {
+                  const config: Record<string, string> = {
+                    APP_VERSION: '1.0.0',
+                    NODE_ENV: 'test',
+                  };
+                  return (config[key] as T) ?? defaultValue;
+                },
+              ),
             },
           },
           {
@@ -215,9 +211,7 @@ describe('FeishuAuthService - Basic Integration', () => {
           {
             provide: FeishuContractValidatorService,
             useValue: {
-              validateAuthResponse: jest
-                .fn()
-                .mockReturnValue(validTokenResponse),
+              validateAuthResponse: mockValidateAuthResponse,
             },
           },
           {
@@ -229,23 +223,20 @@ describe('FeishuAuthService - Basic Integration', () => {
 
       const freshService =
         freshModule.get<FeishuAuthService>(FeishuAuthService);
-      const freshValidator = freshModule.get<FeishuContractValidatorService>(
-        FeishuContractValidatorService,
-      );
 
       // Act
       const token = await freshService.getAccessToken(testAppId, testAppSecret);
 
       // Assert
       expect(token).toBe(validTokenResponse.tenant_access_token);
-      expect(mockHttpClient.post).toHaveBeenCalledWith(
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith(
         '/open-apis/auth/v3/tenant_access_token/internal',
         {
           app_id: testAppId,
           app_secret: testAppSecret,
         },
       );
-      expect(freshValidator.validateAuthResponse).toHaveBeenCalledWith(
+      expect(mockValidateAuthResponse).toHaveBeenCalledWith(
         validTokenResponse,
         'requestNewToken',
       );
@@ -253,7 +244,7 @@ describe('FeishuAuthService - Basic Integration', () => {
 
     it('should throw error for invalid request parameters', async () => {
       // Arrange
-      mockRedis.hgetall.mockResolvedValue({}); // No cached token
+      (mockRedis.hgetall as jest.Mock).mockResolvedValue({}); // No cached token
 
       // Act & Assert - empty appId should throw validation error
       await expect(service.getAccessToken('', testAppSecret)).rejects.toThrow();
@@ -264,9 +255,9 @@ describe('FeishuAuthService - Basic Integration', () => {
   });
 
   describe('Error handling with Schema validation', () => {
-    it('should handle valid error responses with Schema validation', async () => {
+    it('should handle valid error responses with Schema validation', () => {
       // Arrange
-      mockRedis.hgetall.mockResolvedValue({}); // No cached token
+      (mockRedis.hgetall as jest.Mock).mockResolvedValue({}); // No cached token
 
       const validErrorResponse = {
         code: 99991668,
@@ -288,13 +279,15 @@ describe('FeishuAuthService - Basic Integration', () => {
         isAxiosError: true,
       };
 
-      const transformedError = (service as any).transformError(axiosError);
+      const transformedError = (
+        service as unknown as FeishuAuthServiceTestInterface
+      ).transformError(axiosError);
       expect(transformedError.message).toBe(
         'Feishu API Error: [99991668] tenant_access_token 无效',
       );
     });
 
-    it('should handle malformed error responses gracefully', async () => {
+    it('should handle malformed error responses gracefully', () => {
       // Arrange
       const malformedErrorResponse = {
         invalid: 'response',
@@ -316,7 +309,9 @@ describe('FeishuAuthService - Basic Integration', () => {
         isAxiosError: true,
       };
 
-      const transformedError = (service as any).transformError(axiosError);
+      const transformedError = (
+        service as unknown as FeishuAuthServiceTestInterface
+      ).transformError(axiosError);
       expect(transformedError.message).toBe(
         'Feishu API Error: [500] Unknown error',
       );
@@ -332,12 +327,12 @@ describe('FeishuAuthService - Basic Integration', () => {
         createdAt: Date.now().toString(),
       };
 
-      mockRedis.hgetall.mockResolvedValue(validCacheData);
+      (mockRedis.hgetall as jest.Mock).mockResolvedValue(validCacheData);
 
       // Act
-      const result = await (service as any).getCachedToken(
-        'feishu:token:test-app',
-      );
+      const result = await (
+        service as unknown as FeishuAuthServiceTestInterface
+      ).getCachedToken('feishu:token:test-app');
 
       // Assert
       expect(result).toBe(validCacheData.token);
@@ -352,13 +347,13 @@ describe('FeishuAuthService - Basic Integration', () => {
         // Missing createdAt
       };
 
-      mockRedis.hgetall.mockResolvedValue(invalidCacheData);
-      mockRedis.del.mockResolvedValue(1);
+      (mockRedis.hgetall as jest.Mock).mockResolvedValue(invalidCacheData);
+      (mockRedis.del as jest.Mock).mockResolvedValue(1);
 
       // Act
-      const result = await (service as any).getCachedToken(
-        'feishu:token:test-app',
-      );
+      const result = await (
+        service as unknown as FeishuAuthServiceTestInterface
+      ).getCachedToken('feishu:token:test-app');
 
       // Assert
       expect(result).toBeNull();
@@ -373,12 +368,12 @@ describe('FeishuAuthService - Basic Integration', () => {
         createdAt: (Date.now() - 7200000).toString(), // 2 hours ago
       };
 
-      mockRedis.hgetall.mockResolvedValue(expiredCacheData);
+      (mockRedis.hgetall as jest.Mock).mockResolvedValue(expiredCacheData);
 
       // Act
-      const result = await (service as any).getCachedToken(
-        'feishu:token:test-app',
-      );
+      const result = await (
+        service as unknown as FeishuAuthServiceTestInterface
+      ).getCachedToken('feishu:token:test-app');
 
       // Assert
       expect(result).toBeNull();
@@ -386,12 +381,12 @@ describe('FeishuAuthService - Basic Integration', () => {
 
     it('should handle missing cache data gracefully', async () => {
       // Arrange - Empty cache data
-      mockRedis.hgetall.mockResolvedValue({});
+      (mockRedis.hgetall as jest.Mock).mockResolvedValue({});
 
       // Act
-      const result = await (service as any).getCachedToken(
-        'feishu:token:test-app',
-      );
+      const result = await (
+        service as unknown as FeishuAuthServiceTestInterface
+      ).getCachedToken('feishu:token:test-app');
 
       // Assert
       expect(result).toBeNull();
