@@ -4,20 +4,49 @@ import { RedisService } from '../../redis';
 import { FeishuTableService } from './feishu-table.service';
 import { FieldAutoCreationServiceV2 } from './field-auto-creation.service'; // 🆕 新服务导入
 import { FeishuFieldType } from '../schemas/field.schema'; // 🔧 使用统一的字段类型定义
-import { FeishuField } from '../interfaces/feishu.interface';
 import { PrismaService } from '../../common/prisma/prisma.service';
 // 已迁移到verified版本，移除旧配置引用
 import {
-  VERIFIED_FIELD_MAPPINGS,
   getVerifiedFieldMapping,
   VerifiedFieldMappingConfig,
   FIELD_TYPE_MAPPING,
 } from '../config/douban-field-mapping.config';
 import {
   FieldCreationRequest,
-  ContentType,
   BatchFieldCreationResult,
 } from '../schemas/field-creation.schema'; // 🆕 新schema导入
+
+// 数据库映射结构类型定义
+interface TableMappingMetadata {
+  dataType: string;
+  strategy: string;
+  createdAt?: string;
+  updatedAt?: string;
+  version: string;
+}
+
+interface TableMappingConfig {
+  [fieldName: string]: unknown;
+  _metadata?: TableMappingMetadata;
+}
+
+interface UserTableMappings {
+  [tableKey: string]: TableMappingConfig;
+}
+
+// 统计结果类型定义
+interface MappingStats {
+  totalTables: number;
+  mappings: Array<{
+    appToken: string;
+    tableId: string;
+    dataType?: string;
+    strategy: string;
+    version: string;
+    fieldCount: number;
+    lastUpdated?: string;
+  }>;
+}
 
 /**
  * 字段映射管理服务 V2 - 精确匹配 + 自动创建策略
@@ -128,11 +157,14 @@ export class FieldMappingService {
         } else {
           // 字段不存在，需要创建
           const feishuFieldType =
-            FIELD_TYPE_MAPPING[fieldConfig.fieldType] || FeishuFieldType.Text;
+            FIELD_TYPE_MAPPING[
+              fieldConfig.fieldType as keyof typeof FIELD_TYPE_MAPPING
+            ] || FeishuFieldType.Text;
           fieldsToCreate.push({
             doubanField,
             chineseName,
-            fieldType: feishuFieldType,
+            fieldType:
+              feishuFieldType as (typeof FeishuFieldType)[keyof typeof FeishuFieldType],
             description: fieldConfig.description,
           });
         }
@@ -255,7 +287,7 @@ export class FieldMappingService {
         return null;
       }
 
-      const tableMappings = syncConfig.tableMappings as any;
+      const tableMappings = syncConfig.tableMappings as UserTableMappings;
       const tableKey = `${appToken}:${tableId}`;
 
       if (tableMappings[tableKey]) {
@@ -294,7 +326,7 @@ export class FieldMappingService {
   ): Promise<void> {
     try {
       // 验证映射的有效性
-      await this.validateFieldMappings(mappings, dataType);
+      this.validateFieldMappings(mappings, dataType);
 
       // 保存到数据库
       await this.saveFieldMappingsToDatabase(
@@ -416,10 +448,10 @@ export class FieldMappingService {
    * 从复杂对象中提取嵌套属性值，支持点语法路径
    * 整合版本A的嵌套属性解析逻辑
    */
-  private extractNestedValue(
-    data: any,
+  private extractNestedValue<T = unknown>(
+    data: Record<string, unknown> | null | undefined,
     fieldConfig: VerifiedFieldMappingConfig,
-  ): any {
+  ): T | undefined {
     // 如果数据为null或undefined，直接返回undefined
     if (data == null) {
       return undefined;
@@ -429,21 +461,21 @@ export class FieldMappingService {
 
     // 如果没有嵌套路径或路径为空，返回直接属性值
     if (!nestedPath || !nestedPath.includes('.')) {
-      return data[doubanFieldName];
+      return data?.[doubanFieldName] as T | undefined;
     }
 
     // 🔥 整合版本A的嵌套属性解析逻辑
     const keys = nestedPath.split('.');
-    let value = data;
+    let value: unknown = data;
 
     for (const key of keys) {
-      if (value == null) {
+      if (value == null || typeof value !== 'object') {
         return undefined;
       }
-      value = value[key];
+      value = (value as Record<string, unknown>)[key];
     }
 
-    return value;
+    return value as T | undefined;
   }
 
   /**
@@ -521,8 +553,8 @@ export class FieldMappingService {
 
     // 2. 校验必需字段存在性
     const requiredFields = Object.entries(verifiedConfig)
-      .filter(([_, config]) => config.required)
-      .map(([field, _]) => field);
+      .filter(([, config]) => config.required)
+      .map(([field]) => field);
 
     const missingRequired = requiredFields.filter((field) => !mappings[field]);
     missingRequired.forEach((field) => {
@@ -617,6 +649,7 @@ export class FieldMappingService {
     await this.prisma.syncConfig.upsert({
       where: { userId },
       update: {
+        // Reason: Prisma JSON field type compatibility with InputJsonValue
         tableMappings: {
           ...(await this.getExistingTableMappings(userId)),
           [tableKey]: {
@@ -628,10 +661,11 @@ export class FieldMappingService {
               version: '2.0',
             },
           },
-        },
+        } as any,
       },
       create: {
         userId,
+        // Reason: Prisma JSON field type compatibility with InputJsonValue
         tableMappings: {
           [tableKey]: {
             ...mappings,
@@ -642,7 +676,7 @@ export class FieldMappingService {
               version: '2.0',
             },
           },
-        },
+        } as any,
       },
     });
   }
@@ -650,13 +684,15 @@ export class FieldMappingService {
   /**
    * 获取现有表格映射
    */
-  private async getExistingTableMappings(userId: string): Promise<any> {
+  private async getExistingTableMappings(
+    userId: string,
+  ): Promise<UserTableMappings> {
     const config = await this.prisma.syncConfig.findUnique({
       where: { userId },
       select: { tableMappings: true },
     });
 
-    return config?.tableMappings || {};
+    return (config?.tableMappings as UserTableMappings) || {};
   }
 
   /**
@@ -691,7 +727,7 @@ export class FieldMappingService {
     try {
       const cacheKey = `${this.cacheConfig.mappingsKeyPrefix}${appToken}:${tableId}`;
       const cached = await this.redis.get(cacheKey);
-      return cached ? JSON.parse(cached) : null;
+      return cached ? (JSON.parse(cached) as Record<string, string>) : null;
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
@@ -703,14 +739,14 @@ export class FieldMappingService {
   /**
    * 验证字段映射有效性
    */
-  private async validateFieldMappings(
+  private validateFieldMappings(
     mappings: Record<string, string>,
     dataType: 'books' | 'movies' | 'tv' | 'documentary',
-  ): Promise<void> {
+  ): void {
     const doubanFieldConfig = getVerifiedFieldMapping(dataType);
     const requiredFields = Object.entries(doubanFieldConfig)
-      .filter(([_, config]) => config.required)
-      .map(([field, _]) => field);
+      .filter(([, config]) => config.required)
+      .map(([field]) => field);
 
     // 检查必需字段
     const missingRequired = requiredFields.filter((field) => !mappings[field]);
@@ -761,7 +797,7 @@ export class FieldMappingService {
   /**
    * 获取字段映射统计
    */
-  async getMappingStats(userId: string): Promise<any> {
+  async getMappingStats(userId: string): Promise<MappingStats | null> {
     try {
       const syncConfig = await this.prisma.syncConfig.findUnique({
         where: { userId },
@@ -772,27 +808,25 @@ export class FieldMappingService {
         return { totalTables: 0, mappings: [] };
       }
 
-      const tableMappings = syncConfig.tableMappings as any;
+      const tableMappings = syncConfig.tableMappings as UserTableMappings;
       const stats = {
         totalTables: Object.keys(tableMappings).length,
-        mappings: Object.entries(tableMappings).map(
-          ([tableKey, mapping]: [string, any]) => {
-            const [appToken, tableId] = tableKey.split(':');
-            const fieldCount = Object.keys(mapping).filter(
-              (key) => !key.startsWith('_'),
-            ).length;
+        mappings: Object.entries(tableMappings).map(([tableKey, mapping]) => {
+          const [appToken, tableId] = tableKey.split(':');
+          const fieldCount = Object.keys(mapping).filter(
+            (key) => !key.startsWith('_'),
+          ).length;
 
-            return {
-              appToken,
-              tableId,
-              dataType: mapping._metadata?.dataType,
-              strategy: mapping._metadata?.strategy || 'unknown',
-              version: mapping._metadata?.version || '1.0',
-              fieldCount,
-              lastUpdated: mapping._metadata?.updatedAt,
-            };
-          },
-        ),
+          return {
+            appToken,
+            tableId,
+            dataType: mapping._metadata?.dataType,
+            strategy: mapping._metadata?.strategy || 'unknown',
+            version: mapping._metadata?.version || '1.0',
+            fieldCount,
+            lastUpdated: mapping._metadata?.updatedAt,
+          };
+        }),
       };
 
       return stats;
@@ -900,11 +934,14 @@ export class FieldMappingService {
         } else {
           // 字段不存在，需要创建
           const feishuFieldType =
-            FIELD_TYPE_MAPPING[fieldConfig.fieldType] || FeishuFieldType.Text;
+            FIELD_TYPE_MAPPING[
+              fieldConfig.fieldType as keyof typeof FIELD_TYPE_MAPPING
+            ] || FeishuFieldType.Text;
           fieldsToCreate.push({
             doubanField,
             chineseName,
-            fieldType: feishuFieldType,
+            fieldType:
+              feishuFieldType as (typeof FeishuFieldType)[keyof typeof FeishuFieldType],
             description: fieldConfig.description,
           });
         }
@@ -946,7 +983,7 @@ export class FieldMappingService {
             );
 
           // 映射创建成功的字段
-          batchResult.success.forEach((field, index) => {
+          batchResult.success.forEach((field) => {
             // 根据字段名匹配回原始配置
             const fieldConfig = fieldsToCreate.find(
               (config) => config.chineseName === field.field_name,
