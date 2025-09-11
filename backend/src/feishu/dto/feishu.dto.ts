@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsArray, IsOptional, IsObject } from 'class-validator';
+import { FeishuRecordData } from '../interfaces/feishu.interface';
 
 /**
  * 批量创建记录DTO
@@ -39,7 +40,7 @@ export class BatchCreateRecordsDto {
     items: { type: 'object' },
   })
   @IsArray({ message: '记录必须是数组' })
-  records!: any[];
+  records!: FeishuRecordData[];
 
   @ApiProperty({
     description: '字段映射表 (字段名 -> Field ID)',
