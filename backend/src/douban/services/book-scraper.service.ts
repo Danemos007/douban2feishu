@@ -16,17 +16,17 @@ function toStringArray(value: string | string[] | undefined): string[] {
 }
 import * as cheerio from 'cheerio';
 import { AntiSpiderService } from './anti-spider.service';
-import {
-  HtmlParserService,
-  ParsedUserState,
-  ParsedListPage,
-} from './html-parser.service';
-import {
-  BookCompleteSchema,
-  validateBookComplete,
-  type BookComplete,
-  type UserStatus,
-} from '../schemas';
+import { HtmlParserService } from './html-parser.service';
+
+// Local type definitions for HtmlParserService return types
+interface StructuredData {
+  name?: string;
+  author?: Array<{ name?: string } | string> | { name?: string };
+  isbn?: string;
+}
+
+type InfoValue = string | string[] | undefined;
+import { validateBookComplete, type BookComplete } from '../schemas';
 
 export interface BookData {
   // 基础字段
@@ -132,7 +132,7 @@ export class BookScraperService {
     status: string,
     limit: number,
   ): Promise<{ id: string; title: string; url: string }[]> {
-    const items = [];
+    const items: { id: string; title: string; url: string }[] = [];
     let start = 0;
     const pageSize = 30;
 
@@ -143,14 +143,14 @@ export class BookScraperService {
         const html = await this.antiSpider.makeRequest(url, cookie);
         const $ = cheerio.load(html);
 
-        const listPage = this.htmlParser.parseListPage($ as any);
+        const listPage = this.htmlParser.parseListPage($);
 
         if (listPage.items.length === 0) {
           this.logger.debug(`No more items found at start=${start}`);
           break;
         }
 
-        (items as any[]).push(...listPage.items);
+        items.push(...listPage.items);
 
         // 检查是否还有更多页面
         if (!listPage.hasMore || listPage.items.length < pageSize) {
@@ -200,19 +200,19 @@ export class BookScraperService {
   ): BookData {
     try {
       // 1. 解析JSON-LD结构化数据
-      const structuredData = this.htmlParser.parseStructuredData($ as any);
+      const structuredData = this.htmlParser.parseStructuredData($);
 
       // 2. 解析Meta标签
-      const metaTags = this.htmlParser.parseMetaTags($ as any);
+      const metaTags = this.htmlParser.parseMetaTags($);
 
       // 3. 解析基础信息
-      const basicInfo = this.htmlParser.parseBasicInfo($ as any);
+      const basicInfo = this.htmlParser.parseBasicInfo($);
 
       // 4. 解析用户状态
-      const userState = this.htmlParser.parseUserState($ as any);
+      const userState = this.htmlParser.parseUserState($);
 
       // 5. 解析#info区域的详细信息
-      const infoData = this.htmlParser.parseInfoSection($ as any);
+      const infoData = this.htmlParser.parseInfoSection($);
 
       // 6. 组合数据
       const bookData: BookData = {
@@ -258,22 +258,38 @@ export class BookScraperService {
   /**
    * 提取作者信息
    */
-  private extractAuthors(structuredData: any, infoData: any): string[] {
+  private extractAuthors(
+    structuredData: StructuredData | null,
+    infoData: Record<string, InfoValue>,
+  ): string[] {
     // 优先使用JSON-LD数据
     if (structuredData?.author) {
       if (Array.isArray(structuredData.author)) {
-        return structuredData.author.map((a) => a.name || a).filter(Boolean);
-      } else if (structuredData.author.name) {
+        return structuredData.author
+          .map((a) => {
+            if (typeof a === 'string') return a;
+            if (typeof a === 'object' && a.name) return a.name;
+            return null;
+          })
+          .filter((name): name is string => Boolean(name));
+      } else if (
+        typeof structuredData.author === 'object' &&
+        structuredData.author.name &&
+        typeof structuredData.author.name === 'string'
+      ) {
         return [structuredData.author.name];
       }
     }
 
     // 备用：从info数据提取
-    if (infoData.author) {
-      if (Array.isArray(infoData.author)) {
-        return infoData.author;
-      } else {
-        return [infoData.author];
+    const authorInfo = infoData.author;
+    if (authorInfo) {
+      if (Array.isArray(authorInfo)) {
+        return authorInfo.filter(
+          (item): item is string => typeof item === 'string',
+        );
+      } else if (typeof authorInfo === 'string') {
+        return [authorInfo];
       }
     }
 
@@ -309,7 +325,7 @@ export class BookScraperService {
       // 直接解析
       const date = new Date(dateStr);
       return isNaN(date.getTime()) ? undefined : date;
-    } catch (error) {
+    } catch {
       this.logger.warn(`Failed to parse publish date: ${dateStr}`);
       return undefined;
     }
@@ -337,7 +353,7 @@ export class BookScraperService {
       const price = parseFloat(numStr);
 
       return isNaN(price) ? undefined : price;
-    } catch (error) {
+    } catch {
       this.logger.warn(`Failed to parse price: ${priceStr}`);
       return undefined;
     }
