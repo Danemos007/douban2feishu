@@ -6,10 +6,10 @@ import {
 } from '@nestjs/common';
 import {
   PrismaClient,
+  Prisma,
   User,
   UserCredentials,
   SyncHistory,
-  SyncConfig,
 } from '../../../generated/prisma';
 import {
   isUser,
@@ -47,18 +47,6 @@ interface HealthCheckResult {
   timestamp: Date;
   responseTime: number;
   error?: string;
-}
-
-/**
- * Prisma日志事件接口
- */
-interface PrismaLogEvent {
-  timestamp: Date;
-  query?: string;
-  params?: string;
-  duration?: number;
-  target?: string;
-  message?: string;
 }
 
 /**
@@ -147,7 +135,7 @@ export class PrismaService
     try {
       // 查询日志 (开发环境)
       if (typeof this.$on === 'function') {
-        (this as any).$on('query', (e: any) => {
+        this.$on('query', (e: Prisma.QueryEvent) => {
           if (process.env.NODE_ENV === 'development') {
             this.logger.debug(`Query: ${e.query || 'N/A'}`);
             this.logger.debug(`Params: ${e.params || 'N/A'}`);
@@ -156,17 +144,17 @@ export class PrismaService
         });
 
         // 错误日志
-        (this as any).$on('error', (e: any) => {
-          this.logger.error('Database error:', e.message || e.toString());
+        this.$on('error', (e: Prisma.LogEvent) => {
+          this.logger.error('Database error:', e.message || 'Unknown error');
         });
 
         // 信息日志
-        (this as any).$on('info', (e: any) => {
+        this.$on('info', (e: Prisma.LogEvent) => {
           this.logger.log(`Database info: ${e.message || 'No message'}`);
         });
 
         // 警告日志
-        (this as any).$on('warn', (e: any) => {
+        this.$on('warn', (e: Prisma.LogEvent) => {
           this.logger.warn(`Database warning: ${e.message || 'No message'}`);
         });
       }
@@ -372,7 +360,7 @@ export class PrismaService
       histories.forEach((history, index) => {
         try {
           assertIsSyncHistory(history);
-        } catch (error) {
+        } catch {
           this.logger.error('Invalid sync history record found', {
             userId,
             index,
