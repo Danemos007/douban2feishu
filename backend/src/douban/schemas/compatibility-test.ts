@@ -13,10 +13,10 @@ import {
   validateMovieComplete,
   validateTvSeriesComplete,
   validateDocumentaryComplete,
-  BookCompleteSchema,
-  MovieCompleteSchema,
-  TvSeriesCompleteSchema,
-  DocumentaryCompleteSchema,
+  type BookComplete,
+  type MovieComplete,
+  type TvSeriesComplete,
+  type DocumentaryComplete,
 } from './index';
 
 /**
@@ -153,13 +153,24 @@ const testDocumentaryData = {
 };
 
 /**
+ * 测试结果类型定义 - 使用泛型进行精确类型控制
+ */
+type TestResult<T> =
+  | { success: true; error: ''; data: T }
+  | { success: false; error: string; data: null };
+
+type TestResults = {
+  book: TestResult<BookComplete>;
+  movie: TestResult<MovieComplete>;
+  tv: TestResult<TvSeriesComplete>;
+  documentary: TestResult<DocumentaryComplete>;
+};
+
+/**
  * 运行兼容性测试
  */
 export function runCompatibilityTests() {
-  const results: Record<
-    string,
-    { success: boolean; error: string; data: any }
-  > = {};
+  const results = {} as Partial<TestResults>;
 
   console.log('🧪 开始运行Schema兼容性测试...\n');
 
@@ -167,11 +178,9 @@ export function runCompatibilityTests() {
   try {
     console.log('📚 测试书籍Schema...');
     const bookResult = validateBookComplete(testBookData);
-    results.book = {
-      success: bookResult.success,
-      error: bookResult.success ? '' : (bookResult as any).error || '验证失败',
-      data: bookResult.success ? bookResult.data : null,
-    };
+    results.book = bookResult.success
+      ? { success: true, error: '', data: bookResult.data }
+      : { success: false, error: bookResult.error || '验证失败', data: null };
     if (results.book.success) {
       console.log('✅ 书籍Schema验证成功');
       console.log(`   - Subject ID: ${results.book.data.subjectId}`);
@@ -183,7 +192,11 @@ export function runCompatibilityTests() {
       console.log(`   ${results.book.error}`);
     }
   } catch (error) {
-    results.book = { success: false, error: `测试异常: ${error}`, data: null };
+    results.book = {
+      success: false,
+      error: `测试异常: ${String(error)}`,
+      data: null,
+    };
     console.log('❌ 书籍Schema测试异常:', error);
   }
 
@@ -193,13 +206,9 @@ export function runCompatibilityTests() {
   try {
     console.log('🎬 测试电影Schema...');
     const movieResult = validateMovieComplete(testMovieData);
-    results.movie = {
-      success: movieResult.success,
-      error: movieResult.success
-        ? ''
-        : (movieResult as any).error || '验证失败',
-      data: movieResult.success ? movieResult.data : null,
-    };
+    results.movie = movieResult.success
+      ? { success: true, error: '', data: movieResult.data }
+      : { success: false, error: movieResult.error || '验证失败', data: null };
     if (results.movie.success) {
       console.log('✅ 电影Schema验证成功');
       console.log(`   - Subject ID: ${results.movie.data.subjectId}`);
@@ -211,7 +220,11 @@ export function runCompatibilityTests() {
       console.log(`   ${results.movie.error}`);
     }
   } catch (error) {
-    results.movie = { success: false, error: `测试异常: ${error}`, data: null };
+    results.movie = {
+      success: false,
+      error: `测试异常: ${String(error)}`,
+      data: null,
+    };
     console.log('❌ 电影Schema测试异常:', error);
   }
 
@@ -221,11 +234,9 @@ export function runCompatibilityTests() {
   try {
     console.log('📺 测试电视剧Schema...');
     const tvResult = validateTvSeriesComplete(testTvData);
-    results.tv = {
-      success: tvResult.success,
-      error: tvResult.success ? '' : (tvResult as any).error || '验证失败',
-      data: tvResult.success ? tvResult.data : null,
-    };
+    results.tv = tvResult.success
+      ? { success: true, error: '', data: tvResult.data }
+      : { success: false, error: tvResult.error || '验证失败', data: null };
     if (results.tv.success) {
       console.log('✅ 电视剧Schema验证成功');
       console.log(`   - Subject ID: ${results.tv.data.subjectId}`);
@@ -237,7 +248,11 @@ export function runCompatibilityTests() {
       console.log(`   ${results.tv.error}`);
     }
   } catch (error) {
-    results.tv = { success: false, error: `测试异常: ${error}`, data: null };
+    results.tv = {
+      success: false,
+      error: `测试异常: ${String(error)}`,
+      data: null,
+    };
     console.log('❌ 电视剧Schema测试异常:', error);
   }
 
@@ -247,11 +262,9 @@ export function runCompatibilityTests() {
   try {
     console.log('🎞️ 测试纪录片Schema...');
     const docResult = validateDocumentaryComplete(testDocumentaryData);
-    results.documentary = {
-      success: docResult.success,
-      error: docResult.success ? '' : (docResult as any).error || '验证失败',
-      data: docResult.success ? docResult.data : null,
-    };
+    results.documentary = docResult.success
+      ? { success: true, error: '', data: docResult.data }
+      : { success: false, error: docResult.error || '验证失败', data: null };
     if (results.documentary.success) {
       console.log('✅ 纪录片Schema验证成功');
       console.log(`   - Subject ID: ${results.documentary.data.subjectId}`);
@@ -269,7 +282,7 @@ export function runCompatibilityTests() {
   } catch (error) {
     results.documentary = {
       success: false,
-      error: `测试异常: ${error}`,
+      error: `测试异常: ${String(error)}`,
       data: null,
     };
     console.log('❌ 纪录片Schema测试异常:', error);
