@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import type { Job } from 'bull';
+import type { JsonValue } from '@prisma/client/runtime/library';
 
 import { SyncProcessor } from './sync.processor';
 import { SyncService } from './sync.service';
@@ -9,7 +10,7 @@ import { SyncEngineService } from '../feishu/services/sync-engine.service';
 import { FieldMappingService } from '../feishu/services/field-mapping.service';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { CryptoService } from '../common/crypto/crypto.service';
-import { SyncJobData } from './interfaces/sync.interface';
+import { SyncJobData, SyncPhase } from './interfaces/sync.interface';
 import { DoubanItem } from '../douban/interfaces/douban.interface';
 
 describe('SyncProcessor', () => {
@@ -503,7 +504,7 @@ describe('SyncProcessor', () => {
 
       jest.spyOn(prismaService.syncConfig, 'findUnique').mockResolvedValue({
         ...mockSyncConfig,
-        tableMappings: {} as Record<string, unknown>,
+        tableMappings: {} as unknown as JsonValue,
       });
 
       await expect(
@@ -612,6 +613,14 @@ describe('SyncProcessor', () => {
     });
 
     it('应该正确处理缺失的加密字段', async () => {
+      // Mock logger to suppress expected error logs in tests
+      const loggerErrorSpy = jest
+        .spyOn(
+          (processor as unknown as { logger: { error: jest.Mock } }).logger,
+          'error',
+        )
+        .mockImplementation();
+
       jest
         .spyOn(prismaService.userCredentials, 'findUnique')
         .mockResolvedValue({
@@ -620,10 +629,16 @@ describe('SyncProcessor', () => {
           feishuAppSecretEncrypted: null,
         });
 
-      await processor.handleSync(mockJob as Job<SyncJobData>);
+      await expect(
+        processor.handleSync(mockJob as Job<SyncJobData>),
+      ).rejects.toThrow('Feishu App Secret is required for sync operation');
 
       // 不应该调用decrypt，因为字段为null
       expect(cryptoDecryptSpy).not.toHaveBeenCalled();
+      
+      // Verify error was logged
+      expect(loggerErrorSpy).toHaveBeenCalled();
+      loggerErrorSpy.mockRestore();
     });
 
     it('应该正确处理数据库查询错误', async () => {
@@ -779,7 +794,7 @@ describe('SyncProcessor', () => {
         | ((progress: {
             processed: number;
             total: number;
-            phase: string;
+            phase: SyncPhase;
           }) => void)
         | undefined;
 
@@ -799,7 +814,6 @@ describe('SyncProcessor', () => {
           phase: 'create',
           processed: 1,
           total: 2,
-          message: 'Creating records',
         });
 
         expect(updateSyncProgressSpy).toHaveBeenCalledWith({
