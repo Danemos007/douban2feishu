@@ -10,10 +10,13 @@ import {
   SyncEngineConfig,
   SyncOptionsConfig,
   SyncResult,
-  SyncProgressCallback,
-  DoubanDataCategory,
-  SyncPhase,
 } from '../../sync/interfaces/sync.interface';
+import {
+  DoubanBook,
+  DoubanMovie,
+  DoubanMusic,
+  DoubanItem,
+} from '../../douban/interfaces/douban.interface';
 
 /**
  * 数据同步引擎 - Subject ID增量同步核心服务
@@ -110,10 +113,7 @@ export class SyncEngineService {
       }
 
       // 初始化同步状态
-      const syncState = await this.initializeSyncState(
-        userId,
-        syncConfig.tableId,
-      );
+      await this.initializeSyncState(userId, syncConfig.tableId);
 
       // 获取现有记录状态
       const existingRecords = await this.getExistingRecordsIndex(
@@ -124,9 +124,12 @@ export class SyncEngineService {
         fieldMappings.subjectId,
       );
 
+      // 类型守卫：验证并转换豆瓣数据
+      const typedDoubanData = this.validateDoubanData(doubanData);
+
       // 分析变更
-      const changeAnalysis = await this.analyzeChanges(
-        doubanData,
+      const changeAnalysis = this.analyzeChanges(
+        typedDoubanData,
         existingRecords,
         fieldMappings,
         options.fullSync || false,
@@ -156,12 +159,12 @@ export class SyncEngineService {
   /**
    * 分析数据变更
    */
-  private async analyzeChanges(
-    doubanData: any[],
+  private analyzeChanges(
+    doubanData: DoubanRecord[],
     existingRecords: Map<string, FeishuRecordItem>,
     fieldMappings: Record<string, string>,
     fullSync: boolean,
-  ): Promise<ChangeAnalysis> {
+  ): ChangeAnalysis {
     const changes: ChangeAnalysis = {
       toCreate: [],
       toUpdate: [],
@@ -170,7 +173,7 @@ export class SyncEngineService {
     };
 
     // 创建豆瓣数据索引
-    const doubanRecordMap = new Map<string, any>();
+    const doubanRecordMap = new Map<string, DoubanRecord>();
     doubanData.forEach((record) => {
       if (record.subjectId) {
         doubanRecordMap.set(record.subjectId, record);
@@ -200,11 +203,7 @@ export class SyncEngineService {
       // 现有记录 - 检查是否需要更新
       if (
         fullSync ||
-        (await this.hasRecordChanged(
-          doubanRecord,
-          existingRecord,
-          fieldMappings,
-        ))
+        this.hasRecordChanged(doubanRecord, existingRecord, fieldMappings)
       ) {
         changes.toUpdate.push({
           subjectId,
@@ -244,11 +243,11 @@ export class SyncEngineService {
   /**
    * 检查记录是否发生变更
    */
-  private async hasRecordChanged(
-    doubanRecord: any,
+  private hasRecordChanged(
+    doubanRecord: DoubanRecord,
     feishuRecord: FeishuRecordItem,
     fieldMappings: Record<string, string>,
-  ): Promise<boolean> {
+  ): boolean {
     try {
       // 生成豆瓣记录的哈希值
       const doubanHash = this.generateRecordHash(doubanRecord, fieldMappings);
@@ -277,7 +276,7 @@ export class SyncEngineService {
    * 生成豆瓣记录哈希值
    */
   private generateRecordHash(
-    record: any,
+    record: DoubanRecord,
     fieldMappings: Record<string, string>,
   ): string {
     // 只对映射的字段生成哈希，确保一致性
@@ -313,7 +312,9 @@ export class SyncEngineService {
       .sort()
       .map((key) => {
         const fieldId = fieldMappings[key];
-        const value = feishuRecord.fields[fieldId];
+        const rawValue: unknown = feishuRecord.fields[fieldId];
+        // 类型安全验证：确保值符合飞书字段值类型
+        const value = this.isValidFeishuFieldValue(rawValue) ? rawValue : null;
         return `${key}:${this.normalizeValue(value)}`;
       })
       .join('|');
@@ -326,7 +327,7 @@ export class SyncEngineService {
   /**
    * 规范化字段值用于哈希计算
    */
-  private normalizeValue(value: any): string {
+  private normalizeValue(value: unknown): string {
     if (value === null || value === undefined) {
       return 'null';
     }
@@ -350,21 +351,32 @@ export class SyncEngineService {
         .join(',');
     }
 
-    if (typeof value === 'object') {
+    if (typeof value === 'object' && value !== null) {
       return JSON.stringify(value);
     }
 
-    return String(value);
+    // 对于其他类型（symbol, function, bigint等），进行安全处理
+    if (typeof value === 'symbol' || typeof value === 'function') {
+      return 'null'; // 无法序列化的类型返回字符串'null'
+    }
+
+    if (typeof value === 'bigint') {
+      return value.toString();
+    }
+
+    // 最后的安全回退，只应该剩下原始类型了
+    // 如果到这里还有其他类型，返回类型信息作为字符串
+    return `[${typeof value}]`;
   }
 
   /**
    * 执行同步操作
    */
   private async executeSyncOperations(
-    syncConfig: any,
+    syncConfig: SyncEngineConfig,
     fieldMappings: Record<string, string>,
     changes: ChangeAnalysis,
-    options: any,
+    options: SyncOptionsConfig,
   ): Promise<SyncResult> {
     const result: SyncResult = {
       success: true,
@@ -401,7 +413,6 @@ export class SyncEngineService {
           syncConfig,
           fieldMappings,
           changes.toCreate,
-          options,
         );
         result.summary.created = createResult.success;
         result.summary.failed += createResult.failed;
@@ -427,7 +438,6 @@ export class SyncEngineService {
           syncConfig,
           fieldMappings,
           changes.toUpdate,
-          options,
         );
         result.summary.updated = updateResult.success;
         result.summary.failed += updateResult.failed;
@@ -452,7 +462,6 @@ export class SyncEngineService {
         const deleteResult = await this.batchDeleteRecords(
           syncConfig,
           changes.toDelete,
-          options,
         );
         result.summary.deleted = deleteResult.success;
         result.summary.failed += deleteResult.failed;
@@ -500,7 +509,6 @@ export class SyncEngineService {
     syncConfig: SyncEngineConfig,
     fieldMappings: Record<string, string>,
     createItems: ChangeItem[],
-    options: SyncOptionsConfig,
   ): Promise<BatchOperationResult> {
     const records = createItems.map((item) =>
       this.transformRecordForFeishu(
@@ -541,7 +549,6 @@ export class SyncEngineService {
     syncConfig: SyncEngineConfig,
     fieldMappings: Record<string, string>,
     updateItems: ChangeItem[],
-    options: SyncOptionsConfig,
   ): Promise<BatchOperationResult> {
     const updates = updateItems.map((item) => ({
       recordId: item.recordId!,
@@ -578,7 +585,6 @@ export class SyncEngineService {
   private async batchDeleteRecords(
     syncConfig: SyncEngineConfig,
     deleteItems: ChangeItem[],
-    options: SyncOptionsConfig,
   ): Promise<BatchOperationResult> {
     let success = 0;
     let failed = 0;
@@ -608,8 +614,6 @@ export class SyncEngineService {
         });
       } catch (error) {
         failed++;
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
         details.push({
           subjectId: item.subjectId,
           recordId: item.recordId,
@@ -713,14 +717,34 @@ export class SyncEngineService {
    * 格式化值用于飞书
    */
   private formatValueForFeishu(value: unknown): unknown {
+    // null和undefined
     if (value === null || value === undefined) return null;
+
+    // 基础类型
     if (typeof value === 'string') return value.trim();
     if (typeof value === 'number') return value;
     if (typeof value === 'boolean') return value;
+
+    // 数组类型
     if (Array.isArray(value)) return value;
+
+    // 日期类型
     if (value instanceof Date) return Math.floor(value.getTime() / 1000);
-    if (typeof value === 'object') return JSON.stringify(value);
-    return String(value);
+
+    // 对象类型(排除null)
+    if (typeof value === 'object' && value !== null)
+      return JSON.stringify(value);
+
+    // bigint类型
+    if (typeof value === 'bigint') return value.toString();
+
+    // 无法安全序列化的类型返回null
+    if (typeof value === 'symbol' || typeof value === 'function') {
+      return null;
+    }
+
+    // 最后的回退 - 应该只剩下原始类型了
+    return null; // 安全起见，返回null而不是强制转换
   }
 
   /**
@@ -729,7 +753,7 @@ export class SyncEngineService {
   private async initializeSyncState(
     userId: string,
     tableId: string,
-  ): Promise<any> {
+  ): Promise<SyncState> {
     const stateKey = `${this.cacheConfig.syncStateKeyPrefix}${userId}:${tableId}`;
 
     const syncState = {
@@ -777,17 +801,102 @@ export class SyncEngineService {
   /**
    * 获取同步状态
    */
-  async getSyncState(userId: string, tableId: string): Promise<any> {
+  async getSyncState(
+    userId: string,
+    tableId: string,
+  ): Promise<SyncState | null> {
     try {
       const stateKey = `${this.cacheConfig.syncStateKeyPrefix}${userId}:${tableId}`;
       const state = await this.redis.get(stateKey);
-      return state ? JSON.parse(state) : null;
+      if (!state) return null;
+
+      // 类型安全的JSON解析与验证
+      const parsed = JSON.parse(state) as unknown;
+      return this.isValidSyncState(parsed) ? parsed : null;
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
       this.logger.error('Failed to get sync state:', errorMessage);
       return null;
     }
+  }
+
+  /**
+   * 类型守卫：验证并转换豆瓣数据
+   */
+  private validateDoubanData(data: unknown[]): DoubanRecord[] {
+    return data.map((item, index) => {
+      if (!this.isValidDoubanRecord(item)) {
+        throw new Error(
+          `Invalid douban record at index ${index}: missing required fields`,
+        );
+      }
+      return item;
+    });
+  }
+
+  /**
+   * 豆瓣记录类型守卫
+   */
+  private isValidDoubanRecord(item: unknown): item is DoubanRecord {
+    if (typeof item !== 'object' || item === null) {
+      return false;
+    }
+
+    const record = item as Record<string, unknown>;
+
+    // 检查必需字段
+    return (
+      typeof record.subjectId === 'string' &&
+      typeof record.title === 'string' &&
+      typeof record.doubanUrl === 'string' &&
+      Array.isArray(record.userTags) &&
+      typeof record.category === 'string' &&
+      ['books', 'movies', 'music'].includes(record.category)
+    );
+  }
+
+  /**
+   * 飞书字段值类型守卫
+   */
+  private isValidFeishuFieldValue(value: unknown): value is FeishuFieldValue {
+    if (value === null) return true;
+
+    if (
+      typeof value === 'string' ||
+      typeof value === 'number' ||
+      typeof value === 'boolean'
+    ) {
+      return true;
+    }
+
+    if (Array.isArray(value)) {
+      return value.every(
+        (item) => typeof item === 'string' || typeof item === 'number',
+      );
+    }
+
+    return false;
+  }
+
+  /**
+   * 同步状态类型守卫
+   */
+  private isValidSyncState(value: unknown): value is SyncState {
+    if (typeof value !== 'object' || value === null) {
+      return false;
+    }
+
+    const state = value as Record<string, unknown>;
+
+    return (
+      typeof state.userId === 'string' &&
+      typeof state.tableId === 'string' &&
+      typeof state.startTime === 'string' &&
+      typeof state.phase === 'string' &&
+      typeof state.processed === 'number' &&
+      typeof state.total === 'number'
+    );
   }
 
   /**
@@ -799,6 +908,33 @@ export class SyncEngineService {
 }
 
 // ============= 类型定义 =============
+
+/**
+ * 豆瓣记录联合类型 - 支持所有豆瓣数据类型
+ */
+type DoubanRecord = DoubanBook | DoubanMovie | DoubanMusic | DoubanItem;
+
+/**
+ * 飞书字段值类型 - 安全的字段值联合类型
+ */
+type FeishuFieldValue =
+  | string
+  | number
+  | boolean
+  | null
+  | Array<string | number>;
+
+/**
+ * 同步状态接口
+ */
+interface SyncState {
+  userId: string;
+  tableId: string;
+  startTime: string;
+  phase: string;
+  processed: number;
+  total: number;
+}
 
 interface ChangeAnalysis {
   toCreate: ChangeItem[];
