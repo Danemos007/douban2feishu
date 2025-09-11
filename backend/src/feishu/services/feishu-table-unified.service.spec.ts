@@ -17,7 +17,6 @@
  */
 
 import { Test, TestingModule } from '@nestjs/testing';
-import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { RedisService } from '../../redis';
 
@@ -28,20 +27,41 @@ import {
   FeishuCredentials,
   FieldOperationOptions,
   FieldOperationResult,
-  BatchFieldOperationResult,
   FieldMatchAnalysis,
   FieldOperationError,
   FieldConfigurationMismatchError,
   FieldNotFoundError,
 } from '../schemas/field-operations.schema';
 import { FieldCreationConfig } from '../schemas/field-creation.schema';
-import { FeishuField, FeishuFieldType } from '../schemas/field.schema';
+import {
+  FeishuField,
+  FeishuFieldType,
+  FeishuFieldsResponse,
+} from '../schemas/field.schema';
+import { FeishuRecordsResponse } from '../schemas/record.schema';
+import type { AxiosInstance } from 'axios';
+
+// 🔒 类型伪装接口 - 用于安全访问测试所需的私有方法
+// 严格遵循"永远不要为了测试方便而降低生产代码封装性"原则
+interface ServiceWithPrivateMethods {
+  httpClient: AxiosInstance;
+  createFieldInternal(
+    credentials: FeishuCredentials,
+    tableId: string,
+    fieldConfig: FieldCreationConfig,
+  ): Promise<FeishuField>;
+  updateFieldInternal(
+    credentials: FeishuCredentials,
+    tableId: string,
+    fieldId: string,
+    fieldConfig: FieldCreationConfig,
+  ): Promise<FeishuField>;
+  clearFieldCache(appToken: string, tableId: string): Promise<void>;
+  delay(ms: number): Promise<void>;
+}
 
 describe('FeishuTableService - 革命性统一字段操作', () => {
   let service: FeishuTableService;
-  let authService: FeishuAuthService;
-  let contractValidator: FeishuContractValidatorService;
-  let redis: RedisService;
 
   // 🧪 统一测试数据和Mock配置
   const mockCredentials: FeishuCredentials = {
@@ -100,8 +120,14 @@ describe('FeishuTableService - 革命性统一字段操作', () => {
     };
 
     const mockContractValidator = {
-      validateFieldsResponse: jest.fn().mockImplementation((data) => data),
-      validateRecordsResponse: jest.fn().mockImplementation((data) => data),
+      // Reason: Mock契约验证服务的类型转换，模拟生产环境中Zod schema的运行时验证
+      validateFieldsResponse: jest
+        .fn<FeishuFieldsResponse, [unknown, string]>()
+        .mockImplementation((data) => data as FeishuFieldsResponse),
+      // Reason: Mock契约验证服务的类型转换，模拟生产环境中Zod schema的运行时验证
+      validateRecordsResponse: jest
+        .fn<FeishuRecordsResponse, [unknown, string]>()
+        .mockImplementation((data) => data as FeishuRecordsResponse),
     };
 
     const mockRedis = {
@@ -118,12 +144,14 @@ describe('FeishuTableService - 革命性统一字段操作', () => {
         {
           provide: ConfigService,
           useValue: {
-            get: jest.fn((key: string, defaultValue?: any) => {
-              const configMap: Record<string, any> = {
-                APP_VERSION: '1.0.0-test',
-              };
-              return configMap[key] || defaultValue;
-            }),
+            get: jest.fn<string, [string, string?]>(
+              (key: string, defaultValue?: string) => {
+                const configMap: Record<string, string> = {
+                  APP_VERSION: '1.0.0-test',
+                };
+                return configMap[key] || defaultValue || '';
+              },
+            ),
           },
         },
         {
@@ -142,14 +170,11 @@ describe('FeishuTableService - 革命性统一字段操作', () => {
     }).compile();
 
     service = module.get<FeishuTableService>(FeishuTableService);
-    authService = module.get<FeishuAuthService>(FeishuAuthService);
-    contractValidator = module.get<FeishuContractValidatorService>(
-      FeishuContractValidatorService,
-    );
-    redis = module.get<RedisService>(RedisService);
 
-    // Mock HTTP客户端方法
-    jest.spyOn(service as any, 'httpClient').mockImplementation();
+    // Mock HTTP客户端方法 - 使用类型伪装访问私有成员
+    jest
+      .spyOn(service as unknown as ServiceWithPrivateMethods, 'httpClient')
+      .mockImplementation();
   });
 
   afterEach(() => {
@@ -173,12 +198,18 @@ describe('FeishuTableService - 革命性统一字段操作', () => {
         // Mock: 创建字段成功
         const mockCreatedField = { ...mockExistingCorrectField };
         jest
-          .spyOn(service as any, 'createFieldInternal')
+          .spyOn(
+            service as unknown as ServiceWithPrivateMethods,
+            'createFieldInternal',
+          )
           .mockResolvedValue(mockCreatedField);
 
         // Mock: 缓存清理
         jest
-          .spyOn(service as any, 'clearFieldCache')
+          .spyOn(
+            service as unknown as ServiceWithPrivateMethods,
+            'clearFieldCache',
+          )
           .mockResolvedValue(undefined);
 
         const result = await service.ensureFieldConfiguration(
@@ -195,7 +226,10 @@ describe('FeishuTableService - 革命性统一字段操作', () => {
         expect(typeof result.processingTime).toBe('number');
 
         // 验证内部调用
-        expect(service.findFieldByName).toHaveBeenCalledWith(
+        // Reason: Jest spyOn模式下必须引用原始方法来创建Mock断言，这是标准测试实践
+        // eslint-disable-next-line @typescript-eslint/unbound-method
+        const findFieldByNameMock = service.findFieldByName as jest.Mock;
+        expect(findFieldByNameMock).toHaveBeenCalledWith(
           mockCredentials,
           mockTableId,
           '我的状态',
@@ -219,7 +253,10 @@ describe('FeishuTableService - 革命性统一字段操作', () => {
           ),
         ).rejects.toThrow(FieldNotFoundError);
 
-        expect(service.findFieldByName).toHaveBeenCalled();
+        // Reason: Jest spyOn模式下必须引用原始方法来创建Mock断言，这是标准测试实践
+        // eslint-disable-next-line @typescript-eslint/unbound-method
+        const findFieldByNameMock2 = service.findFieldByName as jest.Mock;
+        expect(findFieldByNameMock2).toHaveBeenCalled();
       });
     });
 
@@ -251,7 +288,11 @@ describe('FeishuTableService - 革命性统一字段操作', () => {
         expect(result.warnings).toHaveLength(0);
 
         // 验证没有进行更新操作
-        expect(service.analyzeFieldConfiguration).toHaveBeenCalledWith(
+        // Reason: Jest spyOn模式下必须引用原始方法来创建Mock断言，这是标准测试实践
+        const analyzeFieldConfigMock =
+          // eslint-disable-next-line @typescript-eslint/unbound-method
+          service.analyzeFieldConfiguration as jest.Mock;
+        expect(analyzeFieldConfigMock).toHaveBeenCalledWith(
           mockExistingCorrectField,
           mockBookStatusConfig,
         );
@@ -318,7 +359,10 @@ describe('FeishuTableService - 革命性统一字段操作', () => {
         // Mock: 更新字段成功
         const mockUpdatedField = { ...mockExistingCorrectField };
         jest
-          .spyOn(service as any, 'updateFieldInternal')
+          .spyOn(
+            service as unknown as ServiceWithPrivateMethods,
+            'updateFieldInternal',
+          )
           .mockResolvedValue(mockUpdatedField);
 
         const result = await service.ensureFieldConfiguration(
@@ -340,7 +384,11 @@ describe('FeishuTableService - 革命性统一字段操作', () => {
         });
 
         // 验证内部调用
-        expect(service.analyzeFieldConfiguration).toHaveBeenCalledWith(
+        // Reason: Jest spyOn模式下必须引用原始方法来创建Mock断言，这是标准测试实践
+        const analyzeFieldConfigMock2 =
+          // eslint-disable-next-line @typescript-eslint/unbound-method
+          service.analyzeFieldConfiguration as jest.Mock;
+        expect(analyzeFieldConfigMock2).toHaveBeenCalledWith(
           mockExistingWrongTypeField,
           mockBookStatusConfig,
         );
@@ -413,7 +461,7 @@ describe('FeishuTableService - 革命性统一字段操作', () => {
     });
 
     describe('🚨 错误处理和重试机制', () => {
-      it('should handle API errors with intelligent retry', async () => {
+      it('should handle API errors with intelligent retry', () => {
         // 这个测试需要模拟真实的重试逻辑，暂时跳过
         // TODO: 需要更精细的Mock设计来正确测试重试机制
         expect(true).toBe(true); // 占位测试
@@ -463,7 +511,10 @@ describe('FeishuTableService - 革命性统一字段操作', () => {
         // Mock: 简单的字段创建
         jest.spyOn(service, 'findFieldByName').mockResolvedValue(null);
         jest
-          .spyOn(service as any, 'createFieldInternal')
+          .spyOn(
+            service as unknown as ServiceWithPrivateMethods,
+            'createFieldInternal',
+          )
           .mockResolvedValue(mockExistingCorrectField);
 
         // Mock: 带详细指标的返回值
@@ -496,11 +547,14 @@ describe('FeishuTableService - 革命性统一字段操作', () => {
 
       it('should have cache management capabilities', async () => {
         // 验证服务具备缓存管理方法
-        expect(typeof (service as any).clearFieldCache).toBe('function');
+        expect(
+          typeof (service as unknown as ServiceWithPrivateMethods)
+            .clearFieldCache,
+        ).toBe('function');
 
         // 验证缓存清理方法可以被调用且不抛出错误
         await expect(
-          (service as any).clearFieldCache(
+          (service as unknown as ServiceWithPrivateMethods).clearFieldCache(
             mockCredentials.appToken,
             mockTableId,
           ),
@@ -657,17 +711,15 @@ describe('FeishuTableService - 革命性统一字段操作', () => {
       } as FieldOperationResult);
 
       const delaySpy = jest
-        .spyOn(service as any, 'delay')
+        .spyOn(service as unknown as ServiceWithPrivateMethods, 'delay')
         .mockResolvedValue(undefined);
 
-      const startTime = Date.now();
       await service.batchEnsureFieldConfigurations(
         mockCredentials,
         mockTableId,
         batchConfigs,
         { operationDelay: 1000 },
       );
-      const endTime = Date.now();
 
       // 验证延迟被调用
       expect(delaySpy).toHaveBeenCalledWith(1000);
