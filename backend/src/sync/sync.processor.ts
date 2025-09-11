@@ -7,9 +7,23 @@ import { DoubanService } from '../douban/douban.service';
 import { FeishuService } from '../feishu/feishu.service';
 import { SyncEngineService } from '../feishu/services/sync-engine.service';
 import { FieldMappingService } from '../feishu/services/field-mapping.service';
-import { SyncJobData } from './interfaces/sync.interface';
+import {
+  SyncJobData,
+  SyncJobOptions,
+  DoubanDataCategory,
+} from './interfaces/sync.interface';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { CryptoService } from '../common/crypto/crypto.service';
+import { DoubanItem } from '../douban/interfaces/douban.interface';
+
+/**
+ * 解密后的用户凭证接口
+ */
+interface DecryptedUserCredentials {
+  doubanCookie: string | null;
+  feishuAppId: string;
+  feishuAppSecret: string | null;
+}
 
 /**
  * 同步任务处理器 - BullMQ任务执行
@@ -69,6 +83,7 @@ export class SyncProcessor {
       // 第二阶段：同步到飞书
       await this.updateProgress(job, 60, 'Starting Feishu sync...');
       const syncResults = await this.syncToFeishu(
+        userId,
         userCredentials,
         doubanData,
         options,
@@ -115,7 +130,9 @@ export class SyncProcessor {
   /**
    * 获取用户凭证
    */
-  private async getUserCredentials(userId: string) {
+  private async getUserCredentials(
+    userId: string,
+  ): Promise<DecryptedUserCredentials> {
     try {
       const credentials = await this.prisma.userCredentials.findUnique({
         where: { userId },
@@ -127,14 +144,11 @@ export class SyncProcessor {
 
       // 解密凭证
       const doubanCookie = credentials.doubanCookieEncrypted
-        ? await this.cryptoService.decrypt(
-            credentials.doubanCookieEncrypted,
-            userId,
-          )
+        ? this.cryptoService.decrypt(credentials.doubanCookieEncrypted, userId)
         : null;
 
       const feishuAppSecret = credentials.feishuAppSecretEncrypted
-        ? await this.cryptoService.decrypt(
+        ? this.cryptoService.decrypt(
             credentials.feishuAppSecretEncrypted,
             userId,
           )
@@ -142,7 +156,7 @@ export class SyncProcessor {
 
       return {
         doubanCookie,
-        feishuAppId: credentials.feishuAppId,
+        feishuAppId: credentials.feishuAppId || '',
         feishuAppSecret,
       };
     } catch (error) {
@@ -156,12 +170,12 @@ export class SyncProcessor {
    */
   private async fetchDoubanData(
     userId: string,
-    credentials: any,
-    options: any,
+    credentials: DecryptedUserCredentials,
+    options: SyncJobOptions,
     job: Job,
-  ) {
+  ): Promise<DoubanItem[]> {
     const categories: ('books' | 'movies' | 'tv')[] = ['books', 'movies', 'tv'];
-    const allData: any[] = [];
+    const allData: DoubanItem[] = [];
     let totalProgress = 10;
 
     for (const category of categories) {
@@ -172,6 +186,11 @@ export class SyncProcessor {
       );
 
       try {
+        if (!credentials.doubanCookie) {
+          this.logger.warn(`Skipping ${category}: No Douban cookie available`);
+          continue;
+        }
+
         const categoryData = await this.doubanService.fetchUserData({
           userId,
           cookie: credentials.doubanCookie,
@@ -204,15 +223,16 @@ export class SyncProcessor {
    * 同步数据到飞书 - 使用增量同步引擎
    */
   private async syncToFeishu(
-    credentials: any,
-    data: any[],
-    options: any,
+    userId: string,
+    credentials: DecryptedUserCredentials,
+    data: DoubanItem[],
+    options: SyncJobOptions,
     job: Job,
   ) {
     try {
       // 获取同步配置
       const syncConfig = await this.prisma.syncConfig.findUnique({
-        where: { userId: job.data.userId },
+        where: { userId },
       });
 
       if (!syncConfig?.tableMappings) {
@@ -222,7 +242,10 @@ export class SyncProcessor {
       }
 
       // 假设使用第一个配置的表格（实际应该根据数据类型选择）
-      const tableMappingsData = syncConfig.tableMappings as any;
+      const tableMappingsData = syncConfig.tableMappings as Record<
+        string,
+        unknown
+      >;
       const firstTableKey = Object.keys(tableMappingsData)[0];
 
       if (!firstTableKey) {
@@ -230,21 +253,34 @@ export class SyncProcessor {
       }
 
       const [appToken, tableId] = firstTableKey.split(':');
-      const tableMapping = tableMappingsData[firstTableKey];
-      const dataType = tableMapping._metadata?.dataType || 'books';
+      const tableMapping = tableMappingsData[firstTableKey] as Record<
+        string,
+        unknown
+      >;
+      const metadata = tableMapping?._metadata as
+        | Record<string, unknown>
+        | undefined;
+      const dataType: DoubanDataCategory =
+        (metadata?.dataType as DoubanDataCategory) || 'books';
 
       await this.updateProgress(job, 65, 'Preparing incremental sync...');
 
+      if (!credentials.feishuAppSecret) {
+        throw new Error('Feishu App Secret is required for sync operation');
+      }
+
       // 使用增量同步引擎
       const syncResult = await this.syncEngineService.performIncrementalSync(
-        job.data.userId,
+        userId,
         {
           appId: credentials.feishuAppId,
           appSecret: credentials.feishuAppSecret,
           appToken,
           tableId,
           dataType,
-          subjectIdField: tableMapping.subjectId || tableMapping['subjectId'], // ~~Field ID~~ **字段名**
+          subjectIdField:
+            (tableMapping.subjectId as string) ||
+            (tableMapping['subjectId'] as string), // ~~Field ID~~ **字段名**
         },
         data,
         {
@@ -252,7 +288,7 @@ export class SyncProcessor {
           onProgress: (progress) => {
             const totalProgress =
               65 + (progress.processed / progress.total) * 30;
-            this.updateProgress(
+            void this.updateProgress(
               job,
               totalProgress,
               `${progress.phase}: ${progress.processed}/${progress.total}`,
@@ -284,10 +320,10 @@ export class SyncProcessor {
    * 更新任务进度
    */
   private async updateProgress(job: Job, progress: number, message: string) {
-    job.progress(progress);
+    void job.progress(progress);
 
     await this.syncService.updateSyncProgress({
-      syncId: job.data.syncId,
+      syncId: (job.data as SyncJobData).syncId,
       jobId: job.id?.toString(),
       status: 'RUNNING',
       progress,
