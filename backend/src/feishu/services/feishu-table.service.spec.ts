@@ -32,42 +32,44 @@ import { FeishuTableService } from './feishu-table.service';
 import { FeishuAuthService } from './feishu-auth.service';
 import { FeishuContractValidatorService } from '../contract/validator.service';
 import { RedisService } from '../../redis';
+import { FeishuFieldType } from '../interfaces/api.interface';
 import {
-  FeishuFieldType,
-  FeishuFieldInfo,
-  FeishuCreateFieldRequest,
-} from '../interfaces/api.interface';
-import {
-  FeishuApiResponse,
   FeishuField,
   FeishuCreateFieldPayload,
   FeishuRecordData,
 } from '../interfaces/feishu.interface';
 import {
-  FeishuCredentialsSchema,
-  FieldOperationOptionsSchema,
-  FieldOperationResultSchema,
-  BatchFieldOperationResultSchema,
-  FieldMatchAnalysisSchema,
-} from '../schemas/field-operations.schema';
+  MockConfigService,
+  createMockHttpResponse,
+  createMockConfigService,
+  createAxiosCompatibleResponse,
+  MockContractValidatorService,
+  createMockContractValidator,
+  MockRedisService,
+  createMockRedisService,
+  MockAxiosInstance,
+  createMockAxiosInstance,
+  getFirstMockCall,
+  HttpRequestConfig,
+} from '../../test/types/mock-http.types';
+// Note: Schema imports removed - not used in current test implementation
 
 // ==================== Mock实现区域 ====================
 
 /**
- * ConfigService Mock - 提供测试环境配置
+ * Axios Mock - 在文件顶部统一Mock axios.create
+ * 使用类型安全的工厂函数，避免any类型问题
  */
-const createMockConfigService = () => ({
-  get: jest.fn((key: string, defaultValue?: any) => {
-    const configMap: Record<string, any> = {
-      APP_VERSION: '1.0.0-test',
-      FEISHU_BASE_URL: 'https://open.feishu.cn',
-      FEISHU_TIMEOUT: 30000,
-      REDIS_TTL_FIELDS: 3600,
-      REDIS_TTL_RECORDS: 300,
-    };
-    return configMap[key] ?? defaultValue;
-  }),
-});
+const mockAxiosInstance: MockAxiosInstance = createMockAxiosInstance();
+
+jest.mock('axios', () => ({
+  create: jest.fn(() => mockAxiosInstance),
+  default: {
+    create: jest.fn(() => mockAxiosInstance),
+  },
+}));
+
+// Note: createMockConfigService moved to mock-http.types.ts for type safety
 
 /**
  * FeishuAuthService Mock - 模拟飞书认证服务
@@ -80,65 +82,13 @@ const createMockFeishuAuthService = () => ({
 
 /**
  * FeishuContractValidatorService Mock - 模拟契约验证服务
+ * 使用类型安全的工厂函数
  */
-const createMockContractValidator = () => ({
-  validateFieldsResponse: jest.fn().mockImplementation((data) => data),
-  validateAuthResponse: jest.fn().mockImplementation((data) => data),
-  validateRecordsResponse: jest.fn().mockImplementation((data) => data),
-  isRatingFieldValidation: jest
-    .fn()
-    .mockImplementation(
-      (field) => field.field_name?.includes('我的评分') && field.type === 2,
-    ),
-  getValidationStats: jest.fn().mockReturnValue({
-    totalValidations: 0,
-    successCount: 0,
-    failureCount: 0,
-  }),
-  resetStats: jest.fn(),
-});
 
 /**
- * Redis Mock - 模拟Redis缓存操作
- * 支持缓存命中/未命中场景的灵活切换
+ * Redis Mock - 现在使用类型安全的工厂函数
+ * 参见 mock-http.types.ts 中的 createMockRedisService()
  */
-const createMockRedis = () => ({
-  // 缓存读取操作
-  get: jest.fn().mockResolvedValue(null), // 默认缓存未命中
-
-  // 缓存写入操作
-  set: jest.fn().mockResolvedValue('OK'),
-  setex: jest.fn().mockResolvedValue('OK'),
-
-  // 缓存删除操作
-  del: jest.fn().mockResolvedValue(1),
-
-  // 其他Redis操作
-  exists: jest.fn().mockResolvedValue(0),
-  expire: jest.fn().mockResolvedValue(1),
-  keys: jest.fn().mockResolvedValue([]),
-
-  // 测试辅助方法：重置所有Mock
-  _resetMocks: function () {
-    // 重置各个Mock方法
-    this.get.mockReset();
-    this.set.mockReset();
-    this.setex.mockReset();
-    this.del.mockReset();
-    this.exists.mockReset();
-    this.expire.mockReset();
-    this.keys.mockReset();
-
-    // 重新设置默认返回值
-    this.get.mockResolvedValue(null);
-    this.set.mockResolvedValue('OK');
-    this.setex.mockResolvedValue('OK');
-    this.del.mockResolvedValue(1);
-    this.exists.mockResolvedValue(0);
-    this.expire.mockResolvedValue(1);
-    this.keys.mockResolvedValue([]);
-  },
-});
 
 // ==================== 测试数据模拟区域 ====================
 
@@ -175,51 +125,26 @@ const mockFeishuFields: FeishuField[] = [
   },
 ];
 
-/**
- * 模拟飞书API响应
- */
-const createMockApiResponse = <T>(data: T): FeishuApiResponse<T> => ({
-  code: 0,
-  msg: 'success',
-  data: data,
-});
+// Note: createMockHttpResponse moved to mock-http.types.ts for type safety
 
-/**
- * 模拟完整的Axios HTTP响应
- */
-const createMockHttpResponse = (data: any) => ({
-  data: data,
-  status: 200,
-  statusText: 'OK',
-  headers: {},
-  config: {},
-});
-
-/**
- * 模拟searchRecords方法的返回类型
- */
-interface MockSearchResult {
-  has_more: boolean;
-  total: number;
-  items: any[];
-}
+// Note: MockSearchResult interface removed - not used in current test implementation
 
 // ==================== 主测试套件 ====================
 
 describe('FeishuTableService - 完全重建版本', () => {
   let service: FeishuTableService;
   let module: TestingModule;
-  let mockConfigService: ReturnType<typeof createMockConfigService>;
+  let mockConfigService: MockConfigService;
   let mockFeishuAuthService: ReturnType<typeof createMockFeishuAuthService>;
-  let mockContractValidator: ReturnType<typeof createMockContractValidator>;
-  let mockRedis: ReturnType<typeof createMockRedis>;
+  let mockContractValidator: MockContractValidatorService;
+  let mockRedis: MockRedisService;
 
   beforeEach(async () => {
     // 创建所有Mock实例
     mockConfigService = createMockConfigService();
     mockFeishuAuthService = createMockFeishuAuthService();
     mockContractValidator = createMockContractValidator();
-    mockRedis = createMockRedis();
+    mockRedis = createMockRedisService();
 
     // 构建TestingModule - 使用正确的依赖注入配置
     module = await Test.createTestingModule({
@@ -258,8 +183,11 @@ describe('FeishuTableService - 完全重建版本', () => {
 
   afterEach(async () => {
     // 重置所有Mock状态
-    mockRedis._resetMocks();
     jest.clearAllMocks();
+
+    // 重置axios mock状态
+    mockAxiosInstance.get.mockReset();
+    mockAxiosInstance.post.mockReset();
 
     // 清理TestingModule
     if (module) {
@@ -316,9 +244,10 @@ describe('FeishuTableService - 完全重建版本', () => {
             items: mockFeishuFields,
           },
         });
-        jest
-          .spyOn(service['httpClient'], 'get')
-          .mockResolvedValue(mockHttpResponse as any);
+        // 直接配置axios mock，避免叠床架屋的jest.spyOn
+        mockAxiosInstance.get.mockResolvedValue(
+          createAxiosCompatibleResponse(mockHttpResponse),
+        );
 
         // 执行测试
         const result = await service.getTableFields(
@@ -381,9 +310,10 @@ describe('FeishuTableService - 完全重建版本', () => {
           msg: 'success',
           data: expectedField,
         });
-        jest
-          .spyOn(service['httpClient'], 'post')
-          .mockResolvedValue(mockHttpResponse as any);
+        // 直接配置axios mock，避免叠床架屋的jest.spyOn
+        mockAxiosInstance.post.mockResolvedValue(
+          createAxiosCompatibleResponse(mockHttpResponse),
+        );
 
         // 执行测试：创建Rating字段
         const result = await service.createTableField(
@@ -401,9 +331,11 @@ describe('FeishuTableService - 完全重建版本', () => {
         expect(mockFeishuAuthService.getAccessToken).toHaveBeenCalled();
 
         // 验证HTTP请求的配置参数
-        const httpCall = jest.spyOn(service['httpClient'], 'post').mock
-          .calls[0];
-        const fieldConfig = httpCall[1] as FeishuCreateFieldPayload;
+        const httpCall = getFirstMockCall<
+          [string, FeishuCreateFieldPayload, unknown?]
+        >(mockAxiosInstance.post);
+        expect(httpCall).toBeDefined();
+        const fieldConfig = httpCall![1];
         expect(fieldConfig.ui_type).toBe('Rating'); // 关键：验证isRatingFieldType修复效果
         expect(fieldConfig.property?.rating).toEqual({ symbol: 'star' });
       });
@@ -428,9 +360,10 @@ describe('FeishuTableService - 完全重建版本', () => {
           msg: 'success',
           data: expectedField,
         });
-        jest
-          .spyOn(service['httpClient'], 'post')
-          .mockResolvedValue(mockHttpResponse as any);
+        // 直接配置axios mock，避免叠床架屋的jest.spyOn
+        mockAxiosInstance.post.mockResolvedValue(
+          createAxiosCompatibleResponse(mockHttpResponse),
+        );
 
         // 执行测试：创建Number字段
         const result = await service.createTableField(
@@ -447,9 +380,11 @@ describe('FeishuTableService - 完全重建版本', () => {
         expect(result).toEqual(expectedField);
 
         // 验证HTTP请求的配置参数
-        const httpCall = jest.spyOn(service['httpClient'], 'post').mock
-          .calls[0];
-        const fieldConfig = httpCall[1] as FeishuCreateFieldPayload;
+        const httpCall = getFirstMockCall<
+          [string, FeishuCreateFieldPayload, unknown?]
+        >(mockAxiosInstance.post);
+        expect(httpCall).toBeDefined();
+        const fieldConfig = httpCall![1];
         expect(fieldConfig.ui_type).toBe('Number'); // Number字段确实有ui_type
         expect(fieldConfig.property?.range).toBeDefined(); // Number字段有range属性
       });
@@ -497,7 +432,9 @@ describe('FeishuTableService - 完全重建版本', () => {
 
         // 验证结果
         expect(result).toEqual(mockRecord);
-        expect(service.searchRecords).toHaveBeenCalledWith(
+        // 使用spy来避免unbound method错误
+        const searchRecordsSpy = jest.spyOn(service, 'searchRecords');
+        expect(searchRecordsSpy).toHaveBeenCalledWith(
           testParams.appId,
           testParams.appSecret,
           testParams.appToken,
@@ -562,7 +499,7 @@ describe('FeishuTableService - 完全重建版本', () => {
         });
         jest
           .spyOn(service['httpClient'], 'post')
-          .mockResolvedValue(mockResponse as any);
+          .mockResolvedValue(createAxiosCompatibleResponse(mockResponse));
 
         // 执行测试
         const result = await service.batchCreateRecords(
@@ -597,7 +534,7 @@ describe('FeishuTableService - 完全重建版本', () => {
       });
       jest
         .spyOn(service['httpClient'], 'get')
-        .mockResolvedValue(mockHttpResponse as any);
+        .mockResolvedValue(createAxiosCompatibleResponse(mockHttpResponse));
 
       // 执行测试
       await service.getTableFields('app', 'secret', 'token', 'table');
@@ -622,7 +559,7 @@ describe('FeishuTableService - 完全重建版本', () => {
       });
       jest
         .spyOn(service['httpClient'], 'get')
-        .mockResolvedValue(mockHttpResponse as any);
+        .mockResolvedValue(createAxiosCompatibleResponse(mockHttpResponse));
 
       // 执行测试 - 应该不抛出异常
       const result = await service.getTableFields(
@@ -643,7 +580,7 @@ describe('FeishuTableService - 完全重建版本', () => {
       mockFeishuAuthService.getAccessToken.mockResolvedValue('valid-token');
 
       // Mock API调用失败(401) - 这会触发错误处理逻辑
-      jest.spyOn(service['httpClient'], 'get').mockRejectedValueOnce({
+      mockAxiosInstance.get.mockRejectedValueOnce({
         response: { status: 401, data: { msg: 'invalid access token' } },
       });
 
@@ -664,9 +601,10 @@ describe('FeishuTableService - 完全重建版本', () => {
         msg: 'success',
         data: { items: [] },
       });
-      jest
-        .spyOn(service['httpClient'], 'get')
-        .mockResolvedValue(mockHttpResponse as any);
+      // 直接配置axios mock，避免叠床架屋的jest.spyOn
+      mockAxiosInstance.get.mockResolvedValue(
+        createAxiosCompatibleResponse(mockHttpResponse),
+      );
 
       // 执行测试
       await service.getTableFields(
@@ -683,11 +621,14 @@ describe('FeishuTableService - 完全重建版本', () => {
       );
 
       // 验证HTTP请求包含正确的认证头
-      const httpCall = jest.spyOn(service['httpClient'], 'get').mock.calls[0];
+      const httpCall = getFirstMockCall<[string, HttpRequestConfig?]>(
+        mockAxiosInstance.get,
+      );
       expect(httpCall).toBeDefined();
-      expect(httpCall[1]).toBeDefined();
-      if (httpCall[1] && httpCall[1].headers) {
-        expect(httpCall[1].headers.Authorization).toBe('Bearer valid-token');
+      expect(httpCall![1]).toBeDefined();
+      const config = httpCall![1];
+      if (config && config.headers) {
+        expect(config.headers.Authorization).toBe('Bearer valid-token');
       }
     });
   });
@@ -737,7 +678,7 @@ describe('FeishuTableService - 完全重建版本', () => {
       it('should handle server 5xx errors gracefully', async () => {
         // 设置Mock：模拟服务器内部错误
         mockFeishuAuthService.getAccessToken.mockResolvedValue('mock-token');
-        jest.spyOn(service['httpClient'], 'get').mockRejectedValue({
+        mockAxiosInstance.get.mockRejectedValue({
           response: {
             status: 500,
             statusText: 'Internal Server Error',
@@ -766,7 +707,7 @@ describe('FeishuTableService - 完全重建版本', () => {
         });
         jest
           .spyOn(service['httpClient'], 'get')
-          .mockResolvedValue(malformedResponse as any);
+          .mockResolvedValue(createAxiosCompatibleResponse(malformedResponse));
 
         // 执行测试 - 应该能够处理格式错误的响应
         await expect(
@@ -831,7 +772,7 @@ describe('FeishuTableService - 完全重建版本', () => {
         });
         jest
           .spyOn(service['httpClient'], 'get')
-          .mockResolvedValue(mockHttpResponse as any);
+          .mockResolvedValue(createAxiosCompatibleResponse(mockHttpResponse));
 
         // 执行测试 - 应该在token刷新后成功
         await expect(
@@ -859,7 +800,7 @@ describe('FeishuTableService - 完全重建版本', () => {
         });
         jest
           .spyOn(service['httpClient'], 'get')
-          .mockResolvedValue(mockHttpResponse as any);
+          .mockResolvedValue(createAxiosCompatibleResponse(mockHttpResponse));
 
         // 执行测试 - 应该优雅降级到API调用
         const result = await service.getTableFields(
@@ -886,7 +827,7 @@ describe('FeishuTableService - 完全重建版本', () => {
         });
         jest
           .spyOn(service['httpClient'], 'get')
-          .mockResolvedValue(mockHttpResponse as any);
+          .mockResolvedValue(createAxiosCompatibleResponse(mockHttpResponse));
 
         // 执行测试 - 即使缓存写入失败，也应该成功返回数据
         const result = await service.getTableFields(
@@ -906,7 +847,7 @@ describe('FeishuTableService - 完全重建版本', () => {
       it('should handle invalid field type configurations', async () => {
         // 设置Mock
         mockFeishuAuthService.getAccessToken.mockResolvedValue('mock-token');
-        jest.spyOn(service['httpClient'], 'post').mockRejectedValue({
+        mockAxiosInstance.post.mockRejectedValue({
           response: {
             status: 400,
             data: {
@@ -924,7 +865,7 @@ describe('FeishuTableService - 完全重建版本', () => {
             testParams.appToken,
             testParams.tableId,
             '', // 空字段名
-            999 as any, // 无效字段类型
+            999 as unknown as FeishuFieldType, // 无效字段类型测试
             '描述',
           ),
         ).rejects.toThrow();
@@ -933,7 +874,7 @@ describe('FeishuTableService - 完全重建版本', () => {
       it('should handle record validation errors in batch operations', async () => {
         // 设置Mock：批量操作部分失败
         mockFeishuAuthService.getAccessToken.mockResolvedValue('mock-token');
-        jest.spyOn(service['httpClient'], 'post').mockRejectedValue({
+        mockAxiosInstance.post.mockRejectedValue({
           response: {
             status: 400,
             data: {
@@ -1006,7 +947,7 @@ describe('FeishuTableService - 完全重建版本', () => {
         });
         jest
           .spyOn(service['httpClient'], 'post')
-          .mockResolvedValue(mockResponse as any);
+          .mockResolvedValue(createAxiosCompatibleResponse(mockResponse));
 
         const startTime = Date.now();
 
@@ -1053,7 +994,7 @@ describe('FeishuTableService - 完全重建版本', () => {
           });
           jest
             .spyOn(service['httpClient'], 'post')
-            .mockResolvedValueOnce(mockResponse as any);
+            .mockResolvedValueOnce(createAxiosCompatibleResponse(mockResponse));
         });
 
         const startTime = Date.now();
@@ -1102,9 +1043,7 @@ describe('FeishuTableService - 完全重建版本', () => {
         });
         jest
           .spyOn(service['httpClient'], 'get')
-          .mockResolvedValue(mockHttpResponse as any);
-
-        const startTime = Date.now();
+          .mockResolvedValue(createAxiosCompatibleResponse(mockHttpResponse));
 
         // 第一次请求 - 缓存未命中，需要API调用
         const result1 = await service.getTableFields(
@@ -1114,9 +1053,6 @@ describe('FeishuTableService - 完全重建版本', () => {
           testParams.tableId,
         );
 
-        const firstCallTime = Date.now() - startTime;
-        const secondCallStart = Date.now();
-
         // 第二次请求 - 缓存命中，无需API调用
         const result2 = await service.getTableFields(
           testParams.appId,
@@ -1125,18 +1061,14 @@ describe('FeishuTableService - 完全重建版本', () => {
           testParams.tableId,
         );
 
-        const secondCallTime = Date.now() - secondCallStart;
-
         // 验证结果一致性
         expect(result1).toEqual(mockFeishuFields);
         expect(result2).toEqual(mockFeishuFields);
 
-        // 验证缓存性能优化 - 第二次请求应该更快（考虑测试环境中的时间精度问题）
-        expect(secondCallTime).toBeLessThanOrEqual(firstCallTime);
-        expect(secondCallTime).toBeLessThan(100); // 缓存命中应在100ms内
-
-        // 验证API调用次数 - 只有第一次调用了API
-        expect(mockFeishuAuthService.getAccessToken).toHaveBeenCalledTimes(1);
+        // 验证缓存机制正确工作 - 通过Mock调用次数验证性能优化
+        expect(mockRedis.get).toHaveBeenCalledTimes(2); // 两次都尝试从缓存读取
+        expect(mockFeishuAuthService.getAccessToken).toHaveBeenCalledTimes(1); // 只有第一次调用认证API
+        expect(mockRedis.setex).toHaveBeenCalledTimes(1); // 只有第一次写入缓存
       });
 
       it('should handle cache expiration and refresh correctly', async () => {
@@ -1153,7 +1085,7 @@ describe('FeishuTableService - 完全重建版本', () => {
         });
         jest
           .spyOn(service['httpClient'], 'get')
-          .mockResolvedValue(mockHttpResponse as any);
+          .mockResolvedValue(createAxiosCompatibleResponse(mockHttpResponse));
 
         // 第一次请求 - 缓存命中
         const result1 = await service.getTableFields(
@@ -1213,7 +1145,7 @@ describe('FeishuTableService - 完全重建版本', () => {
         });
         jest
           .spyOn(service['httpClient'], 'get')
-          .mockResolvedValue(getFieldsResponse as any);
+          .mockResolvedValue(createAxiosCompatibleResponse(getFieldsResponse));
 
         // Step 2: 创建缺失字段
         const newField = {
@@ -1235,7 +1167,9 @@ describe('FeishuTableService - 完全重建版本', () => {
         });
         jest
           .spyOn(service['httpClient'], 'post')
-          .mockResolvedValue(createFieldResponse as any);
+          .mockResolvedValue(
+            createAxiosCompatibleResponse(createFieldResponse),
+          );
 
         // 执行测试：完整流程
 
@@ -1261,9 +1195,11 @@ describe('FeishuTableService - 完全重建版本', () => {
         expect(createdField).toEqual(newField);
 
         // 验证关键的字段类型识别逻辑
-        const createFieldCall = jest.spyOn(service['httpClient'], 'post').mock
-          .calls[0];
-        const fieldConfig = createFieldCall[1] as FeishuCreateFieldPayload;
+        const createFieldCall = getFirstMockCall<
+          [string, FeishuCreateFieldPayload, unknown?]
+        >(mockAxiosInstance.post);
+        expect(createFieldCall).toBeDefined();
+        const fieldConfig = createFieldCall![1];
         expect(fieldConfig.ui_type).toBe('Rating'); // 关键验证点
       });
     });
@@ -1306,7 +1242,9 @@ describe('FeishuTableService - 完全重建版本', () => {
         });
         jest
           .spyOn(service['httpClient'], 'post')
-          .mockResolvedValue(createRecordResponse as any);
+          .mockResolvedValue(
+            createAxiosCompatibleResponse(createRecordResponse),
+          );
 
         // 执行测试：完整的书籍同步流程
 
@@ -1382,8 +1320,10 @@ describe('FeishuTableService - 完全重建版本', () => {
   describe('代码质量和维护性', () => {
     describe('Mock架构验证', () => {
       it('should have consistent mock reset functionality', () => {
-        // 验证Mock重置功能的一致性
-        mockRedis._resetMocks();
+        // 验证Mock重置功能的一致性 - 使用Jest标准重置方法
+        mockRedis.get.mockClear();
+        mockRedis.set.mockClear();
+        mockRedis.del.mockClear();
 
         // 验证所有Mock都被正确重置
         expect(mockRedis.get).toHaveBeenCalledTimes(0);
@@ -1398,20 +1338,20 @@ describe('FeishuTableService - 完全重建版本', () => {
       it('should maintain test isolation between different test cases', async () => {
         // 第一个操作：设置特定的Mock返回值
         mockRedis.get.mockResolvedValueOnce('test-value-1');
-        const result1 = await mockRedis.get('key1');
+        const result1: string | null = await mockRedis.get('key1');
         expect(result1).toBe('test-value-1');
 
         // afterEach应该重置Mock状态
         // 在实际测试运行时，afterEach会被自动调用
 
         // 第二个操作：验证Mock已被重置到默认状态
-        const result2 = await mockRedis.get('key2');
+        const result2: string | null = await mockRedis.get('key2');
         expect(result2).toBeNull(); // 应该返回默认值
       });
     });
 
     describe('类型安全验证', () => {
-      it('should maintain proper TypeScript types in mock responses', async () => {
+      it('should maintain proper TypeScript types in mock responses', () => {
         // 验证HTTP响应Mock的类型安全
         const typedResponse = createMockHttpResponse({
           items: mockFeishuFields,
@@ -1491,7 +1431,7 @@ describe('FeishuTableService - 完全重建版本', () => {
         });
         jest
           .spyOn(service['httpClient'], 'get')
-          .mockResolvedValue(mockHttpResponse as any);
+          .mockResolvedValue(createAxiosCompatibleResponse(mockHttpResponse));
 
         // 性能测试
         const iterations = 10;
@@ -1509,7 +1449,7 @@ describe('FeishuTableService - 完全重建版本', () => {
           times.push(endTime - startTime);
 
           // 重置Mock状态以确保每次都是一致的测试条件
-          mockRedis._resetMocks();
+          jest.clearAllMocks();
         }
 
         // 性能验证
@@ -1531,7 +1471,7 @@ describe('FeishuTableService - 完全重建版本', () => {
         });
         jest
           .spyOn(service['httpClient'], 'get')
-          .mockResolvedValue(mockHttpResponse as any);
+          .mockResolvedValue(createAxiosCompatibleResponse(mockHttpResponse));
 
         // 并发压力测试
         const concurrentRequests = 20;
@@ -1571,7 +1511,7 @@ describe('FeishuTableService - 完全重建版本', () => {
         });
         jest
           .spyOn(service['httpClient'], 'get')
-          .mockResolvedValue(mockHttpResponse as any);
+          .mockResolvedValue(createAxiosCompatibleResponse(mockHttpResponse));
 
         // 模拟大量重复操作
         const operations = 100;
