@@ -8,12 +8,16 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { Logger } from '@nestjs/common';
 import { FeishuContractValidatorService } from './validator.service';
-import { FeishuFieldsResponse } from '../schemas/field.schema';
-import { FeishuTokenResponse } from '../schemas/auth.schema';
 
 // 导入真实fixtures
-const fieldsFixture = require('./__fixtures__/fields-response.json');
-const authFixture = require('./__fixtures__/auth-response.json');
+import fieldsFixture from './__fixtures__/fields-response.json';
+import authFixture from './__fixtures__/auth-response.json';
+
+// 类型安全的Jest匹配器助手 - 黄金标准实现
+const createTypeSafeMatchers = {
+  any: <T>(constructor: new (...args: unknown[]) => T): T =>
+    expect.any(constructor) as T,
+};
 
 describe('FeishuContractValidatorService', () => {
   let service: FeishuContractValidatorService;
@@ -166,8 +170,8 @@ describe('FeishuContractValidatorService', () => {
           '契约验证失败 - test-endpoint',
           expect.objectContaining({
             endpoint: 'test-endpoint',
-            errors: expect.any(Array),
-            actualData: expect.any(String),
+            errors: createTypeSafeMatchers.any(Array),
+            actualData: createTypeSafeMatchers.any(String),
           }),
         );
       });
