@@ -70,7 +70,7 @@ export class CookieManagerService {
   /**
    * 加密存储Cookie
    */
-  async encryptCookie(userId: string, rawCookie: string): Promise<string> {
+  encryptCookie(userId: string, rawCookie: string): string {
     try {
       const iv = this.cryptoService.generateIV();
       const encrypted = this.cryptoService.encrypt(rawCookie, userId, iv);
@@ -90,10 +90,7 @@ export class CookieManagerService {
   /**
    * 解密Cookie
    */
-  async decryptCookie(
-    userId: string,
-    encryptedCookie: string,
-  ): Promise<string> {
+  decryptCookie(userId: string, encryptedCookie: string): string {
     try {
       const decrypted = this.cryptoService.decrypt(encryptedCookie, userId);
       this.logger.debug(`Cookie decrypted for user ${userId}`);
@@ -114,7 +111,7 @@ export class CookieManagerService {
    */
   validateCookieFormat(cookie: string): boolean {
     // 检查Cookie格式是否合理 - 更宽松的正则表达式
-    const cookiePattern = /^[a-zA-Z0-9_=;%\-\s\.":'/]+$/;
+    const cookiePattern = /^[a-zA-Z0-9_=;%\-\s.":'/]+$/;
 
     if (!cookiePattern.test(cookie)) {
       this.logger.warn('Invalid cookie format detected');
@@ -181,12 +178,9 @@ export class CookieManagerService {
     preview: string;
   } {
     const timestamp = new Date();
-    // 简单的hash实现
-    const cookieHash = require('crypto')
-      .createHash('sha256')
-      .update(cookie)
-      .digest('hex')
-      .substring(0, 16);
+    // 使用CryptoService创建安全哈希
+    const fullHash = this.cryptoService.createHash(cookie);
+    const cookieHash = fullHash.substring(0, 16);
     const preview = cookie.substring(0, 50) + '...';
 
     return {
