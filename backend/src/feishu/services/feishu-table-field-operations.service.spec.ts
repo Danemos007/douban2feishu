@@ -12,7 +12,6 @@
  */
 
 import { Test, TestingModule } from '@nestjs/testing';
-import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { RedisService } from '../../redis';
 
@@ -20,10 +19,7 @@ import { RedisService } from '../../redis';
 import {
   FeishuCredentials,
   FieldOperationOptions,
-  FieldOperationResult,
-  BatchFieldOperationResult,
   FieldMatchAnalysis,
-  FieldOperationError,
   FieldConfigurationMismatchError,
   FieldNotFoundError,
 } from '../schemas/field-operations.schema';
@@ -36,9 +32,7 @@ import { FeishuContractValidatorService } from '../contract/validator.service';
 
 describe('FeishuTableService - 统一字段操作接口', () => {
   let service: FeishuTableService;
-  let authService: FeishuAuthService;
-  let contractValidator: FeishuContractValidatorService;
-  let redis: RedisService;
+  let findFieldByNameMock: jest.SpyInstance;
 
   // 🧪 测试数据和Mock
   const mockCredentials: FeishuCredentials = {
@@ -140,19 +134,20 @@ describe('FeishuTableService - 统一字段操作接口', () => {
     }).compile();
 
     service = module.get<FeishuTableService>(FeishuTableService);
-    authService = module.get<FeishuAuthService>(FeishuAuthService);
-    contractValidator = module.get<FeishuContractValidatorService>(
-      FeishuContractValidatorService,
-    );
-    redis = module.get<RedisService>(RedisService);
 
     // 设置测试所需的方法mocks
+    findFieldByNameMock = jest.spyOn(service, 'findFieldByName');
     jest.spyOn(service, 'getTableFields').mockImplementation();
     jest.spyOn(service, 'createTableField').mockImplementation();
 
     // Mock私有方法
-    jest.spyOn(service as any, 'updateFieldInternal').mockImplementation();
-    jest.spyOn(service as any, 'clearFieldCache').mockImplementation();
+    // Type-safe private method mocking using string key access
+    jest
+      .spyOn(service, 'updateFieldInternal' as keyof FeishuTableService)
+      .mockImplementation();
+    jest
+      .spyOn(service, 'clearFieldCache' as keyof FeishuTableService)
+      .mockImplementation();
   });
 
   afterEach(() => {
@@ -163,11 +158,12 @@ describe('FeishuTableService - 统一字段操作接口', () => {
     describe('场景A：字段不存在 → 创建新字段', () => {
       it('should create new SingleSelect field when field does not exist', async () => {
         // Mock: 字段不存在
-        jest.spyOn(service, 'findFieldByName').mockResolvedValue(null);
+        findFieldByNameMock.mockResolvedValue(null);
 
         // Mock: 成功创建字段
+        // Type-safe private method mocking with explicit return type
         jest
-          .spyOn(service as any, 'createFieldInternal')
+          .spyOn(service, 'createFieldInternal' as keyof FeishuTableService)
           .mockResolvedValue(mockExistingCorrectField);
 
         const result = await service.ensureFieldConfiguration(
@@ -184,7 +180,7 @@ describe('FeishuTableService - 统一字段操作接口', () => {
         expect(typeof result.processingTime).toBe('number');
 
         // ✅ 验证方法调用
-        expect(service.findFieldByName).toHaveBeenCalledWith(
+        expect(findFieldByNameMock).toHaveBeenCalledWith(
           mockCredentials,
           mockTableId,
           '我的状态',
@@ -198,7 +194,7 @@ describe('FeishuTableService - 统一字段操作接口', () => {
 
       it('should throw error when strategy is update_only but field does not exist', async () => {
         // Mock: 字段不存在
-        jest.spyOn(service, 'findFieldByName').mockResolvedValue(null);
+        findFieldByNameMock.mockResolvedValue(null);
 
         const options: FieldOperationOptions = {
           strategy: 'update_only',
@@ -218,9 +214,7 @@ describe('FeishuTableService - 统一字段操作接口', () => {
     describe('场景B：字段存在且配置完全匹配 → 返回现有字段', () => {
       it('should return existing field when configuration matches perfectly', async () => {
         // Mock: 字段存在且配置匹配
-        jest
-          .spyOn(service, 'findFieldByName')
-          .mockResolvedValue(mockExistingCorrectField);
+        findFieldByNameMock.mockResolvedValue(mockExistingCorrectField);
         jest.spyOn(service, 'analyzeFieldConfiguration').mockResolvedValue({
           isFullMatch: true,
           differences: [],
@@ -248,9 +242,7 @@ describe('FeishuTableService - 统一字段操作接口', () => {
     describe('场景C：字段存在但配置不匹配 → 智能更新', () => {
       it('should update field when configuration mismatches', async () => {
         // Mock: 字段存在但类型不匹配
-        jest
-          .spyOn(service, 'findFieldByName')
-          .mockResolvedValue(mockExistingWrongTypeField);
+        findFieldByNameMock.mockResolvedValue(mockExistingWrongTypeField);
 
         const mockAnalysisResult: FieldMatchAnalysis = {
           isFullMatch: false,
@@ -275,8 +267,9 @@ describe('FeishuTableService - 统一字段操作接口', () => {
         jest
           .spyOn(service, 'analyzeFieldConfiguration')
           .mockResolvedValue(mockAnalysisResult);
+        // Type-safe private method mocking with explicit return type
         jest
-          .spyOn(service as any, 'updateFieldInternal')
+          .spyOn(service, 'updateFieldInternal' as keyof FeishuTableService)
           .mockResolvedValue(mockExistingCorrectField);
 
         const result = await service.ensureFieldConfiguration(
@@ -298,26 +291,12 @@ describe('FeishuTableService - 统一字段操作接口', () => {
           mockTableId,
           mockExistingWrongTypeField.field_id,
           mockBookStatusConfig,
-          [
-            {
-              property: 'type',
-              from: FeishuFieldType.Text,
-              to: FeishuFieldType.SingleSelect,
-            },
-            {
-              property: 'ui_type',
-              from: 'Text',
-              to: 'SingleSelect',
-            },
-          ],
         );
       });
 
       it('should throw error when conflictResolution is throw_error', async () => {
         // Mock: 字段存在但配置不匹配
-        jest
-          .spyOn(service, 'findFieldByName')
-          .mockResolvedValue(mockExistingWrongTypeField);
+        findFieldByNameMock.mockResolvedValue(mockExistingWrongTypeField);
         jest.spyOn(service, 'analyzeFieldConfiguration').mockResolvedValue({
           isFullMatch: false,
           differences: [
@@ -348,9 +327,7 @@ describe('FeishuTableService - 统一字段操作接口', () => {
 
       it('should skip update when conflictResolution is skip_operation', async () => {
         // Mock: 字段存在但配置不匹配
-        jest
-          .spyOn(service, 'findFieldByName')
-          .mockResolvedValue(mockExistingWrongTypeField);
+        findFieldByNameMock.mockResolvedValue(mockExistingWrongTypeField);
         jest.spyOn(service, 'analyzeFieldConfiguration').mockResolvedValue({
           isFullMatch: false,
           differences: [
@@ -388,9 +365,7 @@ describe('FeishuTableService - 统一字段操作接口', () => {
     describe('错误处理和重试机制', () => {
       it('should handle API errors with intelligent retry', async () => {
         // Mock: API错误
-        jest
-          .spyOn(service, 'findFieldByName')
-          .mockRejectedValueOnce(new Error('API限流'));
+        findFieldByNameMock.mockRejectedValueOnce(new Error('API限流'));
 
         const options: FieldOperationOptions = {
           maxRetries: 3,
@@ -406,14 +381,12 @@ describe('FeishuTableService - 统一字段操作接口', () => {
         ).rejects.toThrow('API限流');
 
         // ✅ 验证调用发生
-        expect(service.findFieldByName).toHaveBeenCalled();
+        expect(findFieldByNameMock).toHaveBeenCalled();
       });
 
       it('should fail after max retries exceeded', async () => {
         // Mock: 持续失败
-        jest
-          .spyOn(service, 'findFieldByName')
-          .mockRejectedValue(new Error('持续API错误'));
+        findFieldByNameMock.mockRejectedValue(new Error('持续API错误'));
 
         const options: FieldOperationOptions = {
           maxRetries: 2,
@@ -428,16 +401,17 @@ describe('FeishuTableService - 统一字段操作接口', () => {
           ),
         ).rejects.toThrow('持续API错误');
 
-        expect(service.findFieldByName).toHaveBeenCalled(); // 至少调用一次
+        expect(findFieldByNameMock).toHaveBeenCalled(); // 至少调用一次
       });
     });
 
     describe('性能和缓存控制', () => {
       it('should clear cache after successful field creation', async () => {
         // Mock: 创建新字段
-        jest.spyOn(service, 'findFieldByName').mockResolvedValue(null);
+        findFieldByNameMock.mockResolvedValue(null);
+        // Type-safe private method mocking with explicit return type
         jest
-          .spyOn(service as any, 'createFieldInternal')
+          .spyOn(service, 'createFieldInternal' as keyof FeishuTableService)
           .mockResolvedValue(mockExistingCorrectField);
 
         const result = await service.ensureFieldConfiguration(
@@ -453,9 +427,7 @@ describe('FeishuTableService - 统一字段操作接口', () => {
 
       it('should skip cache when skipCache option is true', async () => {
         // Mock: 字段存在
-        jest
-          .spyOn(service, 'findFieldByName')
-          .mockResolvedValue(mockExistingCorrectField);
+        findFieldByNameMock.mockResolvedValue(mockExistingCorrectField);
         jest.spyOn(service, 'analyzeFieldConfiguration').mockResolvedValue({
           isFullMatch: true,
           differences: [],
@@ -476,7 +448,7 @@ describe('FeishuTableService - 统一字段操作接口', () => {
 
         // ✅ 验证缓存控制
         expect(result.metadata?.cacheHit).toBe(false);
-        expect(service.findFieldByName).toHaveBeenCalledWith(
+        expect(findFieldByNameMock).toHaveBeenCalledWith(
           mockCredentials,
           mockTableId,
           '我的状态',
@@ -594,8 +566,9 @@ describe('FeishuTableService - 统一字段操作接口', () => {
         warnings: [],
       });
 
+      // Type-safe private method mocking with explicit return type
       const delaySpy = jest
-        .spyOn(service as any, 'delay')
+        .spyOn(service, 'delay' as keyof FeishuTableService)
         .mockResolvedValue(undefined);
 
       const options: FieldOperationOptions = {
@@ -723,9 +696,10 @@ describe('FeishuTableService - 统一字段操作接口', () => {
   describe('Integration Tests - 端到端场景', () => {
     it('should handle complete field lifecycle: create → update → unchanged', async () => {
       // 场景1：创建新字段
-      jest.spyOn(service, 'findFieldByName').mockResolvedValueOnce(null);
+      findFieldByNameMock.mockResolvedValueOnce(null);
+      // Type-safe private method mocking with explicit return type
       jest
-        .spyOn(service as any, 'createFieldInternal')
+        .spyOn(service, 'createFieldInternal' as keyof FeishuTableService)
         .mockResolvedValueOnce(mockExistingCorrectField);
 
       const createResult = await service.ensureFieldConfiguration(
@@ -737,9 +711,7 @@ describe('FeishuTableService - 统一字段操作接口', () => {
       expect(createResult.operation).toBe('created');
 
       // 场景2：字段存在但需更新
-      jest
-        .spyOn(service, 'findFieldByName')
-        .mockResolvedValueOnce(mockExistingWrongTypeField);
+      findFieldByNameMock.mockResolvedValueOnce(mockExistingWrongTypeField);
       jest.spyOn(service, 'analyzeFieldConfiguration').mockResolvedValueOnce({
         isFullMatch: false,
         differences: [
@@ -753,8 +725,9 @@ describe('FeishuTableService - 统一字段操作接口', () => {
         matchScore: 0.5,
         recommendedAction: 'update_field',
       });
+      // Type-safe private method mocking with explicit return type
       jest
-        .spyOn(service as any, 'updateFieldInternal')
+        .spyOn(service, 'updateFieldInternal' as keyof FeishuTableService)
         .mockResolvedValueOnce(mockExistingCorrectField);
 
       const updateResult = await service.ensureFieldConfiguration(
@@ -766,9 +739,7 @@ describe('FeishuTableService - 统一字段操作接口', () => {
       expect(updateResult.operation).toBe('updated');
 
       // 场景3：字段已经正确，无需更改
-      jest
-        .spyOn(service, 'findFieldByName')
-        .mockResolvedValueOnce(mockExistingCorrectField);
+      findFieldByNameMock.mockResolvedValueOnce(mockExistingCorrectField);
       jest.spyOn(service, 'analyzeFieldConfiguration').mockResolvedValueOnce({
         isFullMatch: true,
         differences: [],
