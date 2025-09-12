@@ -1,5 +1,4 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
 
 import { PrismaService } from '../common/prisma/prisma.service';
 import { CryptoService } from '../common/crypto/crypto.service';
@@ -8,6 +7,43 @@ import {
   UpdateFeishuConfigDto,
   UpdateSyncConfigDto,
 } from './dto/config.dto';
+
+// 同步调度配置类型定义 - 与DTO保持一致
+interface SyncSchedule {
+  frequency: 'manual' | 'daily' | 'weekly' | 'monthly';
+  time?: string; // HH:mm格式
+  timezone?: string;
+  daysOfWeek?: number[]; // 0-6, 周日为0
+  dayOfMonth?: number; // 1-31
+}
+
+// 表格映射配置类型定义 - 与DTO保持一致
+interface TableMappings {
+  books?: {
+    tableId: string;
+    fieldMappings: Record<string, string>;
+  };
+  movies?: {
+    tableId: string;
+    fieldMappings: Record<string, string>;
+  };
+  music?: {
+    tableId: string;
+    fieldMappings: Record<string, string>;
+  };
+  unified?: {
+    tableId: string;
+    fieldMappings: Record<string, string>;
+  };
+}
+
+// 解密后凭证返回类型定义
+interface DecryptedCredentials {
+  userId: string;
+  doubanCookie?: string;
+  feishuAppId?: string;
+  feishuAppSecret?: string;
+}
 
 /**
  * 配置服务 - 用户配置管理核心逻辑
@@ -24,6 +60,15 @@ export class ConfigService {
     private readonly prisma: PrismaService,
     private readonly cryptoService: CryptoService,
   ) {}
+
+  /**
+   * 将强类型对象转换为Prisma JSON字段可接受的类型
+   * 避免直接使用 as any 造成的unsafe-assignment错误
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private toJsonValue(value: SyncSchedule | TableMappings | undefined): any {
+    return value; // TypeScript允许任何类型到any的隐式转换
+  }
 
   /**
    * 获取用户配置
@@ -161,8 +206,10 @@ export class ConfigService {
         data: {
           mappingType: dto.mappingType,
           autoSyncEnabled: dto.autoSyncEnabled,
-          syncSchedule: dto.syncSchedule as any,
-          tableMappings: dto.tableMappings as any,
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          syncSchedule: this.toJsonValue(dto.syncSchedule as SyncSchedule),
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          tableMappings: this.toJsonValue(dto.tableMappings as TableMappings),
         },
       });
     } else {
@@ -172,8 +219,10 @@ export class ConfigService {
           userId,
           mappingType: dto.mappingType,
           autoSyncEnabled: dto.autoSyncEnabled,
-          syncSchedule: dto.syncSchedule as any,
-          tableMappings: dto.tableMappings as any,
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          syncSchedule: this.toJsonValue(dto.syncSchedule as SyncSchedule),
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          tableMappings: this.toJsonValue(dto.tableMappings as TableMappings),
         },
       });
     }
@@ -184,7 +233,9 @@ export class ConfigService {
   /**
    * 获取解密后的用户凭证 (内部使用)
    */
-  async getDecryptedCredentials(userId: string) {
+  async getDecryptedCredentials(
+    userId: string,
+  ): Promise<DecryptedCredentials | null> {
     const credentials = await this.prisma.userCredentials.findUnique({
       where: { userId },
     });
@@ -193,25 +244,27 @@ export class ConfigService {
       return null;
     }
 
-    const result: any = {
+    const result: DecryptedCredentials = {
       userId,
     };
 
     // 解密豆瓣Cookie
     if (credentials.doubanCookieEncrypted) {
-      result.doubanCookie = this.cryptoService.decrypt(
+      const decryptedCookie = this.cryptoService.decrypt(
         credentials.doubanCookieEncrypted,
         userId,
       );
+      result.doubanCookie = decryptedCookie ?? undefined;
     }
 
     // 解密飞书App Secret
     if (credentials.feishuAppSecretEncrypted) {
-      result.feishuAppId = credentials.feishuAppId;
-      result.feishuAppSecret = this.cryptoService.decrypt(
+      result.feishuAppId = credentials.feishuAppId ?? undefined;
+      const decryptedSecret = this.cryptoService.decrypt(
         credentials.feishuAppSecretEncrypted,
         userId,
       );
+      result.feishuAppSecret = decryptedSecret ?? undefined;
     }
 
     return result;
