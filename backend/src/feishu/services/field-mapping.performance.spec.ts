@@ -15,7 +15,6 @@
  */
 
 import { Test, TestingModule } from '@nestjs/testing';
-import { Logger } from '@nestjs/common';
 import { RedisService } from '../../redis';
 
 import { FieldMappingService } from './field-mapping.service';
@@ -28,8 +27,42 @@ import {
   BatchFieldCreationResult,
 } from '../schemas/field-creation.schema';
 
+// Type definition for autoConfigureFieldMappingsEnhanced method return
+interface AutoConfigureResult {
+  mappings: Record<string, string>;
+  matched: Array<{
+    doubanField: string;
+    chineseName: string;
+    fieldId: string;
+  }>;
+  created: Array<{
+    doubanField: string;
+    chineseName: string;
+    fieldId: string;
+  }>;
+  errors: Array<{ doubanField: string; chineseName: string; error: string }>;
+  performanceMetrics?: {
+    processingTime: number;
+    successRate: number;
+    totalFields: number;
+    enhancedFeatures: string[];
+  };
+}
+
+// Type-safe interface for FieldMappingService methods used in tests
+interface TestableFieldMappingService extends FieldMappingService {
+  autoConfigureFieldMappingsEnhanced(
+    userId: string,
+    appId: string,
+    appSecret: string,
+    appToken: string,
+    tableId: string,
+    dataType: 'books' | 'movies' | 'tv' | 'documentary',
+  ): Promise<AutoConfigureResult>;
+}
+
 describe('FieldMappingService - Performance Benchmarks', () => {
-  let service: FieldMappingService;
+  let service: TestableFieldMappingService;
   let fieldAutoCreationV2: FieldAutoCreationServiceV2;
   let feishuTableService: FeishuTableService;
   let prismaService: PrismaService;
@@ -48,18 +81,17 @@ describe('FieldMappingService - Performance Benchmarks', () => {
     return process.memoryUsage();
   }
 
-  function measureExecutionTime<T>(
+  async function measureExecutionTime<T>(
     operation: () => Promise<T>,
   ): Promise<{ result: T; executionTime: number }> {
-    return new Promise(async (resolve) => {
-      const startTime = performance.now();
-      const result = await operation();
-      const endTime = performance.now();
-      resolve({
-        result,
-        executionTime: endTime - startTime,
-      });
-    });
+    const startTime = performance.now();
+    const result = await operation();
+    const endTime = performance.now();
+
+    return {
+      result,
+      executionTime: endTime - startTime,
+    };
   }
 
   beforeEach(async () => {
@@ -86,7 +118,7 @@ describe('FieldMappingService - Performance Benchmarks', () => {
       get: jest.fn(),
       setex: jest.fn(),
       del: jest.fn(),
-    };
+    } as jest.Mocked<Pick<RedisService, 'get' | 'setex' | 'del'>>;
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -110,7 +142,10 @@ describe('FieldMappingService - Performance Benchmarks', () => {
       ],
     }).compile();
 
-    service = module.get<FieldMappingService>(FieldMappingService);
+    // Reason: NestJS module.get() type system limitation - casting to extended interface for type-safe method access
+    service = module.get<FieldMappingService>(
+      FieldMappingService,
+    ) as TestableFieldMappingService;
     fieldAutoCreationV2 = module.get<FieldAutoCreationServiceV2>(
       FieldAutoCreationServiceV2,
     );
@@ -173,7 +208,7 @@ describe('FieldMappingService - Performance Benchmarks', () => {
       const memoryBefore = getMemoryUsage();
 
       const { result, executionTime } = await measureExecutionTime(async () => {
-        return await (service as any).autoConfigureFieldMappingsEnhanced(
+        return await service.autoConfigureFieldMappingsEnhanced(
           mockCredentials.userId,
           mockCredentials.appId,
           mockCredentials.appSecret,
@@ -232,7 +267,7 @@ describe('FieldMappingService - Performance Benchmarks', () => {
 
       // 并发执行5个配置任务
       const concurrentRequests = Array.from({ length: 5 }, (_, index) =>
-        (service as any).autoConfigureFieldMappingsEnhanced(
+        service.autoConfigureFieldMappingsEnhanced(
           `${mockCredentials.userId}_${index}`,
           mockCredentials.appId,
           mockCredentials.appSecret,
@@ -266,7 +301,7 @@ describe('FieldMappingService - Performance Benchmarks', () => {
       let cacheMisses = 0;
 
       // Mock Redis行为 - 模拟缓存命中率
-      (redis.get as jest.Mock).mockImplementation((key: string) => {
+      (redis.get as jest.Mock).mockImplementation(() => {
         if (Math.random() > 0.1) {
           // 90%命中率
           cacheHits++;
@@ -332,6 +367,8 @@ describe('FieldMappingService - Performance Benchmarks', () => {
 
       // 缓存清理性能基准
       expect(executionTime).toBeLessThan(1000); // 100次清理在1秒内完成
+      // Reason: Jest mock method verification - redis.del is jest.fn() with no this context issues
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(redis.del).toHaveBeenCalledTimes(100);
     });
   });
@@ -374,7 +411,7 @@ describe('FieldMappingService - Performance Benchmarks', () => {
       const memorySnapshots: number[] = [];
 
       for (let i = 0; i < 50; i++) {
-        await (service as any).autoConfigureFieldMappingsEnhanced(
+        await service.autoConfigureFieldMappingsEnhanced(
           `${mockCredentials.userId}_mem_${i}`,
           mockCredentials.appId,
           mockCredentials.appSecret,
