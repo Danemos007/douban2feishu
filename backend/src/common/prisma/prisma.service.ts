@@ -75,7 +75,7 @@ export class PrismaService
         },
       },
 
-      // 日志配置
+      // 日志配置 - 使用明确的类型定义确保正确的事件推断
       log: [
         {
           emit: 'event',
@@ -93,11 +93,11 @@ export class PrismaService
           emit: 'event',
           level: 'warn',
         },
-      ],
+      ] as const,
 
       // 错误格式化
       errorFormat: 'pretty',
-    });
+    } as const);
 
     // 设置日志事件监听器
     this.setupLogging();
@@ -135,7 +135,17 @@ export class PrismaService
     try {
       // 查询日志 (开发环境)
       if (typeof this.$on === 'function') {
-        this.$on('query', (e: Prisma.QueryEvent) => {
+        // 使用类型安全的方法调用，解决Prisma类型推断问题
+        const client = this as unknown as PrismaClient<{
+          log: [
+            { emit: 'event'; level: 'query' },
+            { emit: 'event'; level: 'error' },
+            { emit: 'event'; level: 'info' },
+            { emit: 'event'; level: 'warn' },
+          ];
+        }>;
+
+        client.$on('query', (e: Prisma.QueryEvent) => {
           if (process.env.NODE_ENV === 'development') {
             this.logger.debug(`Query: ${e.query || 'N/A'}`);
             this.logger.debug(`Params: ${e.params || 'N/A'}`);
@@ -144,17 +154,17 @@ export class PrismaService
         });
 
         // 错误日志
-        this.$on('error', (e: Prisma.LogEvent) => {
+        client.$on('error', (e: Prisma.LogEvent) => {
           this.logger.error('Database error:', e.message || 'Unknown error');
         });
 
         // 信息日志
-        this.$on('info', (e: Prisma.LogEvent) => {
+        client.$on('info', (e: Prisma.LogEvent) => {
           this.logger.log(`Database info: ${e.message || 'No message'}`);
         });
 
         // 警告日志
-        this.$on('warn', (e: Prisma.LogEvent) => {
+        client.$on('warn', (e: Prisma.LogEvent) => {
           this.logger.warn(`Database warning: ${e.message || 'No message'}`);
         });
       }
