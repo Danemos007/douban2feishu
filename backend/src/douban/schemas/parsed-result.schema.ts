@@ -302,31 +302,33 @@ export function validateDoubanItem(
 export function validateDoubanItemByType(
   data: unknown,
   type: 'books' | 'movies' | 'music' | 'tv' | 'documentary',
-): { success: true; data: any } | { success: false; error: string } {
+): { success: true; data: unknown } | { success: false; error: string } {
   try {
-    let schema;
+    // 使用类型安全的直接调用，避免schema变量的any类型问题
     switch (type) {
-      case 'books':
-        schema = DoubanBookSchema;
-        break;
-      case 'movies':
-        schema = DoubanMovieSchema;
-        break;
-      case 'music':
-        schema = DoubanMusicSchema;
-        break;
-      case 'tv':
-        schema = DoubanTvSeriesSchema;
-        break;
-      case 'documentary':
-        schema = DoubanDocumentarySchema;
-        break;
+      case 'books': {
+        const validatedData = DoubanBookSchema.parse(data);
+        return { success: true, data: validatedData };
+      }
+      case 'movies': {
+        const validatedData = DoubanMovieSchema.parse(data);
+        return { success: true, data: validatedData };
+      }
+      case 'music': {
+        const validatedData = DoubanMusicSchema.parse(data);
+        return { success: true, data: validatedData };
+      }
+      case 'tv': {
+        const validatedData = DoubanTvSeriesSchema.parse(data);
+        return { success: true, data: validatedData };
+      }
+      case 'documentary': {
+        const validatedData = DoubanDocumentarySchema.parse(data);
+        return { success: true, data: validatedData };
+      }
       default:
         return { success: false, error: '不支持的豆瓣条目类型' };
     }
-
-    const validatedData = schema.parse(data);
-    return { success: true, data: validatedData };
   } catch (error) {
     if (error instanceof z.ZodError) {
       const errorMessage = error.issues
@@ -381,34 +383,57 @@ export function isDoubanDocumentary(item: unknown): item is DoubanDocumentary {
  * 智能类型推断：根据数据自动判断豆瓣条目类型
  */
 export function inferDoubanItemType(
-  data: any,
+  data: unknown,
 ): 'books' | 'movies' | 'tv' | 'documentary' | 'music' | 'unknown' {
+  // 基础类型守卫
   if (!data || typeof data !== 'object') return 'unknown';
 
-  // 明确的分类字段
+  // 类型安全的对象属性访问
+  const safeData = data as Record<string, unknown>;
+
+  // 明确的分类字段检查
   if (
-    data.category &&
-    ['books', 'movies', 'tv', 'documentary', 'music'].includes(data.category)
+    'category' in safeData &&
+    typeof safeData.category === 'string' &&
+    ['books', 'movies', 'tv', 'documentary', 'music'].includes(
+      safeData.category,
+    )
   ) {
-    return data.category;
+    return safeData.category as
+      | 'books'
+      | 'movies'
+      | 'tv'
+      | 'documentary'
+      | 'music';
   }
 
-  // 基于字段推断
-  if (data.authors && Array.isArray(data.authors) && data.authors.length > 0) {
+  // 基于字段推断 - 书籍类型检查
+  if (
+    'authors' in safeData &&
+    Array.isArray(safeData.authors) &&
+    safeData.authors.length > 0
+  ) {
     return 'books';
   }
 
+  // 基于字段推断 - 影视类型检查
   if (
-    data.directors &&
-    Array.isArray(data.directors) &&
-    data.directors.length > 0
+    'directors' in safeData &&
+    Array.isArray(safeData.directors) &&
+    safeData.directors.length > 0
   ) {
-    if (data.episodeCount || data.firstAirDate) {
+    // 检查是否为电视剧或纪录片
+    const hasEpisodeCount = 'episodeCount' in safeData && safeData.episodeCount;
+    const hasFirstAirDate = 'firstAirDate' in safeData && safeData.firstAirDate;
+
+    if (hasEpisodeCount || hasFirstAirDate) {
       // 检查genres是否包含"纪录片"
       if (
-        data.genres &&
-        Array.isArray(data.genres) &&
-        data.genres.some((g: string) => g.includes('纪录片'))
+        'genres' in safeData &&
+        Array.isArray(safeData.genres) &&
+        safeData.genres.some(
+          (g: unknown) => typeof g === 'string' && g.includes('纪录片'),
+        )
       ) {
         return 'documentary';
       }
@@ -417,7 +442,12 @@ export function inferDoubanItemType(
     return 'movies';
   }
 
-  if (data.artists && Array.isArray(data.artists) && data.artists.length > 0) {
+  // 基于字段推断 - 音乐类型检查
+  if (
+    'artists' in safeData &&
+    Array.isArray(safeData.artists) &&
+    safeData.artists.length > 0
+  ) {
     return 'music';
   }
 
