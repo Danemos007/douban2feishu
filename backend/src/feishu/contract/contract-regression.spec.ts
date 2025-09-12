@@ -8,18 +8,18 @@
 import {
   FeishuFieldsResponseSchema,
   FeishuFieldSchema,
+  FeishuField,
   extractFieldTypeMapping,
   isRatingField,
 } from '../schemas/field.schema';
 import {
   FeishuTokenResponseSchema,
   calculateTokenExpiry,
-  isTokenExpiringSoon,
 } from '../schemas/auth.schema';
 
 // 导入真实fixtures
-const fieldsFixture = require('./__fixtures__/fields-response.json');
-const authFixture = require('./__fixtures__/auth-response.json');
+import fieldsFixture from './__fixtures__/fields-response.json';
+import authFixture from './__fixtures__/auth-response.json';
 
 describe('飞书API契约回归测试', () => {
   describe('字段查询API契约', () => {
@@ -83,7 +83,6 @@ describe('飞书API契约回归测试', () => {
     it('字段类型Schema应涵盖所有已知类型', () => {
       // Arrange - 基于fixture实际数据 + Schema定义的已知类型
       const fixtureKnownTypes = [1, 2, 3, 5, 15]; // 来自真实数据
-      const schemaDefinedTypes = [1, 2, 3, 4, 5, 7, 15]; // Schema中定义的类型
 
       // Act & Assert - 验证每个已知类型都能通过Schema验证
       fixtureKnownTypes.forEach((type) => {
@@ -199,7 +198,7 @@ describe('飞书API契约回归测试', () => {
         unknown_field: 'unknown_value',
         data: {
           ...fieldsFixture.data,
-          items: fieldsFixture.data.items.map((field: any) => ({
+          items: fieldsFixture.data.items.map((field: FeishuField) => ({
             ...field,
             future_field: 'future_value',
           })),
@@ -236,10 +235,12 @@ describe('飞书API契约回归测试', () => {
   });
 
   describe('数据质量验证', () => {
-    it('fixture数据应保持时效性', () => {
+    it('fixture数据应保持时效性', async () => {
       // Arrange
-      const factCheckResults = require('./__fixtures__/fact-check-results.json');
-      const lastUpdate = new Date(factCheckResults[0].timestamp);
+      const factCheckResults = await import(
+        './__fixtures__/fact-check-results.json'
+      );
+      const lastUpdate = new Date(factCheckResults.default[0].timestamp);
       const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
 
       // Assert - fixture数据不应超过14天
