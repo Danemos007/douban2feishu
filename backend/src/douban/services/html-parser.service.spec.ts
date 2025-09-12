@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { HtmlParserService } from './html-parser.service';
 import { Logger } from '@nestjs/common';
+import * as cheerio from 'cheerio';
 
 describe('HtmlParserService', () => {
   let service: HtmlParserService;
@@ -28,7 +29,7 @@ describe('HtmlParserService', () => {
   });
 
   describe('parseDoubanItem', () => {
-    it('should parse a book item with valid HTML', async () => {
+    it('should parse a book item with valid HTML', () => {
       const mockHtml = `
         <html>
           <head>
@@ -65,7 +66,7 @@ describe('HtmlParserService', () => {
         </html>
       `;
 
-      const result = await service.parseDoubanItem(
+      const result = service.parseDoubanItem(
         mockHtml,
         'https://book.douban.com/subject/36973237/',
         'books',
@@ -83,10 +84,10 @@ describe('HtmlParserService', () => {
       expect(['json-ld', 'mixed'].includes(result.parsingStrategy)).toBe(true); // 可能使用混合策略
     });
 
-    it('should handle parsing errors gracefully', async () => {
+    it('should handle parsing errors gracefully', () => {
       const invalidHtml = '<html><body>Invalid content</body></html>';
 
-      const result = await service.parseDoubanItem(
+      const result = service.parseDoubanItem(
         invalidHtml,
         'https://book.douban.com/subject/invalid/',
         'books',
@@ -99,7 +100,7 @@ describe('HtmlParserService', () => {
       ).toBe(true);
     });
 
-    it('should infer item type when not provided', async () => {
+    it('should infer item type when not provided', () => {
       const mockBookHtml = `
         <html>
           <body>
@@ -111,7 +112,7 @@ describe('HtmlParserService', () => {
         </html>
       `;
 
-      const result = await service.parseDoubanItem(
+      const result = service.parseDoubanItem(
         mockBookHtml,
         'https://book.douban.com/subject/123456/',
       );
@@ -123,7 +124,7 @@ describe('HtmlParserService', () => {
   });
 
   describe('parseCollectionPage', () => {
-    it('should parse collection page with items', async () => {
+    it('should parse collection page with items', () => {
       const mockCollectionHtml = `
         <html>
           <head><title>我读过的书</title></head>
@@ -141,7 +142,7 @@ describe('HtmlParserService', () => {
         </html>
       `;
 
-      const result = await service.parseCollectionPage(
+      const result = service.parseCollectionPage(
         mockCollectionHtml,
         'https://book.douban.com/people/test/collect',
         'books',
@@ -164,7 +165,7 @@ describe('HtmlParserService', () => {
         </script>
       `;
 
-      const $ = require('cheerio').load(mockHtml);
+      const $ = cheerio.load(mockHtml);
       const result = service.parseStructuredData($);
 
       expect(result).toBeDefined();
@@ -183,7 +184,7 @@ describe('HtmlParserService', () => {
         </div>
       `;
 
-      const $ = require('cheerio').load(mockHtml);
+      const $ = cheerio.load(mockHtml);
       const result = service.parseUserState($);
 
       expect(result.rating).toBe(4);
@@ -200,16 +201,16 @@ describe('HtmlParserService', () => {
         </script>
       `;
 
-      const $ = require('cheerio').load(mockHtml);
+      const $ = cheerio.load(mockHtml);
       const result = service.parseStructuredData($);
 
       expect(result).toBeNull();
     });
 
-    it('should handle missing required elements', async () => {
+    it('should handle missing required elements', () => {
       const emptyHtml = '<html><body></body></html>';
 
-      const result = await service.parseDoubanItem(
+      const result = service.parseDoubanItem(
         emptyHtml,
         'https://book.douban.com/subject/123/',
         'books',
@@ -221,10 +222,10 @@ describe('HtmlParserService', () => {
   });
 
   describe('performance tracking', () => {
-    it('should track parsing performance', async () => {
+    it('should track parsing performance', () => {
       const mockHtml = '<html><body><h1>测试</h1></body></html>';
 
-      const result = await service.parseDoubanItem(
+      const result = service.parseDoubanItem(
         mockHtml,
         'https://book.douban.com/subject/123/',
         'books',
