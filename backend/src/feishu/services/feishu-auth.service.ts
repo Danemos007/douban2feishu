@@ -1,22 +1,28 @@
 import { Injectable, Logger, OnModuleDestroy, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import axios, { AxiosInstance, AxiosError, AxiosRequestConfig } from 'axios';
-import Redis from 'ioredis';
+import axios, { AxiosInstance, AxiosError, AxiosResponse } from 'axios';
 import { RedisService } from '../../redis';
 
 import { CryptoService } from '../../common/crypto/crypto.service';
 import { ExtendedAxiosRequestConfig } from '../../common/interfaces/http.interface';
 import { FeishuContractValidatorService } from '../contract/validator.service';
 import {
-  FeishuTokenResponse,
   FeishuAuthRequest,
   FeishuAuthRequestSchema,
   TokenStats,
   TokenStatsSchema,
-  TokenCacheInfo,
   TokenCacheInfoSchema,
 } from '../schemas';
 import { FeishuErrorResponseSchema } from '../schemas/api-responses.schema';
+
+/**
+ * 未知格式的错误响应数据接口
+ */
+interface UnknownErrorData {
+  code?: number | string;
+  msg?: string;
+  message?: string;
+}
 
 /**
  * 飞书认证服务 - 企业级Token管理
@@ -69,9 +75,7 @@ export class FeishuAuthService implements OnModuleDestroy {
   }
 
   onModuleDestroy() {
-    // 清理资源
-    this.httpClient?.defaults?.timeout &&
-      clearTimeout(this.httpClient.defaults.timeout);
+    // 清理资源 - httpClient 将自动释放
   }
 
   /**
@@ -243,7 +247,7 @@ export class FeishuAuthService implements OnModuleDestroy {
     // 如果提供了用户ID且appSecret看起来像加密数据，则解密
     let decryptedSecret = appSecret;
     if (userId && this.isEncryptedData(appSecret)) {
-      decryptedSecret = await this.cryptoService.decrypt(appSecret, userId);
+      decryptedSecret = this.cryptoService.decrypt(appSecret, userId);
     }
 
     // 🔥 验证请求参数Schema
@@ -266,7 +270,7 @@ export class FeishuAuthService implements OnModuleDestroy {
       'requestNewToken',
     );
 
-    const { tenant_access_token, expire } = validatedResponse;
+    const { tenant_access_token } = validatedResponse;
 
     if (!tenant_access_token) {
       throw new Error('Invalid token response from Feishu API');
@@ -347,7 +351,22 @@ export class FeishuAuthService implements OnModuleDestroy {
     const windowStart = now - windowSize * 1000;
 
     const cached = this.memoryCache.get(rateLimitKey);
-    let requests: number[] = cached ? JSON.parse(cached.value) : [];
+    let requests: number[] = [];
+
+    if (cached) {
+      try {
+        const parsed: unknown = JSON.parse(cached.value);
+        // 类型安全检查：确保解析结果是数字数组
+        if (
+          Array.isArray(parsed) &&
+          parsed.every((item) => typeof item === 'number')
+        ) {
+          requests = parsed;
+        }
+      } catch {
+        // JSON解析失败时使用空数组，保持健壮性
+      }
+    }
 
     // 清理过期请求
     requests = requests.filter((time) => time > windowStart);
@@ -383,7 +402,9 @@ export class FeishuAuthService implements OnModuleDestroy {
   /**
    * 重试请求
    */
-  private async retryRequest(error: AxiosError): Promise<any> {
+  private async retryRequest(
+    error: AxiosError,
+  ): Promise<AxiosResponse<unknown>> {
     const config = error.config as ExtendedAxiosRequestConfig;
     if (!config) throw error;
 
@@ -416,9 +437,9 @@ export class FeishuAuthService implements OnModuleDestroy {
         return new Error(
           `Feishu API Error: [${errorResponse.code}] ${errorResponse.msg}`,
         );
-      } catch (validationError) {
+      } catch {
         // 如果错误响应格式不符合Schema，使用fallback处理
-        const fallbackData = error.response.data as any;
+        const fallbackData = error.response.data as UnknownErrorData;
         const code = fallbackData?.code || error.response.status;
         const msg =
           fallbackData?.msg || fallbackData?.message || 'Unknown error';
