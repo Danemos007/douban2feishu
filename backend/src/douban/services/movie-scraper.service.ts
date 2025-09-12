@@ -160,7 +160,7 @@ export class MovieScraperService {
       const html = await this.antiSpiderService.makeRequest(url, cookie);
 
       // 使用类型安全的HtmlParserService解析
-      const parseResult = await this.htmlParserService.parseDoubanItem(
+      const parseResult = this.htmlParserService.parseDoubanItem(
         html,
         url,
         'movies',
@@ -172,7 +172,7 @@ export class MovieScraperService {
         const finalType = expectedType || detectedType;
 
         // 根据类型进行特定验证
-        const validationResult = await this.validateByType(
+        const validationResult = this.validateByType(
           parseResult.data,
           finalType,
         );
@@ -440,7 +440,7 @@ export class MovieScraperService {
         const $ = cheerio.load(html);
 
         // 使用HtmlParserService解析列表页
-        const listPage = this.htmlParserService.parseListPage($ as any);
+        const listPage = this.htmlParserService.parseListPage($);
 
         if (listPage.items.length === 0) {
           this.logger.debug(`No more items found at start=${start}`);
@@ -540,12 +540,10 @@ export class MovieScraperService {
   /**
    * 根据类型进行特定验证
    */
-  private async validateByType(
+  private validateByType(
     data: DoubanItem,
     type: MediaType,
-  ): Promise<
-    { success: true; data: MediaContent } | { success: false; error: string }
-  > {
+  ): { success: true; data: MediaContent } | { success: false; error: string } {
     try {
       switch (type) {
         case 'movie': {
@@ -576,7 +574,10 @@ export class MovieScraperService {
         }
 
         default:
-          return { success: false, error: `Unknown media type: ${type}` };
+          return {
+            success: false,
+            error: `Unknown media type: ${String(type)}`,
+          };
       }
     } catch (error) {
       return {
@@ -617,7 +618,11 @@ export class MovieScraperService {
       const detectedType = this.classifyMediaType(item as DoubanItem);
 
       // 验证对应类型
-      let validation: { success: boolean; data?: any; error?: string };
+      let validation:
+        | { success: true; data: MovieComplete }
+        | { success: true; data: TvSeriesComplete }
+        | { success: true; data: DocumentaryComplete }
+        | { success: false; error: string };
 
       switch (detectedType) {
         case 'movie':
@@ -628,7 +633,11 @@ export class MovieScraperService {
             invalid.push({
               index,
               data: item,
-              errors: [validation.error || 'Movie validation failed'],
+              errors: [
+                'error' in validation
+                  ? validation.error
+                  : 'Movie validation failed',
+              ],
             });
           }
           break;
@@ -641,7 +650,11 @@ export class MovieScraperService {
             invalid.push({
               index,
               data: item,
-              errors: [validation.error || 'TV series validation failed'],
+              errors: [
+                'error' in validation
+                  ? validation.error
+                  : 'TV series validation failed',
+              ],
             });
           }
           break;
@@ -654,7 +667,11 @@ export class MovieScraperService {
             invalid.push({
               index,
               data: item,
-              errors: [validation.error || 'Documentary validation failed'],
+              errors: [
+                'error' in validation
+                  ? validation.error
+                  : 'Documentary validation failed',
+              ],
             });
           }
           break;
@@ -663,7 +680,7 @@ export class MovieScraperService {
           invalid.push({
             index,
             data: item,
-            errors: [`Unknown media type: ${detectedType}`],
+            errors: [`Unknown media type: ${String(detectedType)}`],
           });
       }
     });
@@ -758,7 +775,7 @@ export class MovieScraperService {
     cookie: string,
     status: 'collect' | 'wish' | 'do' = 'collect',
     limit = 1000,
-  ): Promise<any[]> {
+  ): Promise<MovieData[]> {
     const result = await this.batchScrapeUserMedia(userId, cookie, {
       status: status,
       limit,
@@ -766,7 +783,7 @@ export class MovieScraperService {
     });
 
     // 转换为旧格式
-    const legacyItems: any[] = [];
+    const legacyItems: MovieData[] = [];
 
     result.byType.movies.forEach((movie) => {
       legacyItems.push(this.convertToLegacyFormat(movie, 'movie'));
@@ -791,14 +808,14 @@ export class MovieScraperService {
     cookie: string,
     page = 0,
     status: 'collect' | 'wish' | 'do' = 'collect',
-  ): Promise<{ items: any[]; total: number }> {
+  ): Promise<{ items: MediaListItem[]; total: number }> {
     const start = page * 30;
     const url = this.buildListUrl(userId, status, start);
 
     try {
       const html = await this.antiSpiderService.makeRequest(url, cookie);
       const $ = cheerio.load(html);
-      const listPage = this.htmlParserService.parseListPage($ as any);
+      const listPage = this.htmlParserService.parseListPage($);
 
       return {
         items: listPage.items.map((item) => ({

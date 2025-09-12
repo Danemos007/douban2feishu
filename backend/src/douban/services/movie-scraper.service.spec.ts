@@ -119,7 +119,7 @@ describe('MovieScraperService', () => {
       );
 
       // Mock成功的解析
-      mockHtmlParserService.parseDoubanItem.mockResolvedValue({
+      mockHtmlParserService.parseDoubanItem.mockReturnValue({
         success: true,
         data: mockMovieData,
         errors: [],
@@ -187,7 +187,7 @@ describe('MovieScraperService', () => {
       mockAntiSpiderService.makeRequest.mockResolvedValue(
         '<html><body>TV HTML</body></html>',
       );
-      mockHtmlParserService.parseDoubanItem.mockResolvedValue({
+      mockHtmlParserService.parseDoubanItem.mockReturnValue({
         success: true,
         data: mockTvData,
         errors: [],
@@ -250,7 +250,7 @@ describe('MovieScraperService', () => {
       mockAntiSpiderService.makeRequest.mockResolvedValue(
         '<html><body>Documentary HTML</body></html>',
       );
-      mockHtmlParserService.parseDoubanItem.mockResolvedValue({
+      mockHtmlParserService.parseDoubanItem.mockReturnValue({
         success: true,
         data: mockDocumentaryData,
         errors: [],
@@ -277,7 +277,7 @@ describe('MovieScraperService', () => {
       mockAntiSpiderService.makeRequest.mockResolvedValue(
         '<html><body>Invalid</body></html>',
       );
-      mockHtmlParserService.parseDoubanItem.mockResolvedValue({
+      mockHtmlParserService.parseDoubanItem.mockReturnValue({
         success: false,
         errors: ['无法解析媒体信息'],
         warnings: [],
@@ -374,7 +374,7 @@ describe('MovieScraperService', () => {
 
       // Mock detail parsing
       mockHtmlParserService.parseDoubanItem
-        .mockResolvedValueOnce({
+        .mockReturnValueOnce({
           success: true,
           data: mockMovieData,
           errors: [],
@@ -386,7 +386,7 @@ describe('MovieScraperService', () => {
           },
           parsingStrategy: 'json-ld',
         })
-        .mockResolvedValueOnce({
+        .mockReturnValueOnce({
           success: true,
           data: mockTvData,
           errors: [],
@@ -460,7 +460,7 @@ describe('MovieScraperService', () => {
         releaseDate: '1994-09-23',
       };
 
-      mockHtmlParserService.parseDoubanItem.mockResolvedValueOnce({
+      mockHtmlParserService.parseDoubanItem.mockReturnValueOnce({
         success: true,
         data: mockMovieData,
         errors: [],
@@ -608,7 +608,7 @@ describe('MovieScraperService', () => {
       mockAntiSpiderService.makeRequest.mockResolvedValue(
         '<html><body>Mock HTML</body></html>',
       );
-      mockHtmlParserService.parseDoubanItem.mockResolvedValue({
+      mockHtmlParserService.parseDoubanItem.mockReturnValue({
         success: true,
         data: mockMovieData,
         errors: [],
