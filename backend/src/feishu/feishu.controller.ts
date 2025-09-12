@@ -4,7 +4,6 @@ import {
   Get,
   Body,
   Param,
-  Query,
   UseGuards,
   HttpCode,
   HttpStatus,
@@ -15,7 +14,6 @@ import {
   ApiResponse,
   ApiBearerAuth,
   ApiParam,
-  ApiQuery,
 } from '@nestjs/swagger';
 
 import { FeishuService } from './feishu.service';
@@ -27,6 +25,18 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { GetTableFieldsDto } from './dto/feishu.dto';
 import { AuthenticatedUser } from '../auth/interfaces/auth.interface';
+import { FeishuField } from './interfaces/feishu.interface';
+import { TokenStats } from './schemas';
+
+/**
+ * 导入字段映射配置的数据结构
+ */
+interface ImportMappingData {
+  appToken: string;
+  tableId: string;
+  mappings: Record<string, string>;
+  dataType: 'books' | 'movies' | 'tv' | 'documentary';
+}
 
 /**
  * 飞书控制器 - 飞书API操作
@@ -72,7 +82,7 @@ export class FeishuController {
     return {
       fields,
       fieldMappings: fields.reduce(
-        (acc: Record<string, string>, field: any) => {
+        (acc: Record<string, string>, field: FeishuField) => {
           acc[field.field_name] = field.field_id;
           return acc;
         },
@@ -187,7 +197,7 @@ export class FeishuController {
       tableId: string;
       dataType: 'books' | 'movies' | 'tv';
       subjectIdField: string;
-      doubanData: any[];
+      doubanData: unknown[];
       fullSync?: boolean;
       deleteOrphans?: boolean;
     },
@@ -256,7 +266,7 @@ export class FeishuController {
     summary: '获取Token统计',
     description: '获取飞书Token缓存和使用统计信息',
   })
-  async getTokenStats(): Promise<{ stats: any }> {
+  async getTokenStats(): Promise<{ stats: TokenStats | null }> {
     const stats = await this.authService.getTokenStats();
     return { stats };
   }
@@ -313,7 +323,7 @@ export class FeishuController {
   @ApiResponse({ status: 200, description: '配置导入成功' })
   async importMappings(
     @CurrentUser() user: AuthenticatedUser,
-    @Body() importData: any,
+    @Body() importData: ImportMappingData,
   ) {
     await this.fieldMappingService.setFieldMappings(
       user.id,
