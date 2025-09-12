@@ -157,9 +157,29 @@ export interface FieldValidationResult {
 }
 
 /**
+ * 电影字段验证所需的最小数据接口
+ * 只包含验证函数实际需要访问的字段
+ * 使用宽松但类型安全的设计，兼容各种数据源
+ */
+interface ValidationMovieData {
+  /** 豆瓣电影ID - 必需字段，用于匹配验证用例 */
+  subjectId: string;
+  /** 片长 - 可选字段，用于片长验证 */
+  duration?: unknown;
+  /** 上映日期 - 可选字段，用于上映日期验证 */
+  releaseDate?: unknown;
+  /** 制片地区 - 可选字段，用于制片地区验证 */
+  country?: unknown;
+  /** 语言 - 可选字段，用于语言验证 */
+  language?: unknown;
+}
+
+/**
  * 执行电影字段验证
  */
-export function validateMovieFields(movie: any): FieldValidationResult[] {
+export function validateMovieFields(
+  movie: ValidationMovieData,
+): FieldValidationResult[] {
   const validationCase = getValidationCaseBySubjectId(movie.subjectId);
   if (!validationCase) {
     return [];
@@ -170,14 +190,17 @@ export function validateMovieFields(movie: any): FieldValidationResult[] {
   // 验证片长
   if (validationCase.validations.duration) {
     const durationValidation = validationCase.validations.duration;
-    const passed = durationValidation.validator
-      ? durationValidation.validator(movie.duration)
-      : true;
+    const durationValue =
+      typeof movie.duration === 'string' ? movie.duration : undefined;
+    const passed =
+      durationValidation.validator && durationValue
+        ? durationValidation.validator(durationValue)
+        : true;
 
     results.push({
       fieldName: 'duration',
       passed,
-      actualValue: movie.duration || 'null',
+      actualValue: durationValue || 'null',
       expectedCriteria:
         durationValidation.shouldContain?.join(' & ') || 'custom validator',
       errorMessage: passed
@@ -189,14 +212,17 @@ export function validateMovieFields(movie: any): FieldValidationResult[] {
   // 验证上映日期
   if (validationCase.validations.releaseDate) {
     const releaseDateValidation = validationCase.validations.releaseDate;
-    const passed = releaseDateValidation.validator
-      ? releaseDateValidation.validator(movie.releaseDate)
-      : true;
+    const releaseDateValue =
+      typeof movie.releaseDate === 'string' ? movie.releaseDate : undefined;
+    const passed =
+      releaseDateValidation.validator && releaseDateValue
+        ? releaseDateValidation.validator(releaseDateValue)
+        : true;
 
     results.push({
       fieldName: 'releaseDate',
       passed,
-      actualValue: movie.releaseDate || 'null',
+      actualValue: releaseDateValue || 'null',
       expectedCriteria:
         releaseDateValidation.shouldContain?.join(' & ') ||
         (releaseDateValidation.shouldHaveMultipleRegions
@@ -211,14 +237,17 @@ export function validateMovieFields(movie: any): FieldValidationResult[] {
   // 验证制片地区
   if (validationCase.validations.country) {
     const countryValidation = validationCase.validations.country;
-    const passed = countryValidation.validator
-      ? countryValidation.validator(movie.country)
-      : true;
+    const countryValue =
+      typeof movie.country === 'string' ? movie.country : undefined;
+    const passed =
+      countryValidation.validator && countryValue
+        ? countryValidation.validator(countryValue)
+        : true;
 
     results.push({
       fieldName: 'country',
       passed,
-      actualValue: movie.country || 'null',
+      actualValue: countryValue || 'null',
       expectedCriteria:
         countryValidation.shouldContain?.join(' & ') || 'custom validator',
       errorMessage: passed
@@ -230,14 +259,17 @@ export function validateMovieFields(movie: any): FieldValidationResult[] {
   // 验证语言
   if (validationCase.validations.language) {
     const languageValidation = validationCase.validations.language;
-    const passed = languageValidation.validator
-      ? languageValidation.validator(movie.language)
-      : true;
+    const languageValue =
+      typeof movie.language === 'string' ? movie.language : undefined;
+    const passed =
+      languageValidation.validator && languageValue
+        ? languageValidation.validator(languageValue)
+        : true;
 
     results.push({
       fieldName: 'language',
       passed,
-      actualValue: movie.language || 'null',
+      actualValue: languageValue || 'null',
       expectedCriteria:
         languageValidation.shouldContain?.join(' & ') || 'custom validator',
       errorMessage: passed
