@@ -1,0 +1,36 @@
+## 测试失败基线 - book-fields.schema.ts 修复前
+## 日期: 2025-09-13
+## 分支: fix/type-safety-refactor
+
+### 测试套件状态:
+- ✅ 通过: 31个测试套件
+- ❌ 失败: 1个测试套件
+- 📊 总计: 32个测试套件
+
+### 测试用例状态:
+- ✅ 通过: 720个测试
+- ⏭️ 跳过: 1个测试  
+- 📊 总计: 721个测试
+
+### 失败详情:
+**文件**: sync/sync.controller.spec.ts
+**原因**: TypeScript编译错误
+**错误**: TS2352: Conversion of type 'null' to type 'string' may be a mistake
+**位置**: src/sync/sync.controller.spec.ts:492:38
+**代码**: `await controller.getSyncStatus(null as string);`
+
+### 运行时间:
+- 总耗时: 29.255秒
+- 预估时间: 32秒
+
+### 注意事项:
+- 此失败与编译错误基线一致 (typescript-errors-baseline.txt)
+- 非功能性失败，属于类型检查问题
+- 所有功能测试均通过，系统核心功能正常
+
+### 验证标准:
+修复 book-fields.schema.ts 后，测试结果必须与此基线完全一致:
+- 失败测试套件数量: 1个 (sync.controller.spec.ts)
+- 通过测试套件数量: 31个
+- 总测试数量: 721个 (720通过 + 1跳过)
+- 不允许引入任何新的测试失败
