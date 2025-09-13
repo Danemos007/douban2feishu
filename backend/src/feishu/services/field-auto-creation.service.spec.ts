@@ -9,14 +9,11 @@
  */
 
 import { Test, TestingModule } from '@nestjs/testing';
-import { Logger } from '@nestjs/common';
 import { FieldAutoCreationServiceV2 } from './field-auto-creation.service';
 import { FieldCreationConfigManager } from './field-creation-config';
 import { FeishuTableService } from './feishu-table.service';
 import {
   FieldCreationRequest,
-  FieldCreationResponse,
-  BatchFieldCreationResult,
   ContentType,
 } from '../schemas/field-creation.schema';
 import { FeishuFieldType } from '../schemas/field.schema';
@@ -28,7 +25,11 @@ import {
 describe('FieldAutoCreationServiceV2 - 极简重构版', () => {
   let service: FieldAutoCreationServiceV2;
   let configManager: FieldCreationConfigManager;
-  let feishuTableService: FeishuTableService;
+
+  // Spy variables for unbound-method fix
+  let ensureFieldConfigurationSpy: jest.SpyInstance;
+  let batchEnsureFieldConfigurationsSpy: jest.SpyInstance;
+  let findFieldByNameSpy: jest.SpyInstance;
 
   const mockCredentials = {
     appId: 'cli_test12345678901234567890',
@@ -92,7 +93,13 @@ describe('FieldAutoCreationServiceV2 - 极简重构版', () => {
     configManager = module.get<FieldCreationConfigManager>(
       FieldCreationConfigManager,
     );
-    feishuTableService = module.get<FeishuTableService>(FeishuTableService);
+
+    // Create spy variables for methods to fix unbound-method errors
+    ensureFieldConfigurationSpy =
+      mockFeishuTableService.ensureFieldConfiguration;
+    batchEnsureFieldConfigurationsSpy =
+      mockFeishuTableService.batchEnsureFieldConfigurations;
+    findFieldByNameSpy = mockFeishuTableService.findFieldByName;
   });
 
   describe('🎯 createFieldWithContentTypeSupport - 智能字段创建', () => {
@@ -123,9 +130,7 @@ describe('FieldAutoCreationServiceV2 - 极简重构版', () => {
         },
       };
 
-      (
-        feishuTableService.ensureFieldConfiguration as jest.Mock
-      ).mockResolvedValue(mockUnifiedResult);
+      ensureFieldConfigurationSpy.mockResolvedValue(mockUnifiedResult);
 
       // 执行测试
       const result = await service.createFieldWithContentTypeSupport(
@@ -148,7 +153,7 @@ describe('FieldAutoCreationServiceV2 - 极简重构版', () => {
       });
 
       // 验证统一接口调用
-      expect(feishuTableService.ensureFieldConfiguration).toHaveBeenCalledWith(
+      expect(ensureFieldConfigurationSpy).toHaveBeenCalledWith(
         {
           appId: mockCredentials.appId,
           appSecret: mockCredentials.appSecret,
@@ -257,9 +262,7 @@ describe('FieldAutoCreationServiceV2 - 极简重构版', () => {
         totalExecutionTime: 1500,
       };
 
-      (
-        feishuTableService.batchEnsureFieldConfigurations as jest.Mock
-      ).mockResolvedValue(mockBatchResult);
+      batchEnsureFieldConfigurationsSpy.mockResolvedValue(mockBatchResult);
 
       // 执行测试
       const result = await service.batchCreateFieldsWithSmartDelay(
@@ -281,9 +284,7 @@ describe('FieldAutoCreationServiceV2 - 极简重构版', () => {
       });
 
       // 验证统一接口调用
-      expect(
-        feishuTableService.batchEnsureFieldConfigurations,
-      ).toHaveBeenCalledWith(
+      expect(batchEnsureFieldConfigurationsSpy).toHaveBeenCalledWith(
         {
           appId: mockCredentials.appId,
           appSecret: mockCredentials.appSecret,
@@ -331,9 +332,9 @@ describe('FieldAutoCreationServiceV2 - 极简重构版', () => {
         totalExecutionTime: 2000,
       };
 
-      (
-        feishuTableService.batchEnsureFieldConfigurations as jest.Mock
-      ).mockResolvedValue(mockBatchResultWithFailures);
+      batchEnsureFieldConfigurationsSpy.mockResolvedValue(
+        mockBatchResultWithFailures,
+      );
 
       const result = await service.batchCreateFieldsWithSmartDelay(
         mockCredentials.appId,
@@ -362,9 +363,7 @@ describe('FieldAutoCreationServiceV2 - 极简重构版', () => {
         is_primary: false,
       };
 
-      (feishuTableService.findFieldByName as jest.Mock).mockResolvedValue(
-        mockField,
-      );
+      findFieldByNameSpy.mockResolvedValue(mockField);
 
       const exists = await service.checkFieldExists(
         mockCredentials.appId,
@@ -375,7 +374,7 @@ describe('FieldAutoCreationServiceV2 - 极简重构版', () => {
       );
 
       expect(exists).toBe(true);
-      expect(feishuTableService.findFieldByName).toHaveBeenCalledWith(
+      expect(findFieldByNameSpy).toHaveBeenCalledWith(
         {
           appId: mockCredentials.appId,
           appSecret: mockCredentials.appSecret,
@@ -387,7 +386,7 @@ describe('FieldAutoCreationServiceV2 - 极简重构版', () => {
     });
 
     it('should return false when field does not exist', async () => {
-      (feishuTableService.findFieldByName as jest.Mock).mockResolvedValue(null);
+      findFieldByNameSpy.mockResolvedValue(null);
 
       const exists = await service.checkFieldExists(
         mockCredentials.appId,
@@ -447,9 +446,7 @@ describe('FieldAutoCreationServiceV2 - 极简重构版', () => {
         warnings: [],
       };
 
-      (
-        feishuTableService.ensureFieldConfiguration as jest.Mock
-      ).mockResolvedValue(mockResult);
+      ensureFieldConfigurationSpy.mockResolvedValue(mockResult);
 
       const requestWithDescription = {
         ...mockFieldRequest,
@@ -465,7 +462,7 @@ describe('FieldAutoCreationServiceV2 - 极简重构版', () => {
       );
 
       // 验证描述被正确合并
-      expect(feishuTableService.ensureFieldConfiguration).toHaveBeenCalledWith(
+      expect(ensureFieldConfigurationSpy).toHaveBeenCalledWith(
         expect.any(Object),
         expect.any(String),
         expect.objectContaining({
