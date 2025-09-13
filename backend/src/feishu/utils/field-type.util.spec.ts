@@ -251,7 +251,7 @@ describe('field-type.util', () => {
         );
         const resultWithRating = isRatingFieldType(
           fieldName,
-          FeishuFieldType.Rating,
+          FeishuFieldType.Number,
         );
         const resultWithText = isRatingFieldType(
           fieldName,
@@ -277,7 +277,7 @@ describe('field-type.util', () => {
         );
         const resultWithRating = isRatingFieldType(
           fieldName,
-          FeishuFieldType.Rating,
+          FeishuFieldType.Number,
         );
         const resultWithText = isRatingFieldType(
           fieldName,
