@@ -1,3 +1,0 @@
-src/douban/douban.service.ts(147,13): error TS2352: Conversion of type 'DoubanItem' to type 'RawDataInput' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
-  Index signature for type 'string' is missing in type 'DoubanItem'.
-src/sync/sync.controller.spec.ts(492,38): error TS2352: Conversion of type 'null' to type 'string' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.

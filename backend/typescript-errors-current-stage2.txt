@@ -1,3 +1,0 @@
-src/douban/douban.service.ts(146,13): error TS2345: Argument of type 'DoubanItem' is not assignable to parameter of type 'RawDataInput'.
-  Index signature for type 'string' is missing in type 'DoubanItem'.
-src/sync/sync.controller.spec.ts(492,38): error TS2352: Conversion of type 'null' to type 'string' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.

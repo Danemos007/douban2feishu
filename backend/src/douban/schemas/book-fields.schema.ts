@@ -346,17 +346,36 @@ export function validateBookField(
   fieldName: keyof BookComplete,
   value: unknown,
 ): BookFieldValidation {
-  const fieldSchemas = {
+  // 完整的字段Schema映射，与BookCompleteSchema保持一致
+  const fieldSchemas: Record<keyof BookComplete, z.ZodTypeAny> = {
     subjectId: BookSubjectIdSchema,
-    title: z.string().min(1),
-    authors: z.array(z.string()).min(1),
     userTags: UserTagsSchema,
+    userStatus: UserStatusSchema.optional(),
+    title: z.string().min(1, '书名不能为空'),
+    subtitle: z.string().optional(),
+    rating: BookRatingSchema.optional(),
+    authors: z.array(z.string()).min(1, '书籍必须至少有一个作者'),
+    userComment: UserCommentSchema,
+    summary: BookSummarySchema,
+    coverUrl: CoverImageSchema,
     userRating: UserRatingSchema,
-    rating: BookRatingSchema,
-    // ... 可以继续添加其他字段
-  };
+    originalTitle: z.string().optional(),
+    translators: z.array(z.string()).default([]),
+    year: z.number().min(1000).max(2100).optional(),
+    publisher: z.string().optional(),
+    readDate: MarkDateSchema,
+    doubanUrl: z.string().url().optional(),
+    category: z.literal('books'),
+    genres: BookGenresSchema,
+    publishDate: z.string().optional(),
+    pages: z.number().min(1).optional(),
+    price: z.string().optional(),
+    binding: z.string().optional(),
+    isbn: z.string().optional(),
+  } as const;
 
   const schema = fieldSchemas[fieldName];
+  // 由于完整映射，schema永远不会是undefined，但保持防御性编程
   if (!schema) {
     return {
       field: fieldName,
@@ -402,12 +421,15 @@ export function validateBookField(
 export function assessBookDataQuality(data: unknown): number {
   if (!data || typeof data !== 'object') return 0;
 
-  const book = data as any;
+  // 使用类型守卫进行类型收窄，确保类型安全
+  if (!isValidBookComplete(data)) return 0;
+
+  const book = data;
   let score = 0;
   const maxScore = 100;
 
-  // 核心字段权重分配
-  const fieldWeights = {
+  // 核心字段权重分配 - 使用严格类型定义确保类型安全
+  const fieldWeights: Partial<Record<keyof BookComplete, number>> = {
     subjectId: 15, // 最重要，必需字段
     title: 15, // 书名，必需
     authors: 10, // 作者，重要
@@ -418,15 +440,13 @@ export function assessBookDataQuality(data: unknown): number {
     publisher: 5, // 出版社
     userRating: 5, // 用户评分
     userTags: 5, // 用户标签
-    genres: 5, // 分类
-    pages: 3, // 页数
-    isbn: 3, // ISBN
     translators: 2, // 译者
-    binding: 2, // 装帧
-    price: 2, // 价格
-  };
+  } as const;
 
-  for (const [field, weight] of Object.entries(fieldWeights)) {
+  // 使用类型安全的方式遍历字段权重
+  for (const [field, weight] of Object.entries(fieldWeights) as Array<
+    [keyof BookComplete, number]
+  >) {
     const value = book[field];
     if (value !== undefined && value !== null && value !== '') {
       if (Array.isArray(value) && value.length > 0) {
