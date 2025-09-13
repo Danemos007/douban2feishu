@@ -17,7 +17,7 @@ import { FeishuFieldType } from '../interfaces/api.interface';
 export const FIELD_TYPE_MAPPING = {
   text: FeishuFieldType.Text,
   number: FeishuFieldType.Number,
-  rating: FeishuFieldType.Rating,
+  rating: FeishuFieldType.Number, // 评分使用Number类型，通过ui_type="Rating"区分
   multiSelect: FeishuFieldType.MultiSelect,
   singleSelect: FeishuFieldType.SingleSelect,
   datetime: FeishuFieldType.DateTime,
