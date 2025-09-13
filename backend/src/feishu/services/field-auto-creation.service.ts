@@ -22,16 +22,11 @@ import { FeishuTableService } from './feishu-table.service';
 import {
   FieldCreationRequest,
   FieldCreationResponse,
-  BatchFieldCreationRequest,
   BatchFieldCreationResult,
   FieldCreationStats,
-  ContentType,
   FieldCreationConfig,
 } from '../schemas/field-creation.schema';
-import {
-  FeishuCredentials,
-  FieldOperationOptions,
-} from '../schemas/field-operations.schema';
+import { FeishuCredentials } from '../schemas/field-operations.schema';
 import { FeishuFieldType } from '../schemas/field.schema';
 import { IFieldAutoCreationService } from '../interfaces/field-creation.interface';
 
@@ -180,24 +175,25 @@ export class FieldAutoCreationServiceV2 implements IFieldAutoCreationService {
   /**
    * 📊 获取创建统计 - 委托给统一接口
    */
-  async getCreationStats(): Promise<FieldCreationStats> {
+  getCreationStats(): Promise<FieldCreationStats> {
     // TODO: 从FeishuTableService的统一统计接口获取
     // 这里暂时返回默认值，等统一统计接口完善后再集成
-    return {
+    return Promise.resolve({
       totalCreated: 0,
       successRate: 100,
       averageCreationTime: 0,
       contentTypeDistribution: { books: 0, movies: 0, tv: 0, documentary: 0 },
       fieldTypeDistribution: {},
-    };
+    });
   }
 
   /**
    * 🗑️ 重置统计 - 委托给统一接口
    */
-  async resetStats(): Promise<void> {
+  resetStats(): Promise<void> {
     this.logger.log('📊 统计重置请求 - 委托给统一接口处理');
     // TODO: 调用FeishuTableService的统计重置方法
+    return Promise.resolve();
   }
 
   // =============== 🔧 私有辅助方法 ===============
