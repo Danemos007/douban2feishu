@@ -11,13 +11,20 @@ import { Logger, UseGuards } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { AuthenticatedUser } from '../auth/interfaces/auth.interface';
 import {
   SyncProgress,
   WebSocketEvent,
   SyncProgressEvent,
   SyncErrorEvent,
-  SystemMessageEvent,
 } from './interfaces/sync.interface';
+
+/**
+ * 认证后的Socket接口 - 包含用户信息
+ */
+interface AuthenticatedSocket extends Socket {
+  user?: AuthenticatedUser;
+}
 
 /**
  * 同步WebSocket网关 - 实时状态更新
@@ -47,7 +54,7 @@ export class SyncGateway implements OnGatewayConnection, OnGatewayDisconnect {
   /**
    * 客户端连接处理
    */
-  async handleConnection(client: Socket) {
+  async handleConnection(client: AuthenticatedSocket) {
     try {
       // 从JWT token中提取用户ID
       const userId = this.extractUserFromSocket(client);
@@ -86,7 +93,7 @@ export class SyncGateway implements OnGatewayConnection, OnGatewayDisconnect {
   /**
    * 客户端断开处理
    */
-  handleDisconnect(client: Socket) {
+  handleDisconnect(client: AuthenticatedSocket) {
     try {
       const userId = this.extractUserFromSocket(client);
 
@@ -113,7 +120,7 @@ export class SyncGateway implements OnGatewayConnection, OnGatewayDisconnect {
    */
   @SubscribeMessage('subscribe-sync')
   async handleSubscribeSync(
-    @ConnectedSocket() client: Socket,
+    @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody() data: { syncIds?: string[]; categories?: string[] },
   ): Promise<void> {
     try {
@@ -149,7 +156,7 @@ export class SyncGateway implements OnGatewayConnection, OnGatewayDisconnect {
    */
   @SubscribeMessage('unsubscribe-sync')
   async handleUnsubscribeSync(
-    @ConnectedSocket() client: Socket,
+    @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody() data: { syncIds?: string[] },
   ): Promise<void> {
     try {
@@ -227,14 +234,13 @@ export class SyncGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   /**
-   * 从Socket中提取用户ID
+   * 从Socket中提取用户ID - 类型安全版本
    */
-  private extractUserFromSocket(client: Socket): string | null {
+  private extractUserFromSocket(client: AuthenticatedSocket): string | null {
     try {
-      // 从认证中间件或JWT中提取用户信息
-      // 这里需要根据实际的认证实现来调整
-      return (client as any).user?.id || null;
-    } catch (error) {
+      // 从认证中间件设置的用户信息中提取ID
+      return client.user?.id || null;
+    } catch {
       return null;
     }
   }
