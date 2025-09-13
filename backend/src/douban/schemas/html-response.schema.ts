@@ -393,14 +393,55 @@ export type DoubanHttpError = z.infer<typeof DoubanHttpErrorSchema>;
 export type DoubanRateLimit = z.infer<typeof DoubanRateLimitSchema>;
 
 /**
+ * Schema联合类型：用于类型安全的Schema操作
+ */
+type DoubanSchemaType =
+  | typeof DoubanBookHtmlSchema
+  | typeof DoubanMovieHtmlSchema
+  | typeof DoubanTvHtmlSchema
+  | typeof DoubanCollectionHtmlSchema;
+
+/**
  * 验证工具函数：验证豆瓣HTML响应
+ * 使用函数重载提供精确的类型推断
  */
 export function validateDoubanHtml(
   html: unknown,
+  type: 'book',
+): { success: true; data: DoubanBookHtml } | { success: false; error: string };
+
+export function validateDoubanHtml(
+  html: unknown,
+  type: 'movie',
+): { success: true; data: DoubanMovieHtml } | { success: false; error: string };
+
+export function validateDoubanHtml(
+  html: unknown,
+  type: 'tv',
+): { success: true; data: DoubanTvHtml } | { success: false; error: string };
+
+export function validateDoubanHtml(
+  html: unknown,
+  type: 'collection',
+):
+  | { success: true; data: DoubanCollectionHtml }
+  | { success: false; error: string };
+
+export function validateDoubanHtml(
+  html: unknown,
   type: 'book' | 'movie' | 'tv' | 'collection',
-): { success: true; data: any } | { success: false; error: string } {
+):
+  | {
+      success: true;
+      data:
+        | DoubanBookHtml
+        | DoubanMovieHtml
+        | DoubanTvHtml
+        | DoubanCollectionHtml;
+    }
+  | { success: false; error: string } {
   try {
-    let schema;
+    let schema: DoubanSchemaType;
     switch (type) {
       case 'book':
         schema = DoubanBookHtmlSchema;
@@ -448,6 +489,28 @@ export function isValidDoubanHtml(
     }
   }
 
-  const result = validateDoubanHtml(value, type);
-  return result.success;
+  // 直接使用Schema避免重载问题
+  try {
+    let schema: DoubanSchemaType;
+    switch (type) {
+      case 'book':
+        schema = DoubanBookHtmlSchema;
+        break;
+      case 'movie':
+        schema = DoubanMovieHtmlSchema;
+        break;
+      case 'tv':
+        schema = DoubanTvHtmlSchema;
+        break;
+      case 'collection':
+        schema = DoubanCollectionHtmlSchema;
+        break;
+      default:
+        return false;
+    }
+    schema.parse(value);
+    return true;
+  } catch {
+    return false;
+  }
 }
