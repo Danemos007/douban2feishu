@@ -12,6 +12,16 @@ import { PrismaModule } from '../common/prisma/prisma.module';
 import { CryptoModule } from '../common/crypto/crypto.module';
 
 /**
+ * BullMQ Redis 配置接口
+ * 定义Redis连接所需的类型安全配置
+ */
+interface BullRedisConfig {
+  host: string;
+  port: number;
+  password?: string;
+}
+
+/**
  * 同步模块 - 企业级数据同步模块
  *
  * 功能:
@@ -29,9 +39,9 @@ import { CryptoModule } from '../common/crypto/crypto.module';
     // BullMQ 任务队列配置
     BullModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => {
+      useFactory: (configService: ConfigService) => {
         const redisPassword = configService.get<string>('BULL_REDIS_PASSWORD');
-        const redisConfig: any = {
+        const redisConfig: BullRedisConfig = {
           host: configService.get<string>('BULL_REDIS_HOST', 'localhost'),
           port: configService.get<number>('BULL_REDIS_PORT', 6379),
         };
