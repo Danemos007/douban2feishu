@@ -7,6 +7,22 @@ import { CookieManagerService } from './services/cookie-manager.service';
 import { AntiSpiderService } from './services/anti-spider.service';
 import { BookScraperService, BookData } from './services/book-scraper.service';
 import { DataTransformationService } from './services/data-transformation.service';
+import { RawDataInput } from './types/transformation-generics.types';
+
+/**
+ * 飞书表格记录类型定义
+ * 基于实际飞书API字段类型的严格定义
+ */
+interface FeishuTableRecord {
+  [fieldName: string]:
+    | string
+    | number
+    | boolean
+    | Date
+    | string[]
+    | null
+    | undefined;
+}
 
 /**
  * 豆瓣服务 - 基于obsidian-douban的成熟反爬虫策略
@@ -47,7 +63,7 @@ export class DoubanService {
       // 解密Cookie (如果已加密)
       let cookie = fetchDto.cookie;
       if (fetchDto.isEncrypted) {
-        cookie = await this.cookieManager.decryptCookie(
+        cookie = this.cookieManager.decryptCookie(
           fetchDto.userId,
           fetchDto.cookie,
         );
@@ -66,14 +82,15 @@ export class DoubanService {
 
       // 根据类型调用不同的抓取器
       switch (fetchDto.category) {
-        case 'books':
+        case 'books': {
           const bookData = await this.fetchBooks(
             fetchDto.userId,
             cookie,
             fetchDto,
           );
-          results = bookData.map(this.mapBookToDoubanItem);
+          results = bookData.map((book) => this.mapBookToDoubanItem(book));
           break;
+        }
 
         case 'movies':
           // TODO: 实现电影抓取
@@ -83,8 +100,14 @@ export class DoubanService {
           // TODO: 实现电视剧抓取
           throw new Error('TV show scraping not implemented yet');
 
-        default:
-          throw new Error(`Unsupported category: ${fetchDto.category}`);
+        default: {
+          // 这行代码将确保我们的 switch 语句始终是完整的
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const _exhaustiveCheck: never = fetchDto.category;
+
+          // 在错误信息中，使用 String() 来获取运行时的值
+          throw new Error(`Unsupported category: ${String(fetchDto.category)}`);
+        }
       }
 
       this.logger.log(
@@ -107,7 +130,7 @@ export class DoubanService {
    */
   async scrapeAndTransform(fetchDto: FetchUserDataDto): Promise<{
     rawData: DoubanItem[];
-    transformedData: any[];
+    transformedData: FeishuTableRecord[];
     transformationStats: {
       totalProcessed: number;
       repairsApplied: number;
@@ -132,19 +155,21 @@ export class DoubanService {
       };
 
       // 执行数据转换 - 逐个处理数组项目
-      const transformedData: any[] = [];
+      const transformedData: FeishuTableRecord[] = [];
       let totalRepairsApplied = 0;
       let totalValidationWarnings = 0;
 
       for (const item of rawData) {
         const transformationResult =
-          await this.dataTransformation.transformDoubanData(
-            item as any,
+          this.dataTransformation.transformDoubanData(
+            // Reason: DoubanItem lacks string index signature but is runtime-compatible with RawDataInput
+            item as unknown as RawDataInput,
             fetchDto.category,
             transformationOptions,
           );
 
-        transformedData.push(transformationResult.data);
+        // Reason: TransformedDataOutput uses 'unknown' but transformation service produces FeishuTableRecord-compatible data
+        transformedData.push(transformationResult.data as FeishuTableRecord);
         totalRepairsApplied +=
           transformationResult.statistics?.repairedFields || 0;
         totalValidationWarnings += transformationResult.warnings?.length || 0;
@@ -228,7 +253,7 @@ export class DoubanService {
   /**
    * 加密并存储Cookie
    */
-  async encryptCookie(userId: string, rawCookie: string): Promise<string> {
+  encryptCookie(userId: string, rawCookie: string): string {
     // 验证格式
     if (!this.cookieManager.validateCookieFormat(rawCookie)) {
       throw new Error('Invalid cookie format');
@@ -238,7 +263,7 @@ export class DoubanService {
     const cleanedCookie = this.cookieManager.sanitizeCookie(rawCookie);
 
     // 加密存储
-    return await this.cookieManager.encryptCookie(userId, cleanedCookie);
+    return this.cookieManager.encryptCookie(userId, cleanedCookie);
   }
 
   /**
