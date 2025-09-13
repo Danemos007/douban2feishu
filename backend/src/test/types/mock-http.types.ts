@@ -307,9 +307,9 @@ export function createMockAxiosInstance(): MockAxiosInstance {
  * 类型安全的Mock调用参数访问器
  * 适配当前Jest版本 (单泛型参数) + 类型安全的泛型约束
  */
-export function getLastMockCall<TArgs extends any[]>(
-  mockFn: jest.Mock<any>,
-): TArgs | undefined {
+export function getLastMockCall<TArgs extends unknown[]>(mockFn: {
+  mock: { calls: unknown[][] };
+}): TArgs | undefined {
   const calls = mockFn.mock.calls;
   return calls.length > 0 ? (calls[calls.length - 1] as TArgs) : undefined;
 }
@@ -318,9 +318,9 @@ export function getLastMockCall<TArgs extends any[]>(
  * 类型安全的Mock第一次调用参数访问器
  * 通过泛型约束保证类型正确性，使用安全的类型断言
  */
-export function getFirstMockCall<TArgs extends any[]>(
-  mockFn: jest.Mock<any>,
-): TArgs | undefined {
+export function getFirstMockCall<TArgs extends unknown[]>(mockFn: {
+  mock: { calls: unknown[][] };
+}): TArgs | undefined {
   const calls = mockFn.mock.calls;
   return calls.length > 0 ? (calls[0] as TArgs) : undefined;
 }
