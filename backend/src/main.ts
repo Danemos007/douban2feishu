@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { Logger, ValidationPipe } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import helmet from 'helmet';
@@ -117,7 +117,7 @@ async function bootstrap() {
 
     // 健康检查端点
     if (configService.get<boolean>('HEALTH_CHECK_ENABLED', true)) {
-      const { AppController } = await import('./app.controller');
+      await import('./app.controller');
       // 健康检查逻辑已在AppController中实现
     }
 
@@ -132,14 +132,14 @@ async function bootstrap() {
     logger.log(`📱 API Base URL: http://localhost:${port}/${apiPrefix}`);
 
     // 优雅关闭处理
-    process.on('SIGTERM', async () => {
+    process.on('SIGTERM', () => {
       logger.log('SIGTERM received, shutting down gracefully...');
-      await app.close();
+      void app.close();
     });
 
-    process.on('SIGINT', async () => {
+    process.on('SIGINT', () => {
       logger.log('SIGINT received, shutting down gracefully...');
-      await app.close();
+      void app.close();
     });
   } catch (error) {
     logger.error('Failed to start the application:', error);
