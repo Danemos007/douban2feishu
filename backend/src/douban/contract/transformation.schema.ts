@@ -175,9 +175,7 @@ export type TransformationOptions = z.infer<typeof TransformationOptionsSchema>;
 export type TransformationStatistics = z.infer<
   typeof TransformationStatisticsSchema
 >;
-export type TransformationResult<T = any> = z.infer<
-  typeof TransformationResultSchema
->;
+export type TransformationResult = z.infer<typeof TransformationResultSchema>;
 export type IntelligentRepairConfig = z.infer<
   typeof IntelligentRepairConfigSchema
 >;

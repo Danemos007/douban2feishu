@@ -245,7 +245,9 @@ export function isValidSyncConfig(config: unknown): config is SyncConfig {
  * 检查同步状态是否为最终状态
  */
 export function isFinalSyncStatus(status: SyncStatusType): boolean {
-  return [SyncStatus.SUCCESS, SyncStatus.FAILED, SyncStatus.CANCELLED].includes(
-    status as any,
+  return (
+    status === SyncStatus.SUCCESS ||
+    status === SyncStatus.FAILED ||
+    status === SyncStatus.CANCELLED
   );
 }
