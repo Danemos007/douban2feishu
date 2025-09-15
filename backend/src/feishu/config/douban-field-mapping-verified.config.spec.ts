@@ -8,13 +8,11 @@
 import {
   VERIFIED_MOVIES_FIELD_MAPPING,
   VERIFIED_BOOKS_FIELD_MAPPING,
-  VERIFIED_FIELD_MAPPINGS,
   getVerifiedFieldMapping,
   getVerifiedChineseFieldNames,
   getVerifiedRequiredFields,
   verifiedDoubanFieldToChineseName,
   getVerificationStats,
-  VerifiedFieldMappingConfig,
 } from './douban-field-mapping.config';
 
 describe('豆瓣字段映射配置验证测试', () => {
