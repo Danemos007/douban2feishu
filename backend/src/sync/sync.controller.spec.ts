@@ -492,13 +492,15 @@ describe('SyncController', () => {
     it('应该处理无效的syncId格式并传播错误', async () => {
       const invalidSyncId = 'invalid-uuid-format';
       const errorMessage = 'Sync not found';
-      
-      jest.spyOn(syncService, 'getSyncStatus')
+
+      jest
+        .spyOn(syncService, 'getSyncStatus')
         .mockRejectedValue(new Error(errorMessage));
-        
-      await expect(controller.getSyncStatus(invalidSyncId))
-        .rejects.toThrow(errorMessage);
-        
+
+      await expect(controller.getSyncStatus(invalidSyncId)).rejects.toThrow(
+        errorMessage,
+      );
+
       expect(getSyncStatusSpy).toHaveBeenCalledWith(invalidSyncId);
     });
   });
@@ -530,13 +532,12 @@ describe('SyncController', () => {
 
     it('应该处理队列服务临时不可用的情况', async () => {
       const errorMessage = 'Queue service temporarily unavailable';
-      
+
       jest
         .spyOn(syncService, 'getQueueStats')
         .mockRejectedValue(new Error(errorMessage));
 
-      await expect(controller.getQueueStats())
-        .rejects.toThrow(errorMessage);
+      await expect(controller.getQueueStats()).rejects.toThrow(errorMessage);
     });
 
     it('应该处理Promise被reject的情况', async () => {
@@ -552,8 +553,11 @@ describe('SyncController', () => {
   describe('认证和权限验证', () => {
     it('应该被JwtAuthGuard保护', () => {
       // 验证Controller类上有UseGuards装饰器
-      const metadata = Reflect.getMetadata('__guards__', SyncController);
-      
+      const metadata: unknown = Reflect.getMetadata(
+        '__guards__',
+        SyncController,
+      );
+
       // 类型安全的检查，避免类型断言
       expect(Array.isArray(metadata)).toBe(true);
       expect(metadata).toContain(JwtAuthGuard);
