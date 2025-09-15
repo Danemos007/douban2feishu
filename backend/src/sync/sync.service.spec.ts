@@ -363,7 +363,10 @@ describe('SyncService', () => {
         completedAt: completedSyncHistory.completedAt,
         itemsSynced: 50,
         errorMessage: null,
-        metadata: completedSyncHistory.metadata,
+        metadata: {
+          options: {},
+          requestedAt: expect.any(String),
+        },
       });
       expect(mockPrismaFindUnique).toHaveBeenCalledWith({
         where: { id: mockSyncId },
