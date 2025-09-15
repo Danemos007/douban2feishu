@@ -17,7 +17,6 @@ import {
   FeishuOperationResponseSchema,
   FeishuRateLimitInfoSchema,
   FeishuRequestContextSchema,
-  FeishuResponseMetadataSchema,
   FeishuHealthCheckResponseSchema,
   FeishuErrorCodeMap,
   getErrorMessage,
@@ -413,8 +412,6 @@ describe('Type Safety Integration', () => {
   });
 
   it('should support generic paginated responses', () => {
-    type TestItem = { id: string; name: string };
-
     // 这应该在编译时通过类型检查
     const createPaginatedResponse = () => {
       const ItemSchema = z.object({
