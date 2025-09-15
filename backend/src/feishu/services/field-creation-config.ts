@@ -393,26 +393,41 @@ export class FieldCreationConfigManager implements IFieldCreationConfigManager {
       }
     >;
   } {
-    const stats = {
+    // Initialize with proper type-safe implementation
+    const contentTypeDetails = Object.fromEntries(
+      Object.entries(CONTENT_TYPE_CONFIGS).map(([contentType, config]) => {
+        const fieldTemplates = Object.values(config.fieldTemplates);
+        const fieldTypes = [...new Set(fieldTemplates.map((t) => t.ui_type))];
+
+        return [
+          contentType,
+          {
+            fieldCount: fieldTemplates.length,
+            statusOptionCount: config.statusOptions.length,
+            fieldTypes,
+          },
+        ];
+      }),
+      // Reason: Object.fromEntries returns {[k: string]: any}, TypeScript cannot infer the precise Record type
+    ) as Record<
+      ContentType,
+      {
+        fieldCount: number;
+        statusOptionCount: number;
+        fieldTypes: string[];
+      }
+    >;
+
+    const totalFieldTemplates = Object.values(CONTENT_TYPE_CONFIGS).reduce(
+      (total, config) => total + Object.keys(config.fieldTemplates).length,
+      0,
+    );
+
+    return {
       totalContentTypes: Object.keys(CONTENT_TYPE_CONFIGS).length,
-      totalFieldTemplates: 0,
-      contentTypeDetails: {} as any,
+      totalFieldTemplates,
+      contentTypeDetails,
     };
-
-    Object.entries(CONTENT_TYPE_CONFIGS).forEach(([contentType, config]) => {
-      const fieldTemplates = Object.values(config.fieldTemplates);
-      const fieldTypes = [...new Set(fieldTemplates.map((t) => t.ui_type))];
-
-      stats.contentTypeDetails[contentType as ContentType] = {
-        fieldCount: fieldTemplates.length,
-        statusOptionCount: config.statusOptions.length,
-        fieldTypes,
-      };
-
-      stats.totalFieldTemplates += fieldTemplates.length;
-    });
-
-    return stats;
   }
 }
 
