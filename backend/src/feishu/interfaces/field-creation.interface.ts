@@ -248,7 +248,7 @@ export interface FieldCreationEvent {
   timestamp: Date;
   fieldName: string;
   contentType: ContentType;
-  data?: any;
+  data?: unknown;
 }
 
 /**
@@ -300,7 +300,7 @@ export interface AdvancedFieldCreationOptions extends FieldCreationOptions {
   /**
    * 自定义字段属性
    */
-  customProperties?: Record<string, any>;
+  customProperties?: Record<string, unknown>;
 }
 
 /**
