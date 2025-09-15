@@ -1,7 +1,30 @@
+import { z } from 'zod';
+import type { DoubanItem } from '../../douban/interfaces/douban.interface';
+
 /**
  * 豆瓣数据分类类型
  */
 export type DoubanDataCategory = 'books' | 'movies' | 'tv' | 'documentary';
+
+/**
+ * 豆瓣数据项类型 - 联合类型定义
+ */
+export type DoubanDataItem = DoubanItem;
+
+/**
+ * 飞书表格记录类型定义
+ * 基于实际飞书API字段类型的严格定义
+ */
+export interface FeishuTableRecord {
+  [fieldName: string]:
+    | string
+    | number
+    | boolean
+    | Date
+    | string[]
+    | null
+    | undefined;
+}
 
 /**
  * 同步触发类型
@@ -205,6 +228,83 @@ export type WebSocketEvent =
   | SyncProgressEvent
   | SyncErrorEvent
   | SystemMessageEvent;
+
+/**
+ * 数据转换统计接口
+ */
+export interface DataTransformationStats {
+  totalProcessed: number;
+  repairsApplied: number;
+  validationWarnings: number;
+  processingTime: number;
+}
+
+/**
+ * 飞书同步统计接口
+ */
+export interface FeishuSyncStats {
+  total: number;
+  created: number;
+  updated: number;
+  failed: number;
+}
+
+/**
+ * 同步元数据 Zod Schema - 企业级数据边界验证
+ * 单一事实来源：从此Schema自动生成TypeScript类型
+ */
+export const SyncMetadataSchema = z
+  .object({
+    options: z
+      .object({
+        category: z.enum(['books', 'movies', 'tv', 'documentary']).optional(),
+        transformationEnabled: z.boolean().optional(),
+      })
+      .catchall(z.unknown())
+      .optional(),
+    requestedAt: z.string().optional(),
+    transformationStats: z
+      .object({
+        totalProcessed: z.number(),
+        repairsApplied: z.number(),
+        validationWarnings: z.number(),
+        processingTime: z.number(),
+      })
+      .optional(),
+    feishuSyncStats: z
+      .object({
+        total: z.number(),
+        created: z.number(),
+        updated: z.number(),
+        failed: z.number(),
+      })
+      .optional(),
+    performance: z
+      .object({
+        startTime: z.date().optional(),
+        duration: z.number().optional(),
+      })
+      .optional(),
+  })
+  .catchall(z.unknown()); // 允许扩展字段但保持类型安全
+
+/**
+ * 同步元数据类型 - 从Zod Schema自动推导
+ * 确保类型定义与运行时验证完全一致
+ */
+export type SyncMetadata = z.infer<typeof SyncMetadataSchema>;
+
+/**
+ * 数据转换结果接口 - 企业级类型安全版本
+ */
+export interface DataTransformationResult<
+  T = DoubanDataItem,
+  U = FeishuTableRecord,
+> {
+  rawData: T[];
+  transformedData: U[];
+  transformationStats: DataTransformationStats;
+}
 
 /**
  * 任务队列状态统计接口

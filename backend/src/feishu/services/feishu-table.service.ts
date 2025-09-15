@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { RedisService } from '../../redis';
+import { TableStatsResult } from '../interfaces/api-responses.interface';
 import axios, { AxiosError } from 'axios';
 
 import { ExtendedAxiosRequestConfig } from '../../common/interfaces/http.interface';
@@ -51,13 +52,8 @@ import { IFeishuTableFieldOperations } from '../interfaces/table-field-operation
 // 使用现有Schema定义的字段值类型，无需重复定义
 
 /**
- * 表格统计信息结果接口
+ * 表格统计信息结果接口已移动到 api-responses.interface.ts
  */
-interface TableStatsResult {
-  tableId: string;
-  fieldsCached: boolean;
-  cacheExpiry: number | null;
-}
 
 /**
  * 飞书API错误响应数据类型

@@ -17,6 +17,7 @@ import {
   DoubanMusic,
   DoubanItem,
 } from '../../douban/interfaces/douban.interface';
+import { SyncState } from '../interfaces/api-responses.interface';
 
 /**
  * 数据同步引擎 - Subject ID增量同步核心服务
@@ -923,18 +924,6 @@ type FeishuFieldValue =
   | boolean
   | null
   | Array<string | number>;
-
-/**
- * 同步状态接口
- */
-interface SyncState {
-  userId: string;
-  tableId: string;
-  startTime: string;
-  phase: string;
-  processed: number;
-  total: number;
-}
 
 interface ChangeAnalysis {
   toCreate: ChangeItem[];

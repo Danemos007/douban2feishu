@@ -27,6 +27,11 @@ import { GetTableFieldsDto } from './dto/feishu.dto';
 import { AuthenticatedUser } from '../auth/interfaces/auth.interface';
 import { FeishuField } from './interfaces/feishu.interface';
 import { TokenStats } from './schemas';
+import {
+  SyncState,
+  MappingStats,
+  TableStatsResult,
+} from './interfaces/api-responses.interface';
 
 /**
  * 导入字段映射配置的数据结构
@@ -232,7 +237,7 @@ export class FeishuController {
   async getSyncStatus(
     @CurrentUser() user: AuthenticatedUser,
     @Param('tableId') tableId: string,
-  ) {
+  ): Promise<{ status: SyncState | null }> {
     const status = await this.syncEngineService.getSyncState(user.id, tableId);
     return { status };
   }
@@ -294,7 +299,9 @@ export class FeishuController {
     summary: '获取字段映射统计',
     description: '获取用户的字段映射配置统计信息',
   })
-  async getMappingStats(@CurrentUser() user: AuthenticatedUser) {
+  async getMappingStats(
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<{ stats: MappingStats | null }> {
     const stats = await this.fieldMappingService.getMappingStats(user.id);
     return { stats };
   }
@@ -307,7 +314,9 @@ export class FeishuController {
     summary: '导出字段映射配置',
     description: '导出用户的所有字段映射配置，用于备份或迁移',
   })
-  async exportMappings(@CurrentUser() user: AuthenticatedUser) {
+  async exportMappings(
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<MappingStats | null> {
     return this.fieldMappingService.getMappingStats(user.id);
   }
 
@@ -429,7 +438,9 @@ export class FeishuController {
     summary: '获取字段映射统计（V2）',
     description: '获取用户的字段映射配置统计信息（新版本）',
   })
-  async getMappingStatsV2(@CurrentUser() user: AuthenticatedUser) {
+  async getMappingStatsV2(
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<{ stats: MappingStats | null }> {
     const stats = await this.fieldMappingService.getMappingStats(user.id);
     return { stats };
   }
@@ -447,7 +458,7 @@ export class FeishuController {
   async getTableStats(
     @Param('appToken') appToken: string,
     @Param('tableId') tableId: string,
-  ) {
+  ): Promise<{ stats: TableStatsResult | null }> {
     const stats = await this.tableService.getTableStats(appToken, tableId);
     return { stats };
   }

@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { RedisService } from '../../redis';
 import { Prisma } from '../../../generated/prisma';
+import { MappingStats } from '../interfaces/api-responses.interface';
 
 import { FeishuTableService } from './feishu-table.service';
 import { FieldAutoCreationServiceV2 } from './field-auto-creation.service'; // 🆕 新服务导入
@@ -46,19 +47,7 @@ interface UserTableMappings {
   [tableKey: string]: TableMappingConfig;
 }
 
-// 统计结果类型定义
-interface MappingStats {
-  totalTables: number;
-  mappings: Array<{
-    appToken: string;
-    tableId: string;
-    dataType?: string;
-    strategy: string;
-    version: string;
-    fieldCount: number;
-    lastUpdated?: string;
-  }>;
-}
+// 统计结果类型定义已移动到 api-responses.interface.ts
 
 /**
  * 字段映射管理服务 V2 - 精确匹配 + 自动创建策略

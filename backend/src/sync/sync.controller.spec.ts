@@ -257,15 +257,16 @@ describe('SyncController', () => {
       const complexStatus = {
         ...mockSyncStatus,
         metadata: {
-          duration: 300000,
-          categories: ['books', 'movies', 'tv'],
-          errors: [],
-          warnings: ['Category "music" skipped'],
-          performance: {
-            totalItems: 100,
-            processedItems: 95,
-            failedItems: 5,
+          options: {
+            category: 'books' as const,
+            transformationEnabled: true,
           },
+          requestedAt: new Date().toISOString(),
+          performance: {
+            startTime: new Date(),
+            duration: 300000,
+          },
+          customData: ['books', 'movies', 'tv'], // 使用索引签名
         },
       };
 
@@ -488,10 +489,17 @@ describe('SyncController', () => {
       expect(getSyncHistorySpy).toHaveBeenCalledWith(mockUserId, 10);
     });
 
-    it('应该处理null参数', async () => {
-      await controller.getSyncStatus(null as string);
-
-      expect(getSyncStatusSpy).toHaveBeenCalledWith(null);
+    it('应该处理无效的syncId格式并传播错误', async () => {
+      const invalidSyncId = 'invalid-uuid-format';
+      const errorMessage = 'Sync not found';
+      
+      jest.spyOn(syncService, 'getSyncStatus')
+        .mockRejectedValue(new Error(errorMessage));
+        
+      await expect(controller.getSyncStatus(invalidSyncId))
+        .rejects.toThrow(errorMessage);
+        
+      expect(getSyncStatusSpy).toHaveBeenCalledWith(invalidSyncId);
     });
   });
 
@@ -520,14 +528,15 @@ describe('SyncController', () => {
       expect(result).toBeNull();
     });
 
-    it('应该处理service返回undefined的情况', async () => {
+    it('应该处理队列服务临时不可用的情况', async () => {
+      const errorMessage = 'Queue service temporarily unavailable';
+      
       jest
         .spyOn(syncService, 'getQueueStats')
-        .mockResolvedValue(undefined as unknown as QueueStats);
+        .mockRejectedValue(new Error(errorMessage));
 
-      const result = await controller.getQueueStats();
-
-      expect(result).toBeUndefined();
+      await expect(controller.getQueueStats())
+        .rejects.toThrow(errorMessage);
     });
 
     it('应该处理Promise被reject的情况', async () => {
@@ -543,10 +552,10 @@ describe('SyncController', () => {
   describe('认证和权限验证', () => {
     it('应该被JwtAuthGuard保护', () => {
       // 验证Controller类上有UseGuards装饰器
-      const metadata = Reflect.getMetadata(
-        '__guards__',
-        SyncController,
-      ) as unknown[];
+      const metadata = Reflect.getMetadata('__guards__', SyncController);
+      
+      // 类型安全的检查，避免类型断言
+      expect(Array.isArray(metadata)).toBe(true);
       expect(metadata).toContain(JwtAuthGuard);
     });
 

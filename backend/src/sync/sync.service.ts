@@ -9,6 +9,11 @@ import {
   SyncJobData,
   SyncProgress,
   QueueStats,
+  DataTransformationResult,
+  DoubanDataItem,
+  FeishuTableRecord,
+  SyncMetadata,
+  SyncMetadataSchema,
 } from './interfaces/sync.interface';
 import { DoubanService } from '../douban/douban.service';
 import { FetchUserDataDto } from '../douban/dto/douban.dto';
@@ -123,7 +128,7 @@ export class SyncService {
     completedAt: Date | null;
     itemsSynced: number | null;
     errorMessage: string | null;
-    metadata: any;
+    metadata: SyncMetadata | null;
   } | null> {
     const syncHistory: SyncHistory | null =
       await this.prisma.syncHistory.findUnique({
@@ -141,7 +146,11 @@ export class SyncService {
       completedAt: syncHistory.completedAt,
       itemsSynced: syncHistory.itemsSynced,
       errorMessage: syncHistory.errorMessage,
-      metadata: syncHistory.metadata,
+      metadata: this.parseSyncMetadata(
+        typeof syncHistory.metadata === 'string'
+          ? syncHistory.metadata
+          : JSON.stringify(syncHistory.metadata),
+      ),
     };
   }
 
@@ -280,16 +289,10 @@ export class SyncService {
     },
   ): Promise<{
     syncId: string;
-    transformationResult: {
-      rawData: any[];
-      transformedData: any[];
-      transformationStats: {
-        totalProcessed: number;
-        repairsApplied: number;
-        validationWarnings: number;
-        processingTime: number;
-      };
-    };
+    transformationResult: DataTransformationResult<
+      DoubanDataItem,
+      FeishuTableRecord
+    >;
   }> {
     let syncHistory: SyncHistory | null = null;
 
@@ -475,6 +478,35 @@ export class SyncService {
 
     this.logger.log(`Using table ID ${tableId} for category ${category}`);
     return tableId;
+  }
+
+  /**
+   * 安全解析同步元数据 - 企业级Zod验证版本
+   * 零豁免工具使用，深度数据边界保护
+   */
+  private parseSyncMetadata(metadata: string | null): SyncMetadata | null {
+    if (!metadata) {
+      return null;
+    }
+
+    try {
+      const parsed: unknown = JSON.parse(metadata);
+      const validationResult = SyncMetadataSchema.safeParse(parsed);
+
+      if (validationResult.success) {
+        return validationResult.data;
+      }
+
+      // 详细的验证错误日志，便于调试
+      this.logger.warn('Sync metadata validation failed:', {
+        errors: validationResult.error.errors,
+        rawData: JSON.stringify(parsed),
+      });
+      return null;
+    } catch (error) {
+      this.logger.warn('Failed to parse sync metadata JSON:', error);
+      return null;
+    }
   }
 
   /**
