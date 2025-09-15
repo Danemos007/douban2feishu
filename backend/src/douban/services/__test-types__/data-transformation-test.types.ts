@@ -6,25 +6,30 @@
  */
 
 import { DataTransformationService } from '../data-transformation.service';
-import { TransformationStatistics } from '../../contract/transformation.schema';
+import {
+  TransformationStatistics,
+  DoubanDataType,
+  TransformationOptions,
+} from '../../contract/transformation.schema';
 import {
   DoubanBookData,
   GenericTransformationResult,
   TransformedDataOutput,
+  RawDataInput,
 } from '../../types/transformation-generics.types';
 import { VerifiedFieldMappingConfig } from '../../../feishu/config/douban-field-mapping.config';
 
 // 测试用的完整类型化服务接口 - 独立定义避免继承冲突
 export interface TypedDataTransformationService {
-  // 公共方法 (来自原服务)
+  // 公共方法 (来自原服务) - 严格对齐实际服务签名
   transformDoubanData<
-    TInput extends Record<string, unknown>,
-    TOutput extends Record<string, unknown>,
+    TInput extends RawDataInput,
+    TOutput extends TransformedDataOutput,
   >(
     rawData: TInput,
-    dataType: string,
-    options?: any,
-  ): any;
+    dataType: DoubanDataType,
+    options?: TransformationOptions,
+  ): GenericTransformationResult<TOutput>;
 
   // 公开私有方法进行测试 (使用类型安全的方式)
   extractNestedValue(
