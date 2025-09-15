@@ -8,7 +8,6 @@
 import {
   FieldCreationRequestSchema,
   FieldCreationResponseSchema,
-  FieldCreationConfigSchema,
   BatchFieldCreationRequestSchema,
   BatchFieldCreationResultSchema,
   ContentTypeConfigSchema,
@@ -501,8 +500,10 @@ describe('Field Creation Schema Tests', () => {
           contentType: 'invalid',
           fieldType: 999,
         });
-      } catch (error: any) {
-        const errorMessage = error.message;
+      } catch (error: unknown) {
+        // 类型安全的错误处理：确保 error 是 Error 实例并具有 message 属性
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
         expect(errorMessage).toContain('字段名不能为空');
       }
     });
