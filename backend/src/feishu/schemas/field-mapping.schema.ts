@@ -142,7 +142,7 @@ export const VerifiedFieldMappingsSchema = z
     (data) => {
       const requiredFields = ['subjectId', 'title'];
 
-      for (const [dataType, mapping] of Object.entries(data)) {
+      for (const [_dataType, mapping] of Object.entries(data)) {
         for (const requiredField of requiredFields) {
           if (!mapping[requiredField] || !mapping[requiredField].required) {
             return false;
@@ -227,9 +227,9 @@ export const FieldMappingTransformResultSchema = z
  * 用于验证嵌套属性提取函数的参数
  */
 export const NestedValueExtractionSchema = z.object({
-  data: z.any(), // 原始数据，类型可变
+  data: z.unknown(), // 原始数据，类型安全
   nestedPath: NestedPathSchema,
-  defaultValue: z.any().optional(),
+  defaultValue: z.unknown().optional(),
   throwOnError: z.boolean().default(false),
 });
 
@@ -255,7 +255,7 @@ export type NestedValueExtraction = z.infer<typeof NestedValueExtractionSchema>;
  */
 export function validateFieldMappingConfig(
   config: unknown,
-  dataType: DoubanDataType,
+  _dataType: DoubanDataType,
 ):
   | { success: true; data: VerifiedFieldMappingConfig }
   | { success: false; error: string } {
