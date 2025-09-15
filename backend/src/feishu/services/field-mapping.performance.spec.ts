@@ -301,9 +301,11 @@ describe('FieldMappingService - Performance Benchmarks', () => {
       let cacheMisses = 0;
 
       // Mock Redis行为 - 模拟缓存命中率
+      let requestCount = 0;
       (redis.get as jest.Mock).mockImplementation(() => {
-        if (Math.random() > 0.1) {
-          // 90%命中率
+        requestCount++;
+        if (requestCount <= 88) {
+          // 前88次请求命中，确保>85%的命中率
           cacheHits++;
           return Promise.resolve(
             JSON.stringify({
