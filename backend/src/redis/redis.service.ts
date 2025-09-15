@@ -186,10 +186,15 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     pattern?: string,
     count?: number,
   ): Promise<[string, string[]]> {
-    const options: any = { cursor };
-    if (pattern) options.match = pattern;
-    if (count) options.count = count;
-
-    return this.client.scan(cursor, options);
+    // Use positional arguments following ioredis API design
+    if (pattern && count) {
+      return this.client.scan(cursor, 'MATCH', pattern, 'COUNT', count);
+    } else if (pattern) {
+      return this.client.scan(cursor, 'MATCH', pattern);
+    } else if (count) {
+      return this.client.scan(cursor, 'COUNT', count);
+    } else {
+      return this.client.scan(cursor);
+    }
   }
 }
