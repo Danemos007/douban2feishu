@@ -1,4 +1,8 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  ExecutionContext,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 
 import { AuthenticatedUser } from '../interfaces/auth.interface';
@@ -28,8 +32,10 @@ export class LocalAuthGuard extends AuthGuard('local') {
     err: AuthError | null,
     user: AuthenticatedUser | false,
     info: AuthError | undefined,
-    context?: any,
-    status?: any,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _context?: ExecutionContext,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _status?: unknown,
   ): TUser {
     if (err || !user) {
       let message = 'Authentication failed';
