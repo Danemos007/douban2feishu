@@ -8,6 +8,7 @@ import { FieldMappingService } from './services/field-mapping.service';
 import { SyncEngineService } from './services/sync-engine.service';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { CryptoService } from '../common/crypto/crypto.service';
+import { AuthenticatedUser } from '../auth/interfaces/auth.interface';
 
 // [TDD-TEST] 尝试导入SyncResult类型 - 这个导入应该失败
 import { SyncResult } from '../sync/interfaces/sync.interface';
@@ -107,7 +108,12 @@ describe('FeishuController - SyncResult Type Export Issue', () => {
         .spyOn(syncEngineService, 'performIncrementalSync')
         .mockResolvedValue(mockSyncResult);
 
-      const mockUser = { id: 'test-user-id' };
+      const mockUser: AuthenticatedUser = {
+        id: 'test-user-id',
+        email: 'test@example.com',
+        createdAt: new Date('2023-01-01T00:00:00.000Z'),
+        lastSyncAt: null,
+      };
       const mockBody = {
         appId: 'test-app-id',
         appSecret: 'test-app-secret',
@@ -120,7 +126,7 @@ describe('FeishuController - SyncResult Type Export Issue', () => {
 
       // [TDD-TEST] 调用方法并验证返回类型
       const result = await controller.performIncrementalSync(
-        mockUser as any,
+        mockUser,
         mockBody,
       );
 
