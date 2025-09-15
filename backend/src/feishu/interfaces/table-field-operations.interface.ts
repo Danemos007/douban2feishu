@@ -17,7 +17,10 @@ import {
   BatchFieldOperationResult,
   FieldMatchAnalysis,
 } from '../schemas/field-operations.schema';
-import { FieldCreationConfig } from '../schemas/field-creation.schema';
+import {
+  FieldCreationConfig,
+  FieldProperty,
+} from '../schemas/field-creation.schema';
 import { FeishuField } from '../schemas/field.schema';
 
 /**
@@ -195,8 +198,8 @@ export interface IFeishuTableFieldInternalOperations {
    * 内部方法：深度比较字段属性
    */
   compareFieldProperties(
-    existingProperty: any,
-    expectedProperty: any,
+    existingProperty: FieldProperty,
+    expectedProperty: FieldProperty,
   ): Array<{
     property: string;
     from: unknown;
