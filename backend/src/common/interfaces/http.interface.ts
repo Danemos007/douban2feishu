@@ -3,11 +3,7 @@
  * 为项目中所有HTTP相关操作提供类型安全保障
  */
 
-import {
-  AxiosRequestConfig,
-  AxiosError,
-  InternalAxiosRequestConfig,
-} from 'axios';
+import { AxiosError, InternalAxiosRequestConfig } from 'axios';
 
 /**
  * 扩展的Axios请求配置
@@ -35,23 +31,9 @@ export enum HttpStatus {
   GATEWAY_TIMEOUT = 504,
 }
 
-/**
- * 通用API响应接口
- */
-export interface ApiResponse<T = any> {
-  code: number;
-  msg: string;
-  data: T;
-}
-
-/**
- * API错误响应接口
- */
-export interface ApiErrorResponse {
-  code: number;
-  msg: string;
-  details?: any;
-}
+// API响应类型已统一迁移至 common/types/index.ts
+// 这里保持向后兼容的类型别名
+export type { ApiResponse, ApiErrorResponse } from '../types/index';
 
 /**
  * HTTP重试配置
