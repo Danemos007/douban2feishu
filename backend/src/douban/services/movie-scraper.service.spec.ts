@@ -144,7 +144,11 @@ describe('MovieScraperService', () => {
       expect(result.data?.title).toBe('肖申克的救赎');
       expect(result.performance).toBeDefined();
       expect(result.performance.classification).toContain('movie');
-      expect(mockAntiSpiderService.makeRequest).toHaveBeenCalledWith(
+      expect(
+        // Reason: Jest.Mocked<T> type conflicts with @typescript-eslint/unbound-method in test assertions
+        // eslint-disable-next-line @typescript-eslint/unbound-method
+        mockAntiSpiderService.makeRequest as jest.Mock,
+      ).toHaveBeenCalledWith(
         'https://movie.douban.com/subject/1292052/',
         'test-cookie',
       );
@@ -520,7 +524,11 @@ describe('MovieScraperService', () => {
       expect(result.succeeded).toBe(0); // No details fetched
       expect(result.byType.movies).toHaveLength(0);
       // Should not call parseDoubanItem for details
-      expect(mockHtmlParserService.parseDoubanItem).not.toHaveBeenCalled();
+      expect(
+        // Reason: Jest.Mocked<T> type conflicts with @typescript-eslint/unbound-method in test assertions
+        // eslint-disable-next-line @typescript-eslint/unbound-method
+        mockHtmlParserService.parseDoubanItem as jest.Mock,
+      ).not.toHaveBeenCalled();
     });
   });
 
@@ -697,7 +705,11 @@ describe('MovieScraperService', () => {
       expect(stats).toBeDefined();
       expect(stats).toHaveProperty('requestCount');
       expect(stats).toHaveProperty('isSlowMode');
-      expect(mockAntiSpiderService.getRequestStats).toHaveBeenCalled();
+      expect(
+        // Reason: Jest.Mocked<T> type conflicts with @typescript-eslint/unbound-method in test assertions
+        // eslint-disable-next-line @typescript-eslint/unbound-method
+        mockAntiSpiderService.getRequestStats as jest.Mock,
+      ).toHaveBeenCalled();
     });
   });
 });
