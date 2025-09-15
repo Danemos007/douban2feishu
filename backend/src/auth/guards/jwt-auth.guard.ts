@@ -57,8 +57,8 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     err: Error | null,
     user: AuthenticatedUser | false,
     info: AuthError | undefined,
-    context?: ExecutionContext,
-    status?: any,
+    _context?: ExecutionContext,
+    _status?: unknown,
   ): TUser {
     if (err || !user) {
       let message = 'Authentication failed';
