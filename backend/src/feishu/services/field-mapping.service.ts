@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { RedisService } from '../../redis';
+import { Prisma } from '../../../generated/prisma';
 
 import { FeishuTableService } from './feishu-table.service';
 import { FieldAutoCreationServiceV2 } from './field-auto-creation.service'; // 🆕 新服务导入
@@ -16,7 +17,7 @@ import {
   BatchFieldCreationResult,
 } from '../schemas/field-creation.schema'; // 🆕 新schema导入
 
-// 数据库映射结构类型定义
+// 数据库映射结构类型定义 - 符合 Prisma InputJsonValue 规范
 interface TableMappingMetadata {
   dataType: string;
   strategy: string;
@@ -25,6 +26,17 @@ interface TableMappingMetadata {
   version: string;
 }
 
+// Prisma 兼容的字段映射配置类型 - 使用精确的类型定义避免索引签名冲突
+type PrismaCompatibleTableMappingConfig = Record<string, string | null> & {
+  _metadata?: TableMappingMetadata;
+};
+
+// Prisma 兼容的用户表格映射类型
+type PrismaCompatibleUserTableMappings = {
+  [tableKey: string]: PrismaCompatibleTableMappingConfig;
+};
+
+// 内部使用的类型（保持向后兼容）
 interface TableMappingConfig {
   [fieldName: string]: unknown;
   _metadata?: TableMappingMetadata;
@@ -645,38 +657,48 @@ export class FieldMappingService {
     dataType: string,
   ): Promise<void> {
     const tableKey = `${appToken}:${tableId}`;
+    const metadata: TableMappingMetadata = {
+      dataType,
+      strategy: 'exact_match_auto_create',
+      updatedAt: new Date().toISOString(),
+      version: '2.0',
+    };
+
+    // 构建符合 Prisma InputJsonValue 的数据结构
+    const existingMappings = await this.getExistingTableMappings(userId);
+    // Reason: TypeScript intersection type limitation with Record<string, string | null> & { _metadata?: TableMappingMetadata }
+    const newTableMapping: PrismaCompatibleTableMappingConfig = {
+      ...mappings,
+      _metadata: metadata,
+    } as PrismaCompatibleTableMappingConfig;
+    const updatedTableMappings: PrismaCompatibleUserTableMappings = {
+      ...this.convertToCompatibleMappings(existingMappings),
+      [tableKey]: newTableMapping,
+    };
+
+    const createMetadata: TableMappingMetadata = {
+      dataType,
+      strategy: 'exact_match_auto_create',
+      createdAt: new Date().toISOString(),
+      version: '2.0',
+    };
+    // Reason: TypeScript intersection type limitation with Record<string, string | null> & { _metadata?: TableMappingMetadata }
+    const createTableMapping: PrismaCompatibleTableMappingConfig = {
+      ...mappings,
+      _metadata: createMetadata,
+    } as PrismaCompatibleTableMappingConfig;
+    const createTableMappings: PrismaCompatibleUserTableMappings = {
+      [tableKey]: createTableMapping,
+    };
 
     await this.prisma.syncConfig.upsert({
       where: { userId },
       update: {
-        // Reason: Prisma JSON field type compatibility with InputJsonValue
-        tableMappings: {
-          ...(await this.getExistingTableMappings(userId)),
-          [tableKey]: {
-            ...mappings,
-            _metadata: {
-              dataType,
-              strategy: 'exact_match_auto_create',
-              updatedAt: new Date().toISOString(),
-              version: '2.0',
-            },
-          },
-        } as any,
+        tableMappings: updatedTableMappings as Prisma.InputJsonValue,
       },
       create: {
         userId,
-        // Reason: Prisma JSON field type compatibility with InputJsonValue
-        tableMappings: {
-          [tableKey]: {
-            ...mappings,
-            _metadata: {
-              dataType,
-              strategy: 'exact_match_auto_create',
-              createdAt: new Date().toISOString(),
-              version: '2.0',
-            },
-          },
-        } as any,
+        tableMappings: createTableMappings as Prisma.InputJsonValue,
       },
     });
   }
@@ -693,6 +715,32 @@ export class FieldMappingService {
     });
 
     return (config?.tableMappings as UserTableMappings) || {};
+  }
+
+  /**
+   * 转换为 Prisma 兼容的映射格式
+   */
+  private convertToCompatibleMappings(
+    mappings: UserTableMappings,
+  ): PrismaCompatibleUserTableMappings {
+    const result: PrismaCompatibleUserTableMappings = {};
+
+    Object.entries(mappings).forEach(([tableKey, tableMapping]) => {
+      const compatibleMapping: PrismaCompatibleTableMappingConfig = {};
+
+      Object.entries(tableMapping).forEach(([key, value]) => {
+        if (key === '_metadata') {
+          compatibleMapping._metadata = value as TableMappingMetadata;
+        } else if (typeof value === 'string') {
+          compatibleMapping[key] = value;
+        }
+        // 忽略非字符串、非metadata的值以确保类型安全
+      });
+
+      result[tableKey] = compatibleMapping;
+    });
+
+    return result;
   }
 
   /**
