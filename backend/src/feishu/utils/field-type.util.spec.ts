@@ -211,10 +211,10 @@ describe('field-type.util', () => {
     describe('边界情况和异常处理', () => {
       it('应该处理null/undefined fieldName', () => {
         expect(() =>
-          isRatingFieldType(null as any, FeishuFieldType.Number),
+          isRatingFieldType(null, FeishuFieldType.Number),
         ).not.toThrow();
         expect(() =>
-          isRatingFieldType(undefined as any, FeishuFieldType.Number),
+          isRatingFieldType(undefined, FeishuFieldType.Number),
         ).not.toThrow();
       });
 
