@@ -356,18 +356,17 @@ describe('SyncService', () => {
 
       const result = await service.getSyncStatus(mockSyncId);
 
-      expect(result).toEqual({
-        syncId: mockSyncId,
-        status: 'SUCCESS',
-        startedAt: completedSyncHistory.startedAt,
-        completedAt: completedSyncHistory.completedAt,
-        itemsSynced: 50,
-        errorMessage: null,
-        metadata: {
-          options: {},
-          requestedAt: expect.any(String),
-        },
-      });
+      expect(result).toBeDefined();
+      expect(result?.syncId).toBe(mockSyncId);
+      expect(result?.status).toBe('SUCCESS');
+      expect(result?.startedAt).toBe(completedSyncHistory.startedAt);
+      expect(result?.completedAt).toBe(completedSyncHistory.completedAt);
+      expect(result?.itemsSynced).toBe(50);
+      expect(result?.errorMessage).toBeNull();
+      expect(result?.metadata?.options).toEqual({});
+      expect(result?.metadata?.requestedAt).toMatch(
+        /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/,
+      );
       expect(mockPrismaFindUnique).toHaveBeenCalledWith({
         where: { id: mockSyncId },
       });
