@@ -1,3 +1,5 @@
+import { FeishuRecordFieldValue, FeishuFieldProperty } from '../schemas';
+
 /**
  * 飞书API Token响应
  */
@@ -12,7 +14,7 @@ export interface FeishuTokenResponse {
  * 飞书记录接口
  */
 export interface FeishuRecord {
-  fields: Record<string, any>;
+  fields: Record<string, FeishuRecordFieldValue>;
 }
 
 /**
@@ -22,7 +24,7 @@ export interface FeishuField {
   field_id: string;
   field_name: string;
   type: number;
-  property?: any;
+  property?: FeishuFieldProperty;
   description?: {
     text?: string;
   };
@@ -109,7 +111,7 @@ export type FeishuRecordData =
 /**
  * 飞书API通用响应
  */
-export interface FeishuApiResponse<T = any> {
+export interface FeishuApiResponse<T = unknown> {
   code: number;
   msg: string;
   data: T;
@@ -140,7 +142,7 @@ export interface FeishuRecordsResponse {
  */
 export interface FeishuRecordItem {
   record_id: string;
-  fields: Record<string, any>;
+  fields: Record<string, FeishuRecordFieldValue>;
   created_by?: {
     id: string;
     name: string;
