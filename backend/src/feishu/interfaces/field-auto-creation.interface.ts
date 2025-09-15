@@ -15,6 +15,8 @@ import {
   FieldCreationStats,
 } from '../schemas/field-creation.schema';
 
+import { FeishuField, FeishuFieldProperty } from '../schemas/field.schema';
+
 /**
  * 🎯 极简字段自动创建服务接口 V2.0
  *
@@ -173,12 +175,12 @@ export interface IUnifiedFieldService {
       field_name: string;
       type: number;
       ui_type: string;
-      property?: any;
+      property?: FeishuFieldProperty;
       description?: { text: string };
     },
     options?: FieldAutoCreationOptionsV2,
   ): Promise<{
-    field: any;
+    field: FeishuField;
     operation: 'created' | 'updated' | 'unchanged';
     processingTime: number;
   }>;
@@ -197,13 +199,13 @@ export interface IUnifiedFieldService {
       field_name: string;
       type: number;
       ui_type: string;
-      property?: any;
+      property?: FeishuFieldProperty;
       description?: { text: string };
     }>,
     options?: FieldAutoCreationOptionsV2,
   ): Promise<{
     results: Array<{
-      field: any;
+      field: FeishuField;
       operation: 'created' | 'updated' | 'unchanged';
       processingTime: number;
     }>;
