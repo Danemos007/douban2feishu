@@ -48,6 +48,14 @@ interface ContractFailureLog {
   actualData: string;
 }
 
+// Zod Schema for runtime validation of ContractFailureLog from external data
+const ContractFailureLogSchema = z.object({
+  timestamp: z.string(),
+  endpoint: z.string(),
+  errors: z.array(z.any()), // ZodIssue has complex structure, use any for flexibility
+  actualData: z.string(),
+});
+
 @Injectable()
 export class FeishuContractValidatorService {
   private readonly logger = new Logger(FeishuContractValidatorService.name);
@@ -251,7 +259,9 @@ export class FeishuContractValidatorService {
 
     // 异步落盘到专用契约失败日志文件
     this.persistContractFailure(failureLog).catch((err) => {
-      this.logger.warn(`契约失败日志落盘失败: ${err.message}`);
+      this.logger.warn(
+        `契约失败日志落盘失败: ${err instanceof Error ? err.message : String(err)}`,
+      );
     });
   }
 
@@ -319,9 +329,19 @@ export class FeishuContractValidatorService {
         .split('\n')
         .filter((line) => line.length > 0);
 
-      const failures: ContractFailureLog[] = lines.map((line) =>
-        JSON.parse(line),
-      );
+      const failures: ContractFailureLog[] = lines
+        .map((line) => {
+          try {
+            const parsed: unknown = JSON.parse(line);
+            return ContractFailureLogSchema.parse(parsed);
+          } catch (error) {
+            this.logger.warn(
+              `Invalid contract failure log entry: ${error instanceof Error ? error.message : String(error)}`,
+            );
+            return null;
+          }
+        })
+        .filter((entry): entry is ContractFailureLog => entry !== null);
       const endpoints = Array.from(new Set(failures.map((f) => f.endpoint)));
       const latestFailure = failures.sort(
         (a, b) =>
