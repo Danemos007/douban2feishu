@@ -17,7 +17,7 @@
  */
 
 import { Test, TestingModule } from '@nestjs/testing';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ConfigModule } from '@nestjs/config';
 
 // 核心模块
 import { DoubanModule } from '../douban/douban.module';
@@ -34,6 +34,16 @@ import { PrismaService } from '../common/prisma/prisma.service';
 // 接口和DTO
 import { FetchUserDataDto } from '../douban/dto/douban.dto';
 import { DoubanItem } from '../douban/interfaces/douban.interface';
+
+/**
+ * 同步进度更新接口
+ * 使用unknown类型以兼容实际的SyncProgressCallback类型
+ */
+interface ProgressUpdate {
+  phase: string;
+  processed: number;
+  total: number;
+}
 
 /**
  * Mock数据生成器
@@ -218,7 +228,7 @@ describe('Douban-Feishu Integration (Mock)', () => {
     // Mock服务方法
     jest
       .spyOn(doubanService, 'fetchUserData')
-      .mockImplementation(async (dto: FetchUserDataDto) => {
+      .mockImplementation(async (_dto: FetchUserDataDto) => {
         // 模拟网络延迟
         await new Promise((resolve) => setTimeout(resolve, 100));
         return MockDataGenerator.generateDoubanMovies(5);
@@ -398,7 +408,7 @@ describe('Douban-Feishu Integration (Mock)', () => {
         subjectIdField: '豆瓣ID',
       };
 
-      const progressUpdates: any[] = [];
+      const progressUpdates: ProgressUpdate[] = [];
 
       // 执行Mock增量同步
       const syncResult = await syncEngineService.performIncrementalSync(
@@ -471,13 +481,11 @@ describe('Douban-Feishu Integration (Mock)', () => {
     it('应该能够处理Mock错误情况', async () => {
       console.log('🛡️ 测试Mock错误恢复机制');
 
-      // 临时替换Mock实现以测试错误情况
-      const originalMock = doubanService.fetchUserData as jest.Mock;
+      // 创建Mock spy来保存和恢复原有实现
+      const fetchUserDataSpy = jest.spyOn(doubanService, 'fetchUserData');
 
       // Mock网络错误
-      jest
-        .spyOn(doubanService, 'fetchUserData')
-        .mockRejectedValueOnce(new Error('Mock network error'));
+      fetchUserDataSpy.mockRejectedValueOnce(new Error('Mock network error'));
 
       const invalidDto: FetchUserDataDto = {
         userId: 'test-user-invalid',
@@ -493,7 +501,15 @@ describe('Douban-Feishu Integration (Mock)', () => {
       console.log('✅ Mock错误处理正常');
 
       // 恢复原始Mock
-      doubanService.fetchUserData = originalMock;
+      fetchUserDataSpy.mockRestore();
+      
+      // 重新设置mock实现供后续测试使用
+      jest
+        .spyOn(doubanService, 'fetchUserData')
+        .mockImplementation(async (_dto: FetchUserDataDto) => {
+          await new Promise((resolve) => setTimeout(resolve, 100));
+          return MockDataGenerator.generateDoubanMovies(5);
+        });
     });
 
     /**
