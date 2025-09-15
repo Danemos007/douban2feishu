@@ -23,8 +23,8 @@ import { FeishuFieldType } from '../interfaces/api.interface';
  * - 因此必须基于字段名语义进行准确判断
  */
 export function isRatingFieldType(
-  fieldName: string,
-  fieldType: FeishuFieldType,
+  fieldName: string | null | undefined,
+  _fieldType: FeishuFieldType,
 ): boolean {
   // [CRITICAL-FIX] 处理空值输入
   if (!fieldName || typeof fieldName !== 'string') {
