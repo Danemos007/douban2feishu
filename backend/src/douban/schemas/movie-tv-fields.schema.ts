@@ -457,17 +457,19 @@ export function isDocumentaryByGenres(genres: string[]): boolean {
 }
 
 /**
- * 数据质量评估函数：电影
+ * 数据质量评估函数：影视内容（电影/电视剧/纪录片）
+ * 使用类型安全的方式评估数据完整性和质量
  */
 export function assessMovieDataQuality(data: unknown): number {
   if (!data || typeof data !== 'object') return 0;
 
-  const movie = data as any;
+  // 类型安全的数据访问：使用Record类型进行安全的属性访问
+  const movieData = data as Record<string, unknown>;
   let score = 0;
   const maxScore = 100;
 
-  // 电影字段权重分配
-  const fieldWeights = {
+  // 影视字段权重分配 - 支持电影/电视剧/纪录片的不同字段结构
+  const fieldWeights: Record<string, number> = {
     subjectId: 15, // 最重要
     title: 15, // 片名
     directors: 12, // 导演
@@ -475,31 +477,65 @@ export function assessMovieDataQuality(data: unknown): number {
     summary: 8, // 简介
     cast: 8, // 主演
     year: 5, // 年份
-    duration: 5, // 片长
+    duration: 5, // 片长 (电影)
+    episodeDuration: 5, // 单集片长 (电视剧/纪录片)
     countries: 5, // 制片地区
     languages: 3, // 语言
     genres: 5, // 类型
     coverUrl: 4, // 封面
     writers: 3, // 编剧
     userRating: 2, // 用户评分
+    // 共同字段
+    userTags: 2,
+    userStatus: 2,
+    category: 2,
+    userComment: 2,
+    readDate: 2,
+    doubanUrl: 2,
+    originalTitle: 1,
+    imdbId: 1,
+    // 电视剧特有字段
+    episodeCount: 3,
+    firstAirDate: 3,
+    releaseDate: 3,
   };
 
+  // 类型安全的字段访问和评分
   for (const [field, weight] of Object.entries(fieldWeights)) {
-    const value = movie[field];
-    if (value !== undefined && value !== null && value !== '') {
-      if (Array.isArray(value) && value.length > 0) {
-        score += weight;
-      } else if (typeof value === 'string' && value.trim().length > 0) {
-        score += weight;
-      } else if (typeof value === 'number' && value > 0) {
-        score += weight;
-      } else if (typeof value === 'object') {
-        score += weight;
-      }
+    const value = movieData[field];
+    if (isValidFieldValue(value)) {
+      score += weight;
     }
   }
 
   return Math.min(score, maxScore);
+}
+
+/**
+ * 字段值有效性检查 - 类型安全的字段值验证
+ */
+function isValidFieldValue(value: unknown): boolean {
+  if (value === undefined || value === null || value === '') {
+    return false;
+  }
+
+  if (Array.isArray(value)) {
+    return value.length > 0;
+  }
+
+  if (typeof value === 'string') {
+    return value.trim().length > 0;
+  }
+
+  if (typeof value === 'number') {
+    return value > 0;
+  }
+
+  if (typeof value === 'object') {
+    return true;
+  }
+
+  return false;
 }
 
 /**
