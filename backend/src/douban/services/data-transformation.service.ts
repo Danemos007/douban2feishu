@@ -1239,7 +1239,7 @@ export class DataTransformationService
    * 构建空数据结果
    */
   private buildEmptyResult<TOutput extends TransformedDataOutput>(
-    rawData: any,
+    rawData: RawDataInput,
     options: TransformationOptions,
   ): GenericTransformationResult<TOutput> {
     return {
@@ -1251,7 +1251,7 @@ export class DataTransformationService
         failedFields: 0,
       },
       warnings: this.warnings,
-      ...(options.preserveRawData && { rawData: rawData as RawDataInput }),
+      ...(options.preserveRawData && { rawData }),
     };
   }
 

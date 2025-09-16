@@ -102,7 +102,6 @@ export class DoubanService {
 
         default: {
           // 这行代码将确保我们的 switch 语句始终是完整的
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
           const _exhaustiveCheck: never = fetchDto.category;
 
           // 在错误信息中，使用 String() 来获取运行时的值

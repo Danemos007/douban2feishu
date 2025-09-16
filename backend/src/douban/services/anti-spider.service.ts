@@ -97,20 +97,20 @@ export class AntiSpiderService {
           throw new Error('Request forbidden (403) - possible IP blocking');
         }
 
-        const html = response.data;
+        const html = String(response.data);
 
         // 人机验证检测
-        if (this.isHumanVerificationRequired(html as string)) {
+        if (this.isHumanVerificationRequired(html)) {
           throw new Error('Human verification required - please update cookie');
         }
 
         // 检查其他阻止指标
-        if (this.isBlocked(html as string)) {
+        if (this.isBlocked(html)) {
           throw new Error('Access blocked - content indicates restriction');
         }
 
         this.logger.debug(`Request successful - ${url}`);
-        return html as string;
+        return html;
       } catch (error) {
         lastError = error as Error;
         const errorMessage =
