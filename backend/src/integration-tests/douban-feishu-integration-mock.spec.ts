@@ -502,7 +502,7 @@ describe('Douban-Feishu Integration (Mock)', () => {
 
       // 恢复原始Mock
       fetchUserDataSpy.mockRestore();
-      
+
       // 重新设置mock实现供后续测试使用
       jest
         .spyOn(doubanService, 'fetchUserData')
