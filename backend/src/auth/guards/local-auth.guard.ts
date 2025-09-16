@@ -32,9 +32,7 @@ export class LocalAuthGuard extends AuthGuard('local') {
     err: AuthError | null,
     user: AuthenticatedUser | false,
     info: AuthError | undefined,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _context?: ExecutionContext,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _status?: unknown,
   ): TUser {
     if (err || !user) {

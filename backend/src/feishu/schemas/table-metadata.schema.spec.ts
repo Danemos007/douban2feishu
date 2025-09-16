@@ -12,7 +12,6 @@ import {
   FeishuTableInfoSchema,
   FeishuAppInfoSchema,
   FeishuTablesListResponseSchema,
-  FeishuAppInfoResponseSchema,
   FeishuViewSchema,
   FeishuViewsListResponseSchema,
   FeishuTableStatsSchema,

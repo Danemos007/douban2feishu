@@ -354,7 +354,7 @@ describe('CONTENT_TYPE_CONFIGS', () => {
   it('should have essential fields for all content types', () => {
     const essentialFields = ['Subject ID', '我的状态', '我的评分', '豆瓣评分'];
 
-    Object.entries(CONTENT_TYPE_CONFIGS).forEach(([contentType, config]) => {
+    Object.entries(CONTENT_TYPE_CONFIGS).forEach(([_contentType, config]) => {
       essentialFields.forEach((fieldName) => {
         expect(config.fieldTemplates[fieldName]).toBeDefined();
       });

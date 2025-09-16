@@ -83,7 +83,11 @@ export class CryptoService {
 
       return combined.toString('base64');
     } catch (error) {
-      this.logger.error(`Encryption failed for user ${userId}: ${error}`);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      this.logger.error(
+        `Encryption failed for user ${userId}: ${errorMessage}`,
+      );
       throw new Error('Encryption failed');
     }
   }
@@ -118,7 +122,11 @@ export class CryptoService {
 
       return decrypted;
     } catch (error) {
-      this.logger.error(`Decryption failed for user ${userId}: ${error}`);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      this.logger.error(
+        `Decryption failed for user ${userId}: ${errorMessage}`,
+      );
       throw new Error('Decryption failed or data corrupted');
     }
   }
