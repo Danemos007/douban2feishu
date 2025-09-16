@@ -15,7 +15,7 @@ import {
 
 import { DoubanService } from './douban.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { FetchUserDataDto, ValidateCookieDto } from './dto/douban.dto';
+import { ValidateCookieDto } from './dto/douban.dto';
 
 /**
  * 豆瓣控制器 - 豆瓣数据抓取API
