@@ -15,7 +15,7 @@ describe('AppController', () => {
         {
           provide: ConfigService,
           useValue: {
-            get: jest.fn((key: string, defaultValue: any) => {
+            get: jest.fn((key: string, defaultValue?: unknown): unknown => {
               if (key === 'NODE_ENV') return 'test';
               return defaultValue;
             }),
