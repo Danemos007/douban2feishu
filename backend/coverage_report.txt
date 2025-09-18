@@ -1,0 +1,328 @@
+
+> d2f-backend@1.0.0 test
+> jest --coverage --silent
+
+PASS src/douban/services/data-transformation.service.spec.ts (18.189 s)
+PASS src/sync/sync.gateway.spec.ts (18.735 s)
+[31m[Nest] 76950  - [39m2025/09/16 11:10:06 [31m  ERROR[39m [38;5;3m[FeishuTableService] [39m[31mFailed to get table fields for table:[39m
+[31m[Nest] 76950  - [39m2025/09/16 11:10:06 [31m  ERROR[39m [38;5;3m[FeishuTableService] [39mObject(1) {
+  response: {
+    status: [33m401[39m,
+    data: {
+      msg: [32m'invalid access token'[39m
+    }
+  }
+}
+[31m[Nest] 76950  - [39m2025/09/16 11:10:06 [31m  ERROR[39m [38;5;3m[FeishuTableService] [39m[31mFailed to get table fields for test-table-id:[39m
+[31m[Nest] 76950  - [39m2025/09/16 11:10:06 [31m  ERROR[39m [38;5;3m[FeishuTableService] [39mObject(1) {
+  response: {
+    status: [33m500[39m,
+    statusText: [32m'Internal Server Error'[39m,
+    data: {
+      code: [33m500[39m,
+      msg: [32m'server internal error'[39m
+    }
+  }
+}
+[31m[Nest] 76950  - [39m2025/09/16 11:10:06 [31m  ERROR[39m [38;5;3m[FeishuTableService] [39m[31mFailed to get table fields for test-table-id:[39m
+[31m[Nest] 76950  - [39m2025/09/16 11:10:06 [31m  ERROR[39m [38;5;3m[FeishuTableService] [39mTypeError: Cannot read properties of null (reading 'items')
+    at FeishuTableService.items [as getTableFields] [90m(/Users/admin/Desktop/douban2feishu/backend/[39msrc/feishu/services/feishu-table.service.ts:201:45[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+    at Object.<anonymous> [90m(/Users/admin/Desktop/douban2feishu/backend/[39msrc/feishu/services/feishu-table.service.spec.ts:713:9[90m)[39m
+[31m[Nest] 76950  - [39m2025/09/16 11:10:06 [31m  ERROR[39m [38;5;3m[FeishuTableService] [39m[31mFailed to get table fields for test-table-id:[39m
+[31m[Nest] 76950  - [39m2025/09/16 11:10:06 [31m  ERROR[39m [38;5;3m[FeishuTableService] [39mError: Authentication service unavailable
+    at Object.<anonymous> [90m(/Users/admin/Desktop/douban2feishu/backend/[39msrc/feishu/services/feishu-table.service.spec.ts:728:11[90m)[39m
+    at Promise.finally.completed [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/jestAdapterInit.js:1556:28[90m)[39m
+    at new Promise (<anonymous>)
+    at callAsyncCircusFn [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/jestAdapterInit.js:1496:10[90m)[39m
+    at _callCircusTest [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/jestAdapterInit.js:1006:40[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+    at _runTest [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/jestAdapterInit.js:946:3[90m)[39m
+    at _runTestsForDescribeBlock [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/jestAdapterInit.js:839:13[90m)[39m
+    at _runTestsForDescribeBlock [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/jestAdapterInit.js:829:11[90m)[39m
+    at _runTestsForDescribeBlock [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/jestAdapterInit.js:829:11[90m)[39m
+    at _runTestsForDescribeBlock [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/jestAdapterInit.js:829:11[90m)[39m
+    at run [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/jestAdapterInit.js:757:3[90m)[39m
+    at runAndTransformResultsToJestFormat [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/jestAdapterInit.js:1917:21[90m)[39m
+    at jestAdapter [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/runner.js:101:19[90m)[39m
+    at runTestInternal [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-runner[24m/build/testWorker.js:275:16[90m)[39m
+    at runTest [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-runner[24m/build/testWorker.js:343:7[90m)[39m
+    at Object.worker [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-runner[24m/build/testWorker.js:497:12[90m)[39m
+[31m[Nest] 76950  - [39m2025/09/16 11:10:06 [31m  ERROR[39m [38;5;3m[FeishuTableService] [39m[31mFailed to create field "测试字段":[39m
+[31m[Nest] 76950  - [39m2025/09/16 11:10:06 [31m  ERROR[39m [38;5;3m[FeishuTableService] [39mError: invalid app_id or app_secret
+    at Object.<anonymous> [90m(/Users/admin/Desktop/douban2feishu/backend/[39msrc/feishu/services/feishu-table.service.spec.ts:745:11[90m)[39m
+    at Promise.finally.completed [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/jestAdapterInit.js:1556:28[90m)[39m
+    at new Promise (<anonymous>)
+    at callAsyncCircusFn [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/jestAdapterInit.js:1496:10[90m)[39m
+    at _callCircusTest [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/jestAdapterInit.js:1006:40[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+    at _runTest [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/jestAdapterInit.js:946:3[90m)[39m
+    at _runTestsForDescribeBlock [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/jestAdapterInit.js:839:13[90m)[39m
+    at _runTestsForDescribeBlock [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/jestAdapterInit.js:829:11[90m)[39m
+    at _runTestsForDescribeBlock [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/jestAdapterInit.js:829:11[90m)[39m
+    at _runTestsForDescribeBlock [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/jestAdapterInit.js:829:11[90m)[39m
+    at run [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/jestAdapterInit.js:757:3[90m)[39m
+    at runAndTransformResultsToJestFormat [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/jestAdapterInit.js:1917:21[90m)[39m
+    at jestAdapter [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/runner.js:101:19[90m)[39m
+    at runTestInternal [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-runner[24m/build/testWorker.js:275:16[90m)[39m
+    at runTest [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-runner[24m/build/testWorker.js:343:7[90m)[39m
+    at Object.worker [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-runner[24m/build/testWorker.js:497:12[90m)[39m
+[31m[Nest] 76950  - [39m2025/09/16 11:10:06 [31m  ERROR[39m [38;5;3m[FeishuTableService] [39m[31mFailed to get table fields for test-table-id:[39m
+[31m[Nest] 76950  - [39m2025/09/16 11:10:06 [31m  ERROR[39m [38;5;3m[FeishuTableService] [39mError: access token expired
+    at Object.<anonymous> [90m(/Users/admin/Desktop/douban2feishu/backend/[39msrc/feishu/services/feishu-table.service.spec.ts:765:34[90m)[39m
+    at Promise.finally.completed [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/jestAdapterInit.js:1556:28[90m)[39m
+    at new Promise (<anonymous>)
+    at callAsyncCircusFn [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/jestAdapterInit.js:1496:10[90m)[39m
+    at _callCircusTest [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/jestAdapterInit.js:1006:40[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+    at _runTest [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/jestAdapterInit.js:946:3[90m)[39m
+    at _runTestsForDescribeBlock [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/jestAdapterInit.js:839:13[90m)[39m
+    at _runTestsForDescribeBlock [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/jestAdapterInit.js:829:11[90m)[39m
+    at _runTestsForDescribeBlock [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/jestAdapterInit.js:829:11[90m)[39m
+    at _runTestsForDescribeBlock [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/jestAdapterInit.js:829:11[90m)[39m
+    at run [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/jestAdapterInit.js:757:3[90m)[39m
+    at runAndTransformResultsToJestFormat [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/jestAdapterInit.js:1917:21[90m)[39m
+    at jestAdapter [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/runner.js:101:19[90m)[39m
+    at runTestInternal [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-runner[24m/build/testWorker.js:275:16[90m)[39m
+    at runTest [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-runner[24m/build/testWorker.js:343:7[90m)[39m
+    at Object.worker [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-runner[24m/build/testWorker.js:497:12[90m)[39m
+[31m[Nest] 76950  - [39m2025/09/16 11:10:06 [31m  ERROR[39m [38;5;3m[FeishuTableService] [39m[31mFailed to create field "":[39m
+[31m[Nest] 76950  - [39m2025/09/16 11:10:06 [31m  ERROR[39m [38;5;3m[FeishuTableService] [39mObject(1) {
+  response: {
+    status: [33m400[39m,
+    data: {
+      code: [33m1254006[39m,
+      msg: [32m'invalid field type or property configuration'[39m
+    }
+  }
+}
+PASS src/feishu/services/feishu-table.service.spec.ts (19.963 s)
+PASS src/feishu/services/field-mapping.performance.spec.ts (19.813 s)
+PASS src/feishu/services/feishu-table-unified.service.spec.ts (22.711 s)
+PASS src/feishu/services/field-mapping-enhanced.service.spec.ts
+[31m[Nest] 76953  - [39m2025/09/16 11:10:11 [31m  ERROR[39m [38;5;3m[FeishuTableService] [39m[31m查找字段 "我的状态" 失败:[39m
+[31m[Nest] 76953  - [39m2025/09/16 11:10:11 [31m  ERROR[39m [38;5;3m[FeishuTableService] [39mError: API调用失败
+    at Object.<anonymous> [90m(/Users/admin/Desktop/douban2feishu/backend/[39msrc/feishu/services/feishu-table-field-operations.service.spec.ts:635:28[90m)[39m
+    at Promise.finally.completed [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/jestAdapterInit.js:1556:28[90m)[39m
+    at new Promise (<anonymous>)
+    at callAsyncCircusFn [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/jestAdapterInit.js:1496:10[90m)[39m
+    at _callCircusTest [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/jestAdapterInit.js:1006:40[90m)[39m
+    at _runTest [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/jestAdapterInit.js:946:3[90m)[39m
+    at _runTestsForDescribeBlock [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/jestAdapterInit.js:839:13[90m)[39m
+    at _runTestsForDescribeBlock [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/jestAdapterInit.js:829:11[90m)[39m
+    at _runTestsForDescribeBlock [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/jestAdapterInit.js:829:11[90m)[39m
+    at run [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/jestAdapterInit.js:757:3[90m)[39m
+    at runAndTransformResultsToJestFormat [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/jestAdapterInit.js:1917:21[90m)[39m
+    at jestAdapter [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/runner.js:101:19[90m)[39m
+    at runTestInternal [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-runner[24m/build/testWorker.js:275:16[90m)[39m
+    at runTest [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-runner[24m/build/testWorker.js:343:7[90m)[39m
+    at Object.worker [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-runner[24m/build/testWorker.js:497:12[90m)[39m
+PASS src/integration-tests/douban-feishu-integration-mock.spec.ts (23.393 s)
+PASS src/feishu/services/feishu-table-field-operations.service.spec.ts (5.704 s)
+PASS src/sync/sync.service.spec.ts
+PASS src/sync/sync.controller.spec.ts (6.044 s)
+[31m[Nest] 76948  - [39m2025/09/16 11:10:12 [31m  ERROR[39m [38;5;3m[MovieScraperService] [39m[31mFailed to scrape media 123456:[39m
+[31m[Nest] 76948  - [39m2025/09/16 11:10:12 [31m  ERROR[39m [38;5;3m[MovieScraperService] [39mError: 网络连接失败
+    at Object.<anonymous> [90m(/Users/admin/Desktop/douban2feishu/backend/[39msrc/douban/services/movie-scraper.service.spec.ts:304:9[90m)[39m
+    at Promise.finally.completed [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/jestAdapterInit.js:1556:28[90m)[39m
+    at new Promise (<anonymous>)
+    at callAsyncCircusFn [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/jestAdapterInit.js:1496:10[90m)[39m
+    at _callCircusTest [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/jestAdapterInit.js:1006:40[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+    at _runTest [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/jestAdapterInit.js:946:3[90m)[39m
+    at _runTestsForDescribeBlock [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/jestAdapterInit.js:839:13[90m)[39m
+    at _runTestsForDescribeBlock [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/jestAdapterInit.js:829:11[90m)[39m
+    at _runTestsForDescribeBlock [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/jestAdapterInit.js:829:11[90m)[39m
+    at run [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/jestAdapterInit.js:757:3[90m)[39m
+    at runAndTransformResultsToJestFormat [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/jestAdapterInit.js:1917:21[90m)[39m
+    at jestAdapter [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/runner.js:101:19[90m)[39m
+    at runTestInternal [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-runner[24m/build/testWorker.js:275:16[90m)[39m
+    at runTest [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-runner[24m/build/testWorker.js:343:7[90m)[39m
+    at Object.worker [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-runner[24m/build/testWorker.js:497:12[90m)[39m
+[31m[Nest] 76948  - [39m2025/09/16 11:10:12 [31m  ERROR[39m [38;5;3m[MovieScraperService] [39m[31mFailed to scrape media invalid:[39m
+[31m[Nest] 76948  - [39m2025/09/16 11:10:12 [31m  ERROR[39m [38;5;3m[MovieScraperService] [39mError: 第二个项目失败
+    at Object.<anonymous> [90m(/Users/admin/Desktop/douban2feishu/backend/[39msrc/douban/services/movie-scraper.service.spec.ts:441:32[90m)[39m
+    at Promise.finally.completed [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/jestAdapterInit.js:1556:28[90m)[39m
+    at new Promise (<anonymous>)
+    at callAsyncCircusFn [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/jestAdapterInit.js:1496:10[90m)[39m
+    at _callCircusTest [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/jestAdapterInit.js:1006:40[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+    at _runTest [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/jestAdapterInit.js:946:3[90m)[39m
+    at _runTestsForDescribeBlock [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/jestAdapterInit.js:839:13[90m)[39m
+    at _runTestsForDescribeBlock [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/jestAdapterInit.js:829:11[90m)[39m
+    at _runTestsForDescribeBlock [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/jestAdapterInit.js:829:11[90m)[39m
+    at run [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/jestAdapterInit.js:757:3[90m)[39m
+    at runAndTransformResultsToJestFormat [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/jestAdapterInit.js:1917:21[90m)[39m
+    at jestAdapter [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-circus[24m/build/runner.js:101:19[90m)[39m
+    at runTestInternal [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-runner[24m/build/testWorker.js:275:16[90m)[39m
+    at runTest [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-runner[24m/build/testWorker.js:343:7[90m)[39m
+    at Object.worker [90m(/Users/admin/Desktop/douban2feishu/backend/[39mnode_modules/[4mjest-runner[24m/build/testWorker.js:497:12[90m)[39m
+PASS src/douban/services/movie-scraper.service.spec.ts
+PASS src/auth/auth.service.spec.ts
+PASS src/feishu/services/field-mapping.service.spec.ts
+PASS src/douban/services/html-parser.service.spec.ts
+PASS src/douban/services/book-scraper.service.spec.ts
+PASS src/feishu/feishu.controller.spec.ts
+[31m[Nest] 76951  - [39m2025/09/16 11:10:14 [31m  ERROR[39m [38;5;3m[FeishuAuthService] [39m[31mFailed to get access token for app ***:[39m
+[31m[Nest] 76951  - [39m2025/09/16 11:10:14 [31m  ERROR[39m [38;5;3m[FeishuAuthService] [39mObject(2) {
+  error: [32m'[\n  {\n    "code": "too_small",\n    "minimum": 1,\n    "type": "string",\n    "inclusive": true,\n    "exact": false,\n    "message": "app_id不能为空",\n    "path": [\n      "app_id"\n    ]\n  }\n]'[39m,
+  stack: [32m'ZodError: [\n  {\n    "code": "too_small",\n    "minimum": 1,\n    "type": "string",\n    "inclusive": true,\n    "exact": false,\n    "message": "app_id不能为空",\n    "path": [\n      "app_id"\n    ]\n  }\n]\n    at Object.get error [as error] (/Users/admin/Desktop/douban2feishu/backend/node_modules/zod/lib/types.js:55:31)\n    at ZodObject.parse (/Users/admin/Desktop/douban2feishu/backend/node_modules/zod/lib/types.js:160:22)\n    at FeishuAuthService.parse [as requestNewToken] (/Users/admin/Desktop/douban2feishu/backend/src/feishu/services/feishu-auth.service.ts:260:54)\n    at FeishuAuthService.requestNewToken [as getAccessToken] (/Users/admin/Desktop/douban2feishu/backend/src/feishu/services/feishu-auth.service.ts:143:32)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at Object.<anonymous> (/Users/admin/Desktop/douban2feishu/backend/src/feishu/services/feishu-auth.service.spec.ts:250:7)'[39m
+}
+[31m[Nest] 76951  - [39m2025/09/16 11:10:14 [31m  ERROR[39m [38;5;3m[FeishuAuthService] [39m[31mFailed to get access token for app cli_***500e:[39m
+[31m[Nest] 76951  - [39m2025/09/16 11:10:14 [31m  ERROR[39m [38;5;3m[FeishuAuthService] [39mObject(2) {
+  error: [32m'[\n  {\n    "code": "too_small",\n    "minimum": 1,\n    "type": "string",\n    "inclusive": true,\n    "exact": false,\n    "message": "app_secret不能为空",\n    "path": [\n      "app_secret"\n    ]\n  }\n]'[39m,
+  stack: [32m'ZodError: [\n  {\n    "code": "too_small",\n    "minimum": 1,\n    "type": "string",\n    "inclusive": true,\n    "exact": false,\n    "message": "app_secret不能为空",\n    "path": [\n      "app_secret"\n    ]\n  }\n]\n    at Object.get error [as error] (/Users/admin/Desktop/douban2feishu/backend/node_modules/zod/lib/types.js:55:31)\n    at ZodObject.parse (/Users/admin/Desktop/douban2feishu/backend/node_modules/zod/lib/types.js:160:22)\n    at FeishuAuthService.parse [as requestNewToken] (/Users/admin/Desktop/douban2feishu/backend/src/feishu/services/feishu-auth.service.ts:260:54)\n    at FeishuAuthService.requestNewToken [as getAccessToken] (/Users/admin/Desktop/douban2feishu/backend/src/feishu/services/feishu-auth.service.ts:143:32)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at Object.<anonymous> (/Users/admin/Desktop/douban2feishu/backend/src/feishu/services/feishu-auth.service.spec.ts:253:7)'[39m
+}
+PASS src/douban/services/data-transformation-intelligent-repairs.spec.ts
+PASS src/feishu/services/feishu-auth.service.spec.ts
+[31m[Nest] 76950  - [39m2025/09/16 11:10:14 [31m  ERROR[39m [38;5;3m[FieldCreationConfigManager] [39m[31mUnsupported content type: invalid[39m
+PASS src/feishu/services/field-auto-creation.service.spec.ts
+PASS src/feishu/services/field-creation-config.spec.ts
+PASS src/feishu/schemas/field-creation.schema.spec.ts
+PASS src/common/prisma/prisma.service.spec.ts
+PASS src/feishu/contract/validator.service.spec.ts
+PASS src/app.controller.spec.ts
+PASS src/common/type-guards/__tests__/type-guards.spec.ts
+PASS src/feishu/contract/contract-regression.spec.ts
+PASS src/feishu/schemas/batch-operations.schema.spec.ts
+PASS src/feishu/config/douban-field-mapping-verified.config.spec.ts
+PASS src/feishu/schemas/table-metadata.schema.spec.ts
+PASS src/feishu/schemas/api-responses.schema.spec.ts
+PASS src/feishu/utils/field-type.util.spec.ts
+PASS src/sync/sync.processor.spec.ts (39.537 s)
+-------------------------------------|---------|----------|---------|---------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+File                                 | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s                                                                                                                                                                                                                   
+-------------------------------------|---------|----------|---------|---------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+All files                            |   55.31 |    43.38 |   46.13 |   55.42 |                                                                                                                                                                                                                                     
+ src                                 |   37.03 |    18.75 |      60 |   35.64 |                                                                                                                                                                                                                                     
+  app.controller.ts                  |     100 |      100 |     100 |     100 |                                                                                                                                                                                                                                     
+  app.module.ts                      |       0 |        0 |       0 |       0 | 1-103                                                                                                                                                                                                                               
+  app.service.ts                     |   83.87 |       50 |     100 |   82.75 | 59-60,68-69,91                                                                                                                                                                                                                      
+  main.ts                            |       0 |        0 |       0 |       0 | 1-154                                                                                                                                                                                                                               
+ src/auth                            |   56.62 |       80 |   53.84 |   58.44 |                                                                                                                                                                                                                                     
+  auth.controller.ts                 |       0 |      100 |       0 |       0 | 1-153                                                                                                                                                                                                                               
+  auth.module.ts                     |       0 |        0 |       0 |       0 | 1-54                                                                                                                                                                                                                                
+  auth.service.ts                    |   97.91 |    86.95 |     100 |   97.82 | 158                                                                                                                                                                                                                                 
+ src/auth/decorators                 |   58.33 |        0 |      50 |      50 |                                                                                                                                                                                                                                     
+  current-user.decorator.ts          |   28.57 |        0 |       0 |   28.57 | 31-42                                                                                                                                                                                                                               
+  public.decorator.ts                |     100 |      100 |     100 |     100 |                                                                                                                                                                                                                                     
+ src/auth/dto                        |       0 |      100 |     100 |       0 |                                                                                                                                                                                                                                     
+  auth.dto.ts                        |       0 |      100 |     100 |       0 | 1-70                                                                                                                                                                                                                                
+ src/auth/guards                     |   23.68 |        0 |      25 |   20.58 |                                                                                                                                                                                                                                     
+  jwt-auth.guard.ts                  |   39.13 |        0 |   33.33 |   33.33 | 40-77                                                                                                                                                                                                                               
+  local-auth.guard.ts                |       0 |        0 |       0 |       0 | 1-53                                                                                                                                                                                                                                
+ src/auth/interfaces                 |       0 |      100 |     100 |       0 |                                                                                                                                                                                                                                     
+  auth.interface.ts                  |       0 |      100 |     100 |       0 | 1-91                                                                                                                                                                                                                                
+ src/auth/strategies                 |       0 |        0 |       0 |       0 |                                                                                                                                                                                                                                     
+  jwt.strategy.ts                    |       0 |        0 |       0 |       0 | 1-52                                                                                                                                                                                                                                
+  local.strategy.ts                  |       0 |        0 |       0 |       0 | 1-42                                                                                                                                                                                                                                
+ src/common/crypto                   |   31.57 |        0 |   11.11 |   26.41 |                                                                                                                                                                                                                                     
+  crypto.module.ts                   |     100 |      100 |     100 |     100 |                                                                                                                                                                                                                                     
+  crypto.service.ts                  |   23.52 |        0 |   11.11 |    20.4 | 29-161                                                                                                                                                                                                                              
+ src/common/interceptors             |       0 |        0 |       0 |       0 |                                                                                                                                                                                                                                     
+  logging.interceptor.ts             |       0 |        0 |       0 |       0 | 1-95                                                                                                                                                                                                                                
+ src/common/interfaces               |       0 |        0 |       0 |       0 |                                                                                                                                                                                                                                     
+  http.interface.ts                  |       0 |        0 |       0 |       0 | 21-31                                                                                                                                                                                                                               
+ src/common/prisma                   |    9.01 |        0 |       0 |    5.93 |                                                                                                                                                                                                                                     
+  prisma.module.ts                   |     100 |      100 |     100 |     100 |                                                                                                                                                                                                                                     
+  prisma.service.ts                  |    5.12 |        0 |       0 |    3.47 | 67-469                                                                                                                                                                                                                              
+ src/common/schemas                  |       0 |      100 |     100 |       0 |                                                                                                                                                                                                                                     
+  index.ts                           |       0 |      100 |     100 |       0 | 6-243                                                                                                                                                                                                                               
+ src/common/type-guards              |   59.84 |    41.37 |   59.18 |   59.84 |                                                                                                                                                                                                                                     
+  index.ts                           |     100 |      100 |   63.15 |     100 |                                                                                                                                                                                                                                     
+  sync-history.type-guards.ts        |   61.11 |    55.55 |   63.63 |   61.11 | 77-84,93,137-143,181-195                                                                                                                                                                                                            
+  user-credentials.type-guards.ts    |   63.63 |    60.41 |   58.33 |   63.63 | 56-63,72,133,162-183                                                                                                                                                                                                                
+  user.type-guards.ts                |   30.55 |    18.05 |   42.85 |   30.55 | 46-74,101-146                                                                                                                                                                                                                       
+ src/common/types                    |       0 |        0 |       0 |       0 |                                                                                                                                                                                                                                     
+  business-domain.types.ts           |       0 |        0 |       0 |       0 | 42-248                                                                                                                                                                                                                              
+  external-api.types.ts              |       0 |        0 |       0 |       0 | 138-164                                                                                                                                                                                                                             
+  index.ts                           |       0 |        0 |       0 |       0 | 84-186                                                                                                                                                                                                                              
+ src/config                          |       0 |        0 |       0 |       0 |                                                                                                                                                                                                                                     
+  config.controller.ts               |       0 |      100 |       0 |       0 | 1-153                                                                                                                                                                                                                               
+  config.module.ts                   |       0 |      100 |     100 |       0 | 1-23                                                                                                                                                                                                                                
+  config.service.ts                  |       0 |        0 |       0 |       0 | 1-344                                                                                                                                                                                                                               
+ src/config/dto                      |       0 |      100 |     100 |       0 |                                                                                                                                                                                                                                     
+  config.dto.ts                      |       0 |      100 |     100 |       0 | 1-99                                                                                                                                                                                                                                
+ src/douban                          |   40.19 |        0 |   14.28 |   36.84 |                                                                                                                                                                                                                                     
+  douban.controller.ts               |   66.66 |        0 |      25 |    62.5 | 50-56,76,93-94                                                                                                                                                                                                                      
+  douban.module.ts                   |     100 |      100 |     100 |     100 |                                                                                                                                                                                                                                     
+  douban.service.ts                  |   21.42 |        0 |      10 |    19.4 | 53-283                                                                                                                                                                                                                              
+ src/douban/__fixtures__             |   74.35 |    56.94 |      90 |   74.35 |                                                                                                                                                                                                                                     
+  movie-validation-cases.fixtures.ts |   74.35 |    56.94 |      90 |   74.35 | 145,185,239-247,261-269                                                                                                                                                                                                             
+ src/douban/contract                 |   57.14 |        0 |   11.11 |   57.14 |                                                                                                                                                                                                                                     
+  transformation.schema.ts           |   57.14 |        0 |   11.11 |   57.14 | 48,114,153,168,223-229,241-251,261-265                                                                                                                                                                                              
+ src/douban/dto                      |     100 |      100 |     100 |     100 |                                                                                                                                                                                                                                     
+  douban.dto.ts                      |     100 |      100 |     100 |     100 |                                                                                                                                                                                                                                     
+ src/douban/schemas                  |   37.23 |     9.81 |   28.12 |   37.56 |                                                                                                                                                                                                                                     
+  book-fields.schema.ts              |   44.77 |     3.22 |   28.57 |   46.15 | 189,338,350-408,422-464,471-475                                                                                                                                                                                                     
+  compatibility-test.ts              |       0 |        0 |       0 |       0 | 11-365                                                                                                                                                                                                                              
+  html-response.schema.ts            |      40 |    14.28 |      40 |      40 | 360,380,447-454,459,463,471,482-514                                                                                                                                                                                                 
+  index.ts                           |     100 |      100 |   29.16 |     100 |                                                                                                                                                                                                                                     
+  movie-tv-fields.schema.ts          |   46.15 |      3.7 |   30.76 |   47.72 | 403,419-425,441-447,455-456,464-538,545-549,556-560,567-571                                                                                                                                                                         
+  parsed-result.schema.ts            |    37.5 |    24.48 |      25 |   37.97 | 205-220,287,295,306-339,347-351,356-360,365-369,374-378,402,416,426-442,451                                                                                                                                                         
+ src/douban/services                 |   67.35 |     58.2 |    65.1 |    67.8 |                                                                                                                                                                                                                                     
+  anti-spider.service.ts             |   16.12 |        0 |    5.26 |   15.11 | 33-303                                                                                                                                                                                                                              
+  book-scraper.service.ts            |   61.96 |    40.44 |   78.26 |    62.5 | 14-15,107-108,121-122,160-166,188-189,253-254,272,275-296,326-330,350-358,374-408,441-450                                                                                                                                           
+  cookie-manager.service.ts          |   12.96 |        0 |    9.09 |     9.8 | 22-186                                                                                                                                                                                                                              
+  data-transformation.service.ts     |   78.92 |    74.45 |   84.78 |   79.28 | 71-93,133-134,182-189,213,318-320,355-361,459-461,544-546,557,583,589-591,603,618,641,654,696,792-793,797-798,815,828,832,862-864,871,877,887-919,931,947,951,977-979,988-990,997,1007-1015,1040,1133,1231-1232,1262-1283,1326-1327 
+  html-parser.service.ts             |   74.39 |    57.53 |   75.86 |   75.07 | 215,235-242,288,324-328,385-386,391-392,418,437,440,443,446,503,515-528,562,604,634-640,676-677,697-699,710,763-782,803,812-819,834,851-852,874-876,897-898,933-955,990-991,1034-1047                                               
+  movie-scraper.service.ts           |   73.97 |    55.26 |   76.19 |   73.57 | 203,339-342,357-371,396-405,446-447,465-471,512,517,521,525,532,554,563,572-583,650,663-680,747,764-800,831-841                                                                                                                     
+ src/douban/services/__test-types__  |   85.71 |      100 |   66.66 |   85.71 |                                                                                                                                                                                                                                     
+  data-transformation-test.types.ts  |   85.71 |      100 |   66.66 |   85.71 | 141,166                                                                                                                                                                                                                             
+ src/feishu                          |   34.22 |        0 |   11.76 |   32.58 |                                                                                                                                                                                                                                     
+  feishu.controller.ts               |   54.54 |      100 |   10.52 |   53.12 | 80-92,120,150-158,176-182,241-242,258-263,275-276,290-291,305-306,320,337-344,370,400,424-430,444-445,462-463                                                                                                                       
+  feishu.module.ts                   |     100 |      100 |     100 |     100 |                                                                                                                                                                                                                                     
+  feishu.service.ts                  |   10.57 |        0 |   13.33 |    9.09 | 60-378                                                                                                                                                                                                                              
+ src/feishu/config                   |     100 |      100 |     100 |     100 |                                                                                                                                                                                                                                     
+  douban-field-mapping.config.ts     |     100 |      100 |     100 |     100 |                                                                                                                                                                                                                                     
+ src/feishu/contract                 |   54.42 |       30 |      28 |   53.47 |                                                                                                                                                                                                                                     
+  index.ts                           |       0 |      100 |       0 |       0 | 14-94                                                                                                                                                                                                                               
+  validator.service.ts               |   72.07 |       30 |   73.68 |   71.29 | 155-177,202,262,294,318,338-341,357-396                                                                                                                                                                                             
+ src/feishu/dto                      |     100 |      100 |     100 |     100 |                                                                                                                                                                                                                                     
+  feishu.dto.ts                      |     100 |      100 |     100 |     100 |                                                                                                                                                                                                                                     
+ src/feishu/interfaces               |      80 |       50 |      50 |      80 |                                                                                                                                                                                                                                     
+  api.interface.ts                   |     100 |      100 |     100 |     100 |                                                                                                                                                                                                                                     
+  field-creation.interface.ts        |       0 |        0 |       0 |       0 | 267-270                                                                                                                                                                                                                             
+ src/feishu/schemas                  |   83.61 |    34.61 |   28.37 |   83.47 |                                                                                                                                                                                                                                     
+  api-responses.schema.ts            |     100 |      100 |     100 |     100 |                                                                                                                                                                                                                                     
+  auth.schema.ts                     |    92.3 |        0 |      50 |    92.3 | 89                                                                                                                                                                                                                                  
+  batch-operations.schema.ts         |     100 |      100 |     100 |     100 |                                                                                                                                                                                                                                     
+  field-creation.schema.ts           |     100 |      100 |     100 |     100 |                                                                                                                                                                                                                                     
+  field-mapping.schema.ts            |   29.41 |        0 |       0 |   29.41 | 100,119-122,143-152,176,214-217,262-272,285-306,314-318                                                                                                                                                                             
+  field-operations.schema.ts         |     100 |      100 |     100 |     100 |                                                                                                                                                                                                                                     
+  field.schema.ts                    |   95.65 |    77.77 |      80 |   95.65 | 133                                                                                                                                                                                                                                 
+  index.ts                           |     100 |      100 |    7.14 |     100 |                                                                                                                                                                                                                                     
+  record.schema.ts                   |     100 |      100 |     100 |     100 |                                                                                                                                                                                                                                     
+  table-metadata.schema.ts           |   93.75 |      100 |      75 |   93.75 | 84                                                                                                                                                                                                                                  
+ src/feishu/services                 |   52.41 |    36.41 |   56.33 |   52.74 |                                                                                                                                                                                                                                     
+  feishu-auth.service.ts             |   55.55 |    39.08 |   52.38 |   55.74 | 96-112,139,213-233,250,276,305-314,330,334,341-424,450-469,488-516,546,554-555                                                                                                                                                      
+  feishu-table.service.ts            |      58 |    48.69 |   68.57 |   58.53 | 131-138,144-152,193,236,241,331,340-411,448-618,645-680,728-796,863-932,998-1001,1009,1011,1016,1040,1075-1139,1222,1476,1499-1500,1700,1725-1797,1821,1896,1903-1912,1925-1936,1955                                                
+  field-auto-creation.service.ts     |     100 |       90 |     100 |     100 | 217                                                                                                                                                                                                                                 
+  field-creation-config.ts           |    93.9 |    75.86 |     100 |   93.67 | 349,357,359,367,370                                                                                                                                                                                                                 
+  field-mapping.service.ts           |   61.58 |    40.62 |   54.34 |    61.4 | 122,151-155,199-207,225-228,261-440,597,718-729,752-811,838-874,1057-1062,1122-1127                                                                                                                                                 
+  sync-engine.service.ts             |    6.58 |        0 |    2.43 |    6.14 | 69-907                                                                                                                                                                                                                              
+ src/feishu/utils                    |     100 |      100 |     100 |     100 |                                                                                                                                                                                                                                     
+  field-type.util.ts                 |     100 |      100 |     100 |     100 |                                                                                                                                                                                                                                     
+ src/redis                           |   24.67 |     6.25 |   11.76 |   18.57 |                                                                                                                                                                                                                                     
+  index.ts                           |     100 |      100 |     100 |     100 |                                                                                                                                                                                                                                     
+  redis.module.ts                    |     100 |      100 |     100 |     100 |                                                                                                                                                                                                                                     
+  redis.service.ts                   |   13.43 |     6.25 |    6.25 |   10.93 | 18-51,57-197                                                                                                                                                                                                                        
+ src/sync                            |   89.96 |    78.68 |   90.47 |   90.82 |                                                                                                                                                                                                                                     
+  sync.controller.ts                 |     100 |      100 |     100 |     100 |                                                                                                                                                                                                                                     
+  sync.gateway.ts                    |     100 |    80.39 |     100 |     100 | 72-87,102,113,148,176,203,257-263,290                                                                                                                                                                                               
+  sync.module.ts                     |       0 |        0 |       0 |       0 | 1-84                                                                                                                                                                                                                                
+  sync.processor.ts                  |   92.47 |       90 |      70 |   94.38 | 338-349                                                                                                                                                                                                                             
+  sync.service.ts                    |   93.85 |    75.25 |     100 |   93.69 | 453,489,501-508,531                                                                                                                                                                                                                 
+ src/sync/dto                        |   86.36 |      100 |       0 |     100 |                                                                                                                                                                                                                                     
+  sync.dto.ts                        |   86.36 |      100 |       0 |     100 |                                                                                                                                                                                                                                     
+ src/sync/interfaces                 |     100 |      100 |     100 |     100 |                                                                                                                                                                                                                                     
+  sync.interface.ts                  |     100 |      100 |     100 |     100 |                                                                                                                                                                                                                                     
+ src/test/types                      |   91.93 |       40 |   73.33 |   94.91 |                                                                                                                                                                                                                                     
+  mock-http.types.ts                 |   91.37 |       40 |   69.23 |   94.54 | 154,313-314                                                                                                                                                                                                                         
+  mock-redis.types.ts                |     100 |      100 |     100 |     100 |                                                                                                                                                                                                                                     
+-------------------------------------|---------|----------|---------|---------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Test Suites: 32 passed, 32 total
+Tests:       1 skipped, 768 passed, 769 total
+Snapshots:   0 total
+Time:        61.708 s
