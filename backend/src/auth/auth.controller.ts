@@ -51,7 +51,13 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   /**
-   * 用户注册
+   * 用户注册接口，创建新用户账户并返回JWT token
+   *
+   * @description 使用邮箱和密码创建新用户账户，验证数据格式并生成访问令牌
+   * @param registerDto 用户注册数据，包含邮箱和密码信息
+   * @returns Promise<TokenResponse> 包含访问令牌、刷新令牌和用户信息的完整响应对象
+   * @throws ConflictException 当邮箱地址已被注册时抛出409错误
+   * @throws BadRequestException 当请求参数格式不正确时抛出400错误
    */
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
@@ -78,7 +84,13 @@ export class AuthController {
   }
 
   /**
-   * 用户登录
+   * 用户登录接口，验证凭据并返回JWT token
+   *
+   * @description 验证用户邮箱和密码，成功后生成访问令牌和刷新令牌
+   * @param req 经过LocalAuthGuard验证后的请求对象，包含已认证的用户信息
+   * @returns Promise<TokenResponse> 包含访问令牌、刷新令牌和用户信息的完整响应对象
+   * @throws UnauthorizedException 当邮箱或密码错误时抛出401错误
+   * @throws BadRequestException 当请求参数格式不正确时抛出400错误
    */
   @UseGuards(LocalAuthGuard)
   @Post('login')
@@ -106,7 +118,13 @@ export class AuthController {
   }
 
   /**
-   * 刷新访问token
+   * 刷新访问令牌接口，使用refresh token获取新的access token
+   *
+   * @description 验证refresh token的有效性，并生成新的访问令牌和刷新令牌对
+   * @param refreshTokenDto 包含refresh token的请求数据对象
+   * @returns Promise<TokenResponse> 包含新的访问令牌、刷新令牌和用户信息的完整响应对象
+   * @throws UnauthorizedException 当refresh token无效、过期或格式错误时抛出401错误
+   * @throws BadRequestException 当请求参数格式不正确时抛出400错误
    */
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
@@ -131,7 +149,12 @@ export class AuthController {
   }
 
   /**
-   * 获取当前用户信息 (需要认证)
+   * 获取当前用户信息接口，需要有效的JWT token认证
+   *
+   * @description 返回当前认证用户的详细信息和请求时间戳，用于用户资料展示
+   * @param req 经过JwtAuthGuard验证后的请求对象，包含已认证的用户信息
+   * @returns ProfileResponse 包含用户信息和当前时间戳的响应对象
+   * @throws UnauthorizedException 当JWT token无效、过期或缺失时抛出401错误
    */
   @UseGuards(JwtAuthGuard)
   @Post('profile')
