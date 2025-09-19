@@ -71,7 +71,10 @@ export class ConfigService {
   }
 
   /**
-   * 获取用户配置
+   * @description 获取指定用户的完整配置信息，包括脱敏的凭证状态和同步配置
+   * @param userId - 用户唯一标识符
+   * @returns Promise<object> 包含用户基本信息、豆瓣配置状态、飞书配置状态和同步配置的完整对象
+   * @throws {NotFoundException} 当指定的用户不存在时抛出此异常
    */
   async getUserConfig(userId: string) {
     const user = await this.prisma.user.findUnique({
@@ -117,7 +120,11 @@ export class ConfigService {
   }
 
   /**
-   * 更新豆瓣配置
+   * @description 更新或创建用户的豆瓣配置，使用AES-256加密存储Cookie信息
+   * @param userId - 用户唯一标识符
+   * @param dto - 包含豆瓣Cookie的配置数据传输对象
+   * @returns Promise<object> 包含操作成功消息的响应对象
+   * @throws {Error} 当加密操作失败或数据库更新失败时抛出异常
    */
   async updateDoubanConfig(userId: string, dto: UpdateDoubanConfigDto) {
     // 获取或创建用户凭证
@@ -154,7 +161,11 @@ export class ConfigService {
   }
 
   /**
-   * 更新飞书配置
+   * @description 更新或创建用户的飞书配置，加密存储应用密钥，明文存储应用ID
+   * @param userId - 用户唯一标识符
+   * @param dto - 包含飞书应用ID和应用密钥的配置数据传输对象
+   * @returns Promise<object> 包含操作成功消息的响应对象
+   * @throws {Error} 当加密操作失败或数据库更新失败时抛出异常
    */
   async updateFeishuConfig(userId: string, dto: UpdateFeishuConfigDto) {
     // 获取或创建用户凭证
@@ -191,7 +202,11 @@ export class ConfigService {
   }
 
   /**
-   * 更新同步配置
+   * @description 更新或创建用户的同步配置，包括映射类型、自动同步开关、调度配置和表格映射
+   * @param userId - 用户唯一标识符
+   * @param dto - 包含同步映射类型、自动同步设置、调度配置和表格映射的配置数据传输对象
+   * @returns Promise<object> 包含操作成功消息的响应对象
+   * @throws {Error} 当数据库操作失败或配置验证失败时抛出异常
    */
   async updateSyncConfig(userId: string, dto: UpdateSyncConfigDto) {
     // 获取或创建同步配置
@@ -231,7 +246,10 @@ export class ConfigService {
   }
 
   /**
-   * 获取解密后的用户凭证 (内部使用)
+   * @description 获取用户的解密凭证信息，用于内部服务间调用，返回明文的豆瓣Cookie和飞书应用密钥
+   * @param userId - 用户唯一标识符
+   * @returns Promise<DecryptedCredentials | null> 解密后的用户凭证对象，如果用户无凭证则返回null
+   * @throws {Error} 当解密操作失败或数据库查询失败时抛出异常
    */
   async getDecryptedCredentials(
     userId: string,
@@ -271,7 +289,11 @@ export class ConfigService {
   }
 
   /**
-   * 删除用户配置
+   * @description 根据指定类型删除用户配置，支持删除豆瓣、飞书、同步配置或全部配置
+   * @param userId - 用户唯一标识符
+   * @param configType - 要删除的配置类型：'douban'(豆瓣配置)、'feishu'(飞书配置)、'sync'(同步配置)或'all'(全部配置)
+   * @returns Promise<object> 包含删除操作成功消息的响应对象
+   * @throws {Error} 当数据库删除操作失败时抛出异常
    */
   async deleteUserConfig(
     userId: string,
@@ -315,7 +337,11 @@ export class ConfigService {
   }
 
   /**
-   * 验证配置完整性
+   * @description 验证用户配置的完整性和有效性，检查豆瓣、飞书和同步配置的状态
+   * @param userId - 用户唯一标识符
+   * @returns Promise<object> 包含各项配置验证结果的对象，包含configured和valid状态以及总体验证结果
+   * @throws {NotFoundException} 当用户不存在时通过getUserConfig方法传播此异常
+   * @throws {Error} 当数据库查询失败时抛出异常
    */
   async validateConfig(userId: string) {
     const config = await this.getUserConfig(userId);
