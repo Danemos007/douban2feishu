@@ -20,10 +20,19 @@ export class CryptoService {
   private readonly ivLength = 16; // 128位IV
   private readonly tagLength = 16; // 128位认证标签
 
+  /**
+   * 加密服务构造函数
+   *
+   * @description 初始化加密服务，注入配置服务用于获取主加密密钥
+   * @param configService NestJS配置服务，用于读取环境变量中的加密配置
+   */
   constructor(private readonly configService: ConfigService) {}
 
   /**
-   * 生成随机IV (初始化向量)
+   * 生成随机初始化向量 - 用于AES-GCM加密的随机性保证
+   *
+   * @description 生成128位(16字节)的密码学安全随机初始化向量，确保每次加密操作的唯一性
+   * @returns 32字符的十六进制字符串，表示16字节的随机IV
    */
   generateIV(): string {
     const iv = crypto.randomBytes(this.ivLength);
@@ -51,12 +60,16 @@ export class CryptoService {
   }
 
   /**
-   * 加密敏感数据
+   * 加密敏感数据 - 使用AES-256-GCM认证加密算法
    *
-   * @param plaintext 明文数据
-   * @param userId 用户ID
-   * @param iv 初始化向量 (hex格式)
-   * @returns 加密后的数据 (base64格式)
+   * @description 使用用户专用密钥对明文进行AES-256-GCM加密，提供机密性和完整性保护
+   * @param plaintext 需要加密的明文字符串数据
+   * @param userId 用户唯一标识符，用于派生用户专用加密密钥
+   * @param iv 16字节初始化向量的十六进制字符串表示，确保加密随机性
+   * @returns Base64编码的加密数据，包含IV、认证标签和密文的组合
+   * @throws {Error} 当主密钥未配置时抛出 "Encryption failed"
+   * @throws {Error} 当IV格式无效时抛出 "Encryption failed"
+   * @throws {Error} 当加密过程中发生任何错误时抛出 "Encryption failed"
    */
   encrypt(plaintext: string, userId: string, iv: string): string {
     try {
@@ -93,11 +106,17 @@ export class CryptoService {
   }
 
   /**
-   * 解密敏感数据
+   * 解密敏感数据 - 使用AES-256-GCM认证解密算法
    *
-   * @param encryptedData 加密数据 (base64格式)
-   * @param userId 用户ID
-   * @returns 解密后的明文
+   * @description 使用用户专用密钥对加密数据进行解密，验证数据完整性和真实性
+   * @param encryptedData Base64编码的加密数据，包含IV、认证标签和密文
+   * @param userId 用户唯一标识符，必须与加密时使用的用户ID相同
+   * @returns 解密后的原始明文字符串
+   * @throws {Error} 当主密钥未配置时抛出 "Decryption failed or data corrupted"
+   * @throws {Error} 当Base64格式无效时抛出 "Decryption failed or data corrupted"
+   * @throws {Error} 当数据被篡改或认证标签验证失败时抛出 "Decryption failed or data corrupted"
+   * @throws {Error} 当用户ID不匹配时抛出 "Decryption failed or data corrupted"
+   * @throws {Error} 当解密过程中发生任何错误时抛出 "Decryption failed or data corrupted"
    */
   decrypt(encryptedData: string, userId: string): string {
     try {
@@ -132,7 +151,10 @@ export class CryptoService {
   }
 
   /**
-   * 验证主密钥是否配置正确
+   * 验证主加密密钥配置状态 - 确保系统加密功能可用性
+   *
+   * @description 检查环境变量中的主加密密钥是否正确配置且符合安全要求
+   * @returns 布尔值，true表示主密钥已正确配置且长度>=32字符，false表示未配置或不符合要求
    */
   validateMasterKey(): boolean {
     const masterKey = this.configService.get<string>('MASTER_ENCRYPTION_KEY');
@@ -140,21 +162,34 @@ export class CryptoService {
   }
 
   /**
-   * 生成新的主密钥 (用于密钥轮换)
+   * 生成新的主加密密钥 - 用于密钥轮换和初始化配置
+   *
+   * @description 生成256位(32字节)的密码学安全随机主密钥，用于系统密钥轮换或初始部署
+   * @returns 64字符的十六进制字符串，表示32字节的随机主密钥
    */
   generateMasterKey(): string {
     return crypto.randomBytes(32).toString('hex');
   }
 
   /**
-   * 创建数据哈希 (用于完整性验证)
+   * 创建数据SHA-256哈希值 - 用于数据完整性验证和去重
+   *
+   * @description 使用SHA-256算法对输入数据生成固定长度的哈希摘要，确保数据完整性
+   * @param data 需要计算哈希的输入字符串数据
+   * @returns 64字符的十六进制字符串，表示输入数据的SHA-256哈希值
    */
   createHash(data: string): string {
     return crypto.createHash('sha256').update(data).digest('hex');
   }
 
   /**
-   * 验证数据哈希
+   * 验证数据哈希完整性 - 使用时间安全比较防止时序攻击
+   *
+   * @description 通过重新计算数据哈希并使用时间安全比较验证数据是否被篡改
+   * @param data 原始数据字符串，需要验证完整性的数据
+   * @param hash 预期的SHA-256哈希值，64字符十六进制字符串
+   * @returns 布尔值，true表示数据完整性验证通过，false表示数据可能被篡改
+   * @throws {Error} 当哈希格式无效(非64字符十六进制)时抛出错误
    */
   verifyHash(data: string, hash: string): boolean {
     const computedHash = this.createHash(data);
