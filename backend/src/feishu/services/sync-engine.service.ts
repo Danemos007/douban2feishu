@@ -58,7 +58,18 @@ export class SyncEngineService {
   ) {}
 
   /**
-   * 执行增量同步 - 主入口方法
+   * 执行增量同步操作，实现豆瓣数据到飞书多维表格的智能同步
+   *
+   * @description 基于Subject ID的增量同步核心引擎，支持自动字段映射配置、数据变更检测、批量操作优化等企业级功能
+   * @param userId 用户唯一标识符，用于同步状态跟踪和权限验证
+   * @param syncConfig 飞书同步引擎配置对象，包含应用凭证、表格ID、数据类型等核心配置
+   * @param doubanData 待同步的豆瓣数据数组，支持书籍、电影、音乐等多种数据类型
+   * @param options 同步选项配置，可选参数包括全量同步标志、删除孤立记录、进度回调等
+   * @returns Promise<SyncResult> 同步操作结果，包含成功/失败统计、性能指标、操作详情等完整信息
+   * @throws {Error} 当字段映射服务获取失败时抛出错误
+   * @throws {Error} 当Subject ID字段映射缺失且自动配置失败时抛出错误
+   * @throws {Error} 当豆瓣数据验证失败（缺少必需字段或数据格式错误）时抛出错误
+   * @throws {Error} 当同步操作执行失败（飞书API调用失败、网络错误等）时抛出错误
    */
   async performIncrementalSync(
     userId: string,
@@ -800,7 +811,13 @@ export class SyncEngineService {
   }
 
   /**
-   * 获取同步状态
+   * 获取指定用户和表格的当前同步状态信息
+   *
+   * @description 从Redis缓存中检索同步状态，包含同步进度、开始时间、完成情况等实时信息，支持前端实时状态展示
+   * @param userId 用户唯一标识符，用于构建缓存键和权限验证
+   * @param tableId 飞书多维表格唯一标识符，用于定位具体的同步任务
+   * @returns Promise<SyncState | null> 同步状态对象，包含用户ID、表格ID、同步阶段、处理进度等信息；如果未找到或数据无效则返回null
+   * @throws {Error} 当Redis连接失败或JSON解析错误时，会记录错误日志并返回null，不会抛出异常以保证系统稳定性
    */
   async getSyncState(
     userId: string,
