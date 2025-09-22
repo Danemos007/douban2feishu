@@ -48,6 +48,14 @@ export class DoubanService {
 
   /**
    * 抓取用户豆瓣数据 - 主要入口方法
+   *
+   * @description 根据用户配置抓取豆瓣书影音数据，支持Cookie验证、数据解密和智能反爬虫机制
+   * @param fetchDto 抓取配置参数，包含用户ID、Cookie、数据分类等信息
+   * @returns Promise<DoubanItem[]> 返回标准化的豆瓣数据项目数组
+   * @throws Error 当Cookie格式无效时抛出异常
+   * @throws Error 当Cookie验证失败时抛出异常
+   * @throws Error 当请求不支持的数据分类时抛出异常
+   * @throws Error 当底层服务（解密、验证、抓取）出现错误时抛出异常
    */
   async fetchUserData(fetchDto: FetchUserDataDto): Promise<DoubanItem[]> {
     this.logger.log(
@@ -126,6 +134,12 @@ export class DoubanService {
 
   /**
    * 抓取并转换用户豆瓣数据 - 企业级集成方法
+   *
+   * @description 执行完整的数据抓取和转换流程，包含智能修复、验证统计和性能监控
+   * @param fetchDto 抓取配置参数，包含用户ID、Cookie、数据分类等信息
+   * @returns Promise<{rawData, transformedData, transformationStats}> 返回原始数据、转换后数据和详细统计信息
+   * @throws Error 当数据抓取过程中出现错误时抛出异常
+   * @throws Error 当数据转换过程中出现错误时抛出异常
    */
   async scrapeAndTransform(fetchDto: FetchUserDataDto): Promise<{
     rawData: DoubanItem[];
@@ -238,6 +252,12 @@ export class DoubanService {
 
   /**
    * 验证Cookie有效性
+   *
+   * @description 检查豆瓣Cookie是否有效，包含格式验证和服务端验证
+   * @param userId 用户唯一标识符
+   * @param cookie 待验证的豆瓣Cookie字符串
+   * @returns Promise<{isValid: boolean, error?: string}> 返回验证结果，包含有效性和可能的错误信息
+   * @throws Error 当反爬虫服务不可用或验证过程中出现网络错误时抛出异常
    */
   async validateCookie(
     userId: string,
@@ -251,6 +271,13 @@ export class DoubanService {
 
   /**
    * 加密并存储Cookie
+   *
+   * @description 对原始Cookie进行格式验证、清理和AES-256加密处理
+   * @param userId 用户唯一标识符，用于生成用户特定的加密密钥
+   * @param rawCookie 原始的豆瓣Cookie字符串
+   * @returns string 返回加密后的Cookie字符串
+   * @throws Error 当Cookie格式无效时抛出异常
+   * @throws Error 当Cookie清理或加密过程中出现错误时抛出异常
    */
   encryptCookie(userId: string, rawCookie: string): string {
     // 验证格式
@@ -267,6 +294,9 @@ export class DoubanService {
 
   /**
    * 获取抓取统计信息
+   *
+   * @description 获取豆瓣数据抓取过程的详细统计信息，包含反爬虫和书籍抓取的统计数据
+   * @returns object 返回包含反爬虫服务和书籍抓取服务统计信息的对象
    */
   getScrapingStats() {
     return {
@@ -277,6 +307,9 @@ export class DoubanService {
 
   /**
    * 重置请求计数器
+   *
+   * @description 重置反爬虫服务的请求计数器，用于调试或手动重置慢速模式状态
+   * @returns void 无返回值
    */
   resetRequestCount(): void {
     this.antiSpider.resetRequestCount();
