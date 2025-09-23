@@ -27,7 +27,20 @@ export class AntiSpiderService {
   constructor(private readonly cookieManager: CookieManagerService) {}
 
   /**
-   * 智能延迟策略 - 基于请求计数动态调整
+   * 智能延迟策略 - 基于请求计数动态调整延迟时间
+   *
+   * @description 根据当前请求计数自动切换延迟模式：
+   * - 正常模式（≤200次请求）：4-8秒随机延迟
+   * - 慢速模式（>200次请求）：10-15秒随机延迟
+   * 每次调用会自动增加请求计数器，并执行相应的延迟
+   *
+   * @returns {Promise<void>} 延迟完成后的Promise
+   *
+   * @example
+   * ```typescript
+   * await antiSpiderService.intelligentDelay();
+   * // 根据请求计数自动执行4-8秒或10-15秒延迟
+   * ```
    */
   async intelligentDelay(): Promise<void> {
     this.requestCount++;
@@ -53,6 +66,35 @@ export class AntiSpiderService {
 
   /**
    * 带反爬虫保护的HTTP请求
+   *
+   * @description 执行带有智能延迟、重试机制和人机验证检测的HTTP请求。
+   * 包含以下保护机制：
+   * - 智能延迟（基于请求计数）
+   * - 最多3次重试
+   * - 403错误和人机验证检测
+   * - 自动设置请求头和Cookie
+   *
+   * @param {string} url - 目标URL地址
+   * @param {string} cookie - 用户Cookie字符串
+   * @param {Partial<AxiosRequestConfig>} options - 可选的axios配置参数
+   *
+   * @returns {Promise<string>} 响应的HTML内容
+   *
+   * @throws {Error} 当遇到以下情况时抛出错误：
+   * - 403错误（可能的IP封禁）
+   * - 人机验证要求
+   * - 访问被阻止
+   * - 网络错误或超时
+   * - 所有重试尝试失败
+   *
+   * @example
+   * ```typescript
+   * const html = await antiSpiderService.makeRequest(
+   *   'https://book.douban.com/subject/123456/',
+   *   'userCookieString',
+   *   { timeout: 60000 }
+   * );
+   * ```
    */
   async makeRequest(
     url: string,
@@ -216,7 +258,21 @@ export class AntiSpiderService {
   }
 
   /**
-   * 随机睡眠
+   * 在指定范围内执行随机延迟
+   *
+   * @description 在最小值和最大值之间生成随机延迟时间并执行延迟。
+   * 用于模拟更自然的请求间隔，避免被检测为机器行为。
+   *
+   * @param {number} minMs - 最小延迟时间（毫秒）
+   * @param {number} maxMs - 最大延迟时间（毫秒）
+   *
+   * @returns {Promise<void>} 延迟完成后的Promise
+   *
+   * @example
+   * ```typescript
+   * // 在5-10秒之间随机延迟
+   * await antiSpiderService.sleepRange(5000, 10000);
+   * ```
    */
   async sleepRange(minMs: number, maxMs: number): Promise<void> {
     const delay = minMs + Math.random() * (maxMs - minMs);
@@ -224,7 +280,23 @@ export class AntiSpiderService {
   }
 
   /**
-   * 获取请求统计信息
+   * 获取当前请求统计信息
+   *
+   * @description 返回服务的当前状态统计，包括请求计数、延迟模式等信息。
+   * 用于监控和调试反爬虫策略的执行状态。
+   *
+   * @returns {object} 包含以下属性的统计对象：
+   * - requestCount: 当前请求计数
+   * - isSlowMode: 是否处于慢速模式
+   * - slowModeThreshold: 慢速模式触发阈值
+   * - baseDelay: 基础延迟时间
+   * - slowDelay: 慢速模式延迟时间
+   *
+   * @example
+   * ```typescript
+   * const stats = antiSpiderService.getRequestStats();
+   * console.log(`已请求 ${stats.requestCount} 次，慢速模式: ${stats.isSlowMode}`);
+   * ```
    */
   getRequestStats() {
     return {
@@ -237,7 +309,19 @@ export class AntiSpiderService {
   }
 
   /**
-   * 重置请求计数器
+   * 重置请求计数器为0
+   *
+   * @description 将内部请求计数器重置为0，使服务回到正常延迟模式。
+   * 通常在开始新的爬取任务或需要重新开始计数时使用。
+   * 会记录重置前后的计数值到日志中。
+   *
+   * @returns {void}
+   *
+   * @example
+   * ```typescript
+   * antiSpiderService.resetRequestCount();
+   * // 请求计数器已重置，下次请求将使用正常模式延迟
+   * ```
    */
   resetRequestCount(): void {
     const oldCount = this.requestCount;
@@ -246,7 +330,20 @@ export class AntiSpiderService {
   }
 
   /**
-   * 手动设置请求计数器 (用于测试)
+   * 手动设置请求计数器值（主要用于测试）
+   *
+   * @description 直接设置内部请求计数器的值，主要用于测试场景。
+   * 在生产环境中应谨慎使用，因为它会影响延迟策略的执行。
+   *
+   * @param {number} count - 要设置的请求计数值
+   *
+   * @returns {void}
+   *
+   * @example
+   * ```typescript
+   * // 设置为慢速模式阈值以上，测试慢速延迟
+   * antiSpiderService.setRequestCount(250);
+   * ```
    */
   setRequestCount(count: number): void {
     this.requestCount = count;
@@ -254,7 +351,32 @@ export class AntiSpiderService {
   }
 
   /**
-   * 验证Cookie有效性
+   * 验证用户Cookie的有效性
+   *
+   * @description 通过访问用户主页来验证Cookie是否有效。
+   * 检查以下情况：
+   * - Cookie是否已失效（需要重新登录）
+   * - 账号是否受限或需要验证
+   * - 网络连接是否正常
+   *
+   * @param {string} userId - 豆瓣用户ID
+   * @param {string} cookie - 要验证的Cookie字符串
+   *
+   * @returns {Promise<{isValid: boolean; error?: string}>} 验证结果对象：
+   * - isValid: 是否有效
+   * - error: 错误信息（仅当isValid为false时存在）
+   *
+   * @throws {Error} 当网络请求失败或遇到意外错误时抛出
+   *
+   * @example
+   * ```typescript
+   * const result = await antiSpiderService.validateCookie('12345', 'cookieString');
+   * if (result.isValid) {
+   *   console.log('Cookie有效');
+   * } else {
+   *   console.log('Cookie无效:', result.error);
+   * }
+   * ```
    */
   async validateCookie(
     userId: string,
@@ -295,7 +417,22 @@ export class AntiSpiderService {
   }
 
   /**
-   * 获取当前延迟配置
+   * 获取当前延迟配置信息
+   *
+   * @description 根据当前请求计数返回当前使用的延迟配置。
+   * 包括延迟模式、基础延迟、随机范围和预期延迟时间等信息。
+   *
+   * @returns {object} 延迟配置对象，包含以下属性：
+   * - mode: 当前模式（'normal' 或 'slow'）
+   * - baseDelay: 基础延迟时间（毫秒）
+   * - randomRange: 随机延迟范围（毫秒）
+   * - expectedDelay: 预期延迟时间（字符串格式，包含单位）
+   *
+   * @example
+   * ```typescript
+   * const config = antiSpiderService.getCurrentDelayConfig();
+   * console.log(`当前模式: ${config.mode}, 预期延迟: ${config.expectedDelay}`);
+   * ```
    */
   getCurrentDelayConfig() {
     const isSlowMode = this.requestCount > this.slowModeThreshold;
