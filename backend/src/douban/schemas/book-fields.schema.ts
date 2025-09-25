@@ -320,7 +320,23 @@ export type BookFieldValidation = z.infer<typeof BookFieldValidationSchema>;
 export type BookBatchValidation = z.infer<typeof BookBatchValidationSchema>;
 
 /**
- * 验证工具函数：验证完整书籍数据
+ * 验证完整书籍数据的工具函数，支持16个标准字段的完整验证
+ *
+ * @description 对输入的未知数据进行完整的书籍数据验证，确保符合豆瓣书籍16字段标准格式
+ * @param data - 待验证的数据，可以是任意类型的未知数据
+ * @returns 返回包含验证结果的对象，成功时包含验证后的数据，失败时包含错误信息
+ * @throws 内部捕获所有异常，不会向外抛出异常，而是通过返回值的error字段传递错误信息
+ *
+ * @example
+ * ```typescript
+ * const bookData = { subjectId: '123', title: '测试书籍', authors: ['作者'], doubanUrl: 'https://book.douban.com/subject/123/', category: 'books' };
+ * const result = validateBookComplete(bookData);
+ * if (result.success) {
+ *   console.log('验证成功:', result.data);
+ * } else {
+ *   console.error('验证失败:', result.error);
+ * }
+ * ```
  */
 export function validateBookComplete(
   data: unknown,
@@ -340,7 +356,28 @@ export function validateBookComplete(
 }
 
 /**
- * 验证工具函数：验证单个书籍字段
+ * 验证单个书籍字段的工具函数，支持书籍所有字段的独立验证
+ *
+ * @description 对书籍的单个字段进行精确验证，返回详细的验证结果包含字段名、验证状态、错误信息等
+ * @param fieldName - 要验证的字段名，必须是BookComplete类型的有效字段名
+ * @param value - 字段的值，可以是任意类型的数据
+ * @returns 返回包含字段验证结果的详细信息对象，包括验证状态、错误信息、警告信息等
+ * @throws 内部捕获所有验证异常，通过返回值的errors数组传递错误信息，不会向外抛出异常
+ *
+ * @example
+ * ```typescript
+ * // 验证书名字段
+ * const result = validateBookField('title', '哈利·波特与魔法石');
+ * if (result.isValid) {
+ *   console.log('字段验证通过');
+ * } else {
+ *   console.error('验证失败:', result.errors);
+ * }
+ *
+ * // 验证用户评分字段
+ * const ratingResult = validateBookField('userRating', 6); // 超出范围
+ * console.log(ratingResult.errors); // ['用户评分不能大于5星']
+ * ```
  */
 export function validateBookField(
   fieldName: keyof BookComplete,
@@ -416,7 +453,31 @@ export function validateBookField(
 }
 
 /**
- * 数据质量评估函数
+ * 评估书籍数据质量的量化分析函数，基于字段完整性和重要性进行评分
+ *
+ * @description 根据书籍数据的完整性和字段重要性权重计算质量评分(0-100分)，核心字段权重更高
+ * @param data - 待评估的书籍数据，可以是任意类型的未知数据
+ * @returns 返回0-100的质量评分，0表示数据无效或质量极低，100表示数据完整且高质量
+ * @throws 内部处理所有异常情况，对于无效数据返回0分，不会向外抛出异常
+ *
+ * @example
+ * ```typescript
+ * // 评估完整的高质量数据
+ * const completeBook = {
+ *   subjectId: '123',
+ *   title: '哈利·波特与魔法石',
+ *   authors: ['J.K.罗琳'],
+ *   rating: { average: 8.5, numRaters: 1000 },
+ *   summary: '详细的书籍简介...',
+ *   coverUrl: 'https://example.com/cover.jpg',
+ *   // ... 更多字段
+ * };
+ * const score = assessBookDataQuality(completeBook); // 可能返回85-100分
+ *
+ * // 评估最基础的数据
+ * const basicBook = { subjectId: '123' };
+ * const basicScore = assessBookDataQuality(basicBook); // 返回较低分数
+ * ```
  */
 export function assessBookDataQuality(data: unknown): number {
   if (!data || typeof data !== 'object') return 0;
@@ -465,7 +526,33 @@ export function assessBookDataQuality(data: unknown): number {
 }
 
 /**
- * 类型守卫：检查是否为完整的书籍数据
+ * 类型守卫函数，检查输入数据是否为有效的完整书籍数据格式
+ *
+ * @description 作为TypeScript类型守卫，验证未知数据是否符合BookComplete接口规范，用于类型收窄和运行时类型检查
+ * @param value - 待检查的数据，可以是任意类型的未知数据
+ * @returns 返回布尔值，true表示数据符合BookComplete格式，false表示数据格式不正确
+ * @throws 内部捕获所有验证异常，对于验证失败的情况返回false，不会向外抛出异常
+ *
+ * @example
+ * ```typescript
+ * // 类型守卫用法
+ * function processBookData(data: unknown) {
+ *   if (isValidBookComplete(data)) {
+ *     // 在此作用域内，TypeScript知道data是BookComplete类型
+ *     console.log('书籍ID:', data.subjectId);
+ *     console.log('书名:', data.title);
+ *     // 可以安全访问BookComplete的所有属性
+ *   } else {
+ *     console.error('数据格式不正确');
+ *   }
+ * }
+ *
+ * // 检查外部API数据
+ * const apiData = await fetchBookFromAPI();
+ * if (isValidBookComplete(apiData)) {
+ *   saveToDatabase(apiData); // 类型安全
+ * }
+ * ```
  */
 export function isValidBookComplete(value: unknown): value is BookComplete {
   try {
