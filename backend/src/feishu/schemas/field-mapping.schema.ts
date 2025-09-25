@@ -251,7 +251,33 @@ export type FieldMappingTransformResult = z.infer<
 export type NestedValueExtraction = z.infer<typeof NestedValueExtractionSchema>;
 
 /**
- * 验证工具函数：验证整个字段映射配置
+ * 验证单个字段映射配置的完整性和正确性
+ *
+ * @description 对传入的字段映射配置进行严格的运行时验证，确保符合 VerifiedFieldMappingConfig 规范
+ * @param {unknown} config - 待验证的字段映射配置对象，可能来自外部数据源
+ * @param {DoubanDataType} _dataType - 豆瓣数据类型枚举值，用于上下文标识（当前版本未使用）
+ * @returns {Promise<{success: true; data: VerifiedFieldMappingConfig} | {success: false; error: string}>}
+ *   成功时返回包含验证后数据的对象，失败时返回包含错误信息的对象
+ * @throws {never} 此方法不会抛出异常，所有错误都通过返回值的 error 字段传递
+ *
+ * @example
+ * ```typescript
+ * const result = validateFieldMappingConfig({
+ *   doubanFieldName: 'title',
+ *   chineseName: '书名',
+ *   apiFieldName: '书名',
+ *   fieldType: 'text',
+ *   required: true,
+ *   description: '书籍标题字段',
+ *   verified: true
+ * }, 'books');
+ *
+ * if (result.success) {
+ *   console.log('验证成功:', result.data);
+ * } else {
+ *   console.error('验证失败:', result.error);
+ * }
+ * ```
  */
 export function validateFieldMappingConfig(
   config: unknown,
@@ -274,7 +300,30 @@ export function validateFieldMappingConfig(
 }
 
 /**
- * 验证工具函数：批量验证字段映射集合
+ * 批量验证字段映射配置集合的完整性和一致性
+ *
+ * @description 验证整个数据类型的字段映射配置集合，确保键值对的一致性和字段数量的正确性
+ * @param {unknown} collection - 待验证的字段映射集合对象，键为字段名，值为字段配置
+ * @param {number} [expectedCount] - 可选参数，期望的字段数量，用于验证配置完整性
+ * @returns {Promise<{success: true; data: FieldMappingCollection} | {success: false; error: string}>}
+ *   成功时返回包含验证后集合数据的对象，失败时返回包含详细错误信息的对象
+ * @throws {never} 此方法不会抛出异常，所有错误都通过返回值的 error 字段传递
+ *
+ * @example
+ * ```typescript
+ * const collection = {
+ *   title: { doubanFieldName: 'title', chineseName: '标题', ... },
+ *   author: { doubanFieldName: 'author', chineseName: '作者', ... }
+ * };
+ *
+ * const result = validateFieldMappingCollection(collection, 2);
+ *
+ * if (result.success) {
+ *   console.log('集合验证成功，包含字段:', Object.keys(result.data));
+ * } else {
+ *   console.error('集合验证失败:', result.error);
+ * }
+ * ```
  */
 export function validateFieldMappingCollection(
   collection: unknown,
@@ -308,7 +357,26 @@ export function validateFieldMappingCollection(
 }
 
 /**
- * 验证工具函数：验证嵌套路径格式
+ * 验证嵌套对象属性路径的格式正确性
+ *
+ * @description 检查类似 'rating.average' 或 'author.name' 的嵌套路径字符串是否符合规范格式
+ * @param {string} path - 待验证的嵌套路径字符串，如 'rating.average'、'metadata.source.url' 等
+ * @returns {boolean} 路径格式正确返回 true，格式错误返回 false
+ * @throws {never} 此方法不会抛出异常，格式错误时静默返回 false
+ *
+ * @example
+ * ```typescript
+ * // 有效路径
+ * console.log(validateNestedPath('rating')); // true
+ * console.log(validateNestedPath('rating.average')); // true
+ * console.log(validateNestedPath('metadata.source.url')); // true
+ *
+ * // 无效路径
+ * console.log(validateNestedPath('123invalid')); // false - 不能以数字开头
+ * console.log(validateNestedPath('rating..average')); // false - 不能有连续的点
+ * console.log(validateNestedPath('rating-average')); // false - 不能包含连字符
+ * console.log(validateNestedPath('')); // false - 不能为空字符串
+ * ```
  */
 export function validateNestedPath(path: string): boolean {
   try {
