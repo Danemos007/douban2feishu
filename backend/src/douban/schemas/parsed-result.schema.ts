@@ -277,7 +277,22 @@ export type DoubanBatchResult = z.infer<typeof DoubanBatchResultSchema>;
 export type DoubanParsingContext = z.infer<typeof DoubanParsingContextSchema>;
 
 /**
- * 验证工具函数：验证豆瓣解析结果
+ * 验证豆瓣条目数据的完整性和类型正确性
+ *
+ * @description 使用联合类型Schema对未知数据进行验证，自动判断条目类型并返回验证结果
+ * @param data - 待验证的未知类型数据，通常来源于豆瓣网页解析或API响应
+ * @returns 验证成功时返回包含验证后数据的对象，失败时返回错误信息
+ * @throws 当输入数据不符合任何豆瓣条目Schema时，返回包含详细错误信息的失败结果
+ *
+ * @example
+ * ```typescript
+ * const result = validateDoubanItem(rawBookData);
+ * if (result.success) {
+ *   console.log('验证成功:', result.data.title);
+ * } else {
+ *   console.error('验证失败:', result.error);
+ * }
+ * ```
  */
 export function validateDoubanItem(
   data: unknown,
@@ -297,7 +312,23 @@ export function validateDoubanItem(
 }
 
 /**
- * 验证工具函数：验证特定类型的豆瓣条目
+ * 根据指定类型验证豆瓣条目数据
+ *
+ * @description 使用特定类型的Schema验证数据，确保数据符合指定豆瓣条目类型的字段要求
+ * @param data - 待验证的未知类型数据
+ * @param type - 指定的豆瓣条目类型，支持books、movies、music、tv、documentary
+ * @returns 验证成功时返回包含验证后数据的对象，失败时返回错误信息
+ * @throws 当type参数不在支持范围内时，返回"不支持的豆瓣条目类型"错误
+ * @throws 当data不符合指定type的Schema要求时，返回详细的字段验证错误信息
+ *
+ * @example
+ * ```typescript
+ * const result = validateDoubanItemByType(rawData, 'books');
+ * if (result.success) {
+ *   const bookData = result.data as DoubanBook;
+ *   console.log('书籍标题:', bookData.title);
+ * }
+ * ```
  */
 export function validateDoubanItemByType(
   data: unknown,
@@ -341,7 +372,19 @@ export function validateDoubanItemByType(
 }
 
 /**
- * 类型守卫：检查是否为特定类型的豆瓣条目
+ * 类型守卫：检查数据是否为豆瓣书籍类型
+ *
+ * @description 通过Zod Schema验证判断未知数据是否符合豆瓣书籍的数据结构要求
+ * @param item - 待检查的未知类型数据
+ * @returns 如果数据符合DoubanBook类型返回true，否则返回false
+ *
+ * @example
+ * ```typescript
+ * if (isDoubanBook(someData)) {
+ *   // TypeScript现在知道someData是DoubanBook类型
+ *   console.log('书籍作者:', someData.authors);
+ * }
+ * ```
  */
 export function isDoubanBook(item: unknown): item is DoubanBook {
   try {
@@ -352,6 +395,21 @@ export function isDoubanBook(item: unknown): item is DoubanBook {
   }
 }
 
+/**
+ * 类型守卫：检查数据是否为豆瓣电影类型
+ *
+ * @description 通过Zod Schema验证判断未知数据是否符合豆瓣电影的数据结构要求
+ * @param item - 待检查的未知类型数据
+ * @returns 如果数据符合DoubanMovie类型返回true，否则返回false
+ *
+ * @example
+ * ```typescript
+ * if (isDoubanMovie(someData)) {
+ *   // TypeScript现在知道someData是DoubanMovie类型
+ *   console.log('电影导演:', someData.directors);
+ * }
+ * ```
+ */
 export function isDoubanMovie(item: unknown): item is DoubanMovie {
   try {
     DoubanMovieSchema.parse(item);
@@ -361,6 +419,21 @@ export function isDoubanMovie(item: unknown): item is DoubanMovie {
   }
 }
 
+/**
+ * 类型守卫：检查数据是否为豆瓣电视剧类型
+ *
+ * @description 通过Zod Schema验证判断未知数据是否符合豆瓣电视剧的数据结构要求
+ * @param item - 待检查的未知类型数据
+ * @returns 如果数据符合DoubanTvSeries类型返回true，否则返回false
+ *
+ * @example
+ * ```typescript
+ * if (isDoubanTvSeries(someData)) {
+ *   // TypeScript现在知道someData是DoubanTvSeries类型
+ *   console.log('电视剧集数:', someData.episodeCount);
+ * }
+ * ```
+ */
 export function isDoubanTvSeries(item: unknown): item is DoubanTvSeries {
   try {
     DoubanTvSeriesSchema.parse(item);
@@ -370,6 +443,21 @@ export function isDoubanTvSeries(item: unknown): item is DoubanTvSeries {
   }
 }
 
+/**
+ * 类型守卫：检查数据是否为豆瓣纪录片类型
+ *
+ * @description 通过Zod Schema验证判断未知数据是否符合豆瓣纪录片的数据结构要求
+ * @param item - 待检查的未知类型数据
+ * @returns 如果数据符合DoubanDocumentary类型返回true，否则返回false
+ *
+ * @example
+ * ```typescript
+ * if (isDoubanDocumentary(someData)) {
+ *   // TypeScript现在知道someData是DoubanDocumentary类型
+ *   console.log('纪录片导演:', someData.directors);
+ * }
+ * ```
+ */
 export function isDoubanDocumentary(item: unknown): item is DoubanDocumentary {
   try {
     DoubanDocumentarySchema.parse(item);
@@ -380,7 +468,28 @@ export function isDoubanDocumentary(item: unknown): item is DoubanDocumentary {
 }
 
 /**
- * 智能类型推断：根据数据自动判断豆瓣条目类型
+ * 智能推断豆瓣条目类型
+ *
+ * @description 通过分析数据的字段特征自动判断豆瓣条目类型，支持显式category字段和基于字段推断两种模式
+ * @param data - 待推断的未知类型数据，通常包含豆瓣条目的部分字段信息
+ * @returns 推断出的豆瓣条目类型，如果无法确定则返回'unknown'
+ *
+ * @example
+ * ```typescript
+ * const bookData = { authors: ['作者1'], title: '测试书籍' };
+ * const type = inferDoubanItemType(bookData); // 返回 'books'
+ *
+ * const movieData = { directors: ['导演1'], title: '测试电影' };
+ * const type2 = inferDoubanItemType(movieData); // 返回 'movies'
+ *
+ * const tvData = { directors: ['导演1'], episodeCount: 24 };
+ * const type3 = inferDoubanItemType(tvData); // 返回 'tv'
+ * ```
+ *
+ * @remarks
+ * 推断优先级：
+ * 1. 显式category字段 > 2. 基于authors字段(books) > 3. 基于directors字段(movies/tv/documentary) > 4. 基于artists字段(music)
+ * 对于影视类型，通过episodeCount或firstAirDate判断是否为电视剧/纪录片，再通过genres中是否包含"纪录片"区分电视剧和纪录片
  */
 export function inferDoubanItemType(
   data: unknown,
