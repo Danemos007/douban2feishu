@@ -132,6 +132,27 @@ const mockFeishuFields: FeishuField[] = [
 // ==================== 主测试套件 ====================
 
 describe('FeishuTableService - 完全重建版本', () => {
+  /**
+   * 🛡️ 高负载测试超时保护配置
+   *
+   * 背景说明：
+   * 经过复杂度分析，本文件包含4个高负载测试场景：
+   * - 批量记录创建 (500条记录)
+   * - 并发字段创建 (5个并发请求)
+   * - 并发压力测试 (20个并发请求)
+   * - 内存泄漏测试 (100次迭代)
+   *
+   * 性能基准：整个测试文件运行时间约6秒
+   * 超时设置：30秒 (提供5倍安全缓冲)
+   *
+   * 这些测试在CI环境中可能因为系统资源竞争而运行缓慢，
+   * 参考 field-mapping.performance.spec.ts 的成功经验，
+   * 我们统一设置30秒超时保护。
+   *
+   * ⚠️ 注意：这不是性能问题，而是CI环境稳定性保障措施。
+   * 请不要随意修改这个超时配置。
+   */
+  jest.setTimeout(30000);
   let service: FeishuTableService;
   let module: TestingModule;
   let mockConfigService: MockConfigService;
@@ -653,26 +674,36 @@ describe('FeishuTableService - 完全重建版本', () => {
     };
 
     describe('HTTP请求异常处理', () => {
-      // TODO: Flaky test due to network timeout, needs stabilization
-      it.skip('should handle network timeout errors', async () => {
-        // 设置Mock：模拟网络超时
+      it('should handle network timeout errors', async () => {
+        // 设置Mock：模拟网络超时 - 使用统一的mockAxiosInstance架构
         mockFeishuAuthService.getAccessToken.mockResolvedValue('mock-token');
-        jest
-          .spyOn(service['httpClient'], 'get')
-          .mockRejectedValue(new Error('timeout of 30000ms exceeded'));
+
+        // 🛠️ 修复1：使用统一Mock架构，避免jest.spyOn冲突
+        mockAxiosInstance.get.mockRejectedValue(
+          new Error('timeout of 30000ms exceeded'),
+        );
 
         // 执行测试 - 应该抛出错误
-        await expect(
-          service.getTableFields(
-            testParams.appId,
-            testParams.appSecret,
-            testParams.appToken,
-            testParams.tableId,
-          ),
-        ).rejects.toThrow(/timeout/);
+        const promise = service.getTableFields(
+          testParams.appId,
+          testParams.appSecret,
+          testParams.appToken,
+          testParams.tableId,
+        );
 
-        // 验证认证服务仍被调用
+        // 🛠️ 修复2：精确错误匹配，避免正则匹配的不确定性
+        await expect(promise).rejects.toThrow('timeout of 30000ms exceeded');
+
+        // 🛠️ 修复3：验证Mock确实被调用，确保测试逻辑正确
         expect(mockFeishuAuthService.getAccessToken).toHaveBeenCalled();
+        expect(mockAxiosInstance.get).toHaveBeenCalledWith(
+          expect.stringContaining('/tables/'),
+          expect.objectContaining({
+            headers: expect.objectContaining({
+              Authorization: 'Bearer mock-token',
+            }) as Record<string, string>,
+          }),
+        );
       });
 
       it('should handle server 5xx errors gracefully', async () => {

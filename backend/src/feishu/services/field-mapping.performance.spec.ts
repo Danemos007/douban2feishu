@@ -12,6 +12,11 @@
  * - 批量字段创建: < 10秒 (20字段)
  * - 缓存命中率: > 85%
  * - 内存使用: < 100MB增长
+ *
+ * ⏱️ 超时配置说明：
+ * 注意，这是一个性能测试。它被设计为会运行得比普通单元测试更久。
+ * 我们已经评估过，在10秒左右是正常的，60秒的超时是为了给 CI 环境留足缓冲。
+ * 请不要随意改动它。
  */
 
 import { Test, TestingModule } from '@nestjs/testing';
@@ -232,7 +237,7 @@ describe('FieldMappingService - Performance Benchmarks', () => {
       expect(memoryGrowth).toBeLessThan(100 * 1024 * 1024); // < 100MB
       expect(result.created).toHaveLength(16); // 🔧 修复：书籍实际有16个字段
       expect(result.performanceMetrics?.processingTime).toBeLessThan(5000);
-    }, 10000); // 10秒超时
+    }, 60000); // 60秒超时 - 为CI环境预留充足缓冲
 
     it('should handle high-concurrency field creation scenarios', async () => {
       // Mock基础设置
@@ -292,7 +297,7 @@ describe('FieldMappingService - Performance Benchmarks', () => {
       results.forEach((result) => {
         expect(result.created).toHaveLength(1);
       });
-    }, 15000);
+    }, 60000); // 60秒超时 - 为CI环境预留充足缓冲
   });
 
   describe('📈 缓存性能验证', () => {

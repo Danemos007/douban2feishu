@@ -104,7 +104,11 @@ export class PrismaService
   }
 
   /**
-   * 模块初始化 - 建立数据库连接
+   * 模块初始化时建立数据库连接
+   *
+   * @description 在NestJS模块初始化阶段自动建立与PostgreSQL数据库的连接
+   * @returns Promise<void> 连接成功时resolve，连接失败时reject
+   * @throws Error 当数据库连接失败时抛出连接错误
    */
   async onModuleInit() {
     try {
@@ -117,7 +121,10 @@ export class PrismaService
   }
 
   /**
-   * 模块销毁 - 关闭数据库连接
+   * 模块销毁时优雅关闭数据库连接
+   *
+   * @description 在NestJS模块销毁阶段优雅地关闭与数据库的连接，确保资源正确释放
+   * @returns Promise<void> 断开连接后resolve，即使出现错误也会静默处理
    */
   async onModuleDestroy() {
     try {
@@ -174,7 +181,10 @@ export class PrismaService
   }
 
   /**
-   * 健康检查 - 验证数据库连接
+   * 执行数据库健康检查并返回连接状态
+   *
+   * @description 通过执行简单的SQL查询来验证数据库连接状态，记录响应时间和错误信息
+   * @returns Promise<HealthCheckResult> 包含健康状态、时间戳、响应时间和可能的错误信息的检查结果
    */
   async healthCheck(): Promise<HealthCheckResult> {
     const startTime = Date.now();
@@ -206,10 +216,12 @@ export class PrismaService
   }
 
   /**
-   * 执行事务
+   * 执行数据库事务并处理错误
    *
-   * @param fn 事务函数
-   * @returns 事务结果
+   * @description 在事务环境中执行数据库操作，提供完整的错误处理和日志记录
+   * @param fn 要在事务中执行的函数，接收事务客户端作为参数
+   * @returns Promise<T> 事务函数的执行结果
+   * @throws Error 当事务执行失败时抛出原始错误
    */
   async executeTransaction<T>(fn: TransactionFunction<T>): Promise<T> {
     try {
@@ -224,7 +236,11 @@ export class PrismaService
   }
 
   /**
-   * 清理过期数据 (定期维护)
+   * 清理30天前的过期同步历史数据
+   *
+   * @description 定期维护任务，清理已完成状态且超过30天的同步历史记录以释放存储空间
+   * @returns Promise<CleanupResult> 包含删除记录数量、操作类型和时间戳的清理结果
+   * @throws Error 当清理操作失败时抛出包含详细错误信息的Error实例
    */
   async cleanupExpiredData(): Promise<CleanupResult> {
     try {
@@ -268,7 +284,12 @@ export class PrismaService
   // ==============================
 
   /**
-   * 安全地查找用户（带类型验证）
+   * 安全地根据ID查找用户并进行类型验证
+   *
+   * @description 查找指定ID的用户，执行运行时类型验证确保数据结构正确
+   * @param id 用户的唯一标识符UUID
+   * @returns Promise<User | null> 找到的用户对象，不存在时返回null
+   * @throws Error 当数据库查询失败或用户数据类型验证失败时抛出错误
    */
   async findUserSafely(id: string): Promise<User | null> {
     try {
@@ -295,7 +316,12 @@ export class PrismaService
   }
 
   /**
-   * 安全地查找用户凭证（带类型验证）
+   * 安全地根据用户ID查找用户凭证并进行类型验证
+   *
+   * @description 查找指定用户的加密凭证信息，执行运行时类型验证确保敏感数据结构正确
+   * @param userId 用户的唯一标识符UUID
+   * @returns Promise<UserCredentials | null> 找到的用户凭证对象，不存在时返回null
+   * @throws Error 当数据库查询失败或凭证数据类型验证失败时抛出错误
    */
   async findUserCredentialsSafely(
     userId: string,
@@ -324,7 +350,12 @@ export class PrismaService
   }
 
   /**
-   * 安全地查找同步历史（带类型验证）
+   * 安全地根据ID查找同步历史记录并进行类型验证
+   *
+   * @description 查找指定ID的同步历史记录，执行运行时类型验证确保数据结构正确
+   * @param id 同步历史记录的唯一标识符UUID
+   * @returns Promise<SyncHistory | null> 找到的同步历史对象，不存在时返回null
+   * @throws Error 当数据库查询失败或同步历史数据类型验证失败时抛出错误
    */
   async findSyncHistorySafely(id: string): Promise<SyncHistory | null> {
     try {
@@ -351,7 +382,14 @@ export class PrismaService
   }
 
   /**
-   * 安全地获取用户的所有同步历史（带类型验证）
+   * 安全地获取用户的所有同步历史记录并进行类型验证
+   *
+   * @description 查找指定用户的同步历史列表，支持分页，按开始时间倒序排列，对每条记录执行类型验证
+   * @param userId 用户的唯一标识符UUID
+   * @param take 可选的分页参数，限制返回记录数量
+   * @param skip 可选的分页参数，跳过指定数量的记录
+   * @returns Promise<SyncHistory[]> 用户的同步历史记录数组，按时间倒序排列
+   * @throws Error 当数据库查询失败或任何记录的类型验证失败时抛出错误
    */
   async findUserSyncHistorySafely(
     userId: string,
@@ -395,7 +433,12 @@ export class PrismaService
   }
 
   /**
-   * 批量验证用户数据的类型安全性
+   * 批量验证用户所有相关数据的类型安全性和完整性
+   *
+   * @description 全面检查用户、凭证和同步历史数据的类型安全性，生成详细的验证报告
+   * @param userId 要验证的用户唯一标识符UUID
+   * @returns Promise<DataIntegrityResult> 包含用户、凭证和同步历史验证结果的完整报告
+   * @throws Error 当数据库查询失败或完整性检查过程中发生错误时抛出错误
    */
   async validateUserDataIntegrity(userId: string): Promise<{
     user: { isValid: boolean; error?: string };
