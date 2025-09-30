@@ -9,8 +9,30 @@ import {
 
 /**
  * 用户注册DTO
+ *
+ * @description 用于验证用户注册请求的数据传输对象，包含邮箱和密码字段的完整验证规则
+ *
+ * @example
+ * ```typescript
+ * const registerDto = new RegisterDto();
+ * registerDto.email = 'user@example.com';
+ * registerDto.password = 'SecurePassword123!';
+ * ```
  */
 export class RegisterDto {
+  /**
+   * 用户邮箱地址
+   *
+   * @description 用户注册时使用的邮箱地址，作为账户的唯一标识符
+   *
+   * @type {string}
+   *
+   * @validation
+   * - 必须是有效的邮箱格式
+   * - 长度不能超过255个字符
+   *
+   * @example 'user@example.com'
+   */
   @ApiProperty({
     description: '用户邮箱地址',
     example: 'user@example.com',
@@ -20,6 +42,25 @@ export class RegisterDto {
   @MaxLength(255, { message: '邮箱地址长度不能超过255个字符' })
   email!: string;
 
+  /**
+   * 用户密码
+   *
+   * @description 用户注册时设置的密码，需满足复杂度要求以确保账户安全
+   *
+   * @type {string}
+   *
+   * @validation
+   * - 必须是字符串类型
+   * - 长度至少为8个字符
+   * - 长度不能超过128个字符
+   * - 必须包含至少一个小写字母
+   * - 必须包含至少一个大写字母
+   * - 必须包含至少一个数字
+   * - 必须包含至少一个特殊字符 (@$!%*?&)
+   * - 只能包含字母、数字和允许的特殊字符
+   *
+   * @example 'SecurePassword123!'
+   */
   @ApiProperty({
     description: '用户密码',
     example: 'SecurePassword123!',
@@ -38,8 +79,32 @@ export class RegisterDto {
 
 /**
  * 用户登录DTO
+ *
+ * @description 用于验证用户登录请求的数据传输对象，包含邮箱和密码字段
+ *
+ * @remarks
+ * 登录时的密码验证相对宽松，只要求非空即可，因为实际的密码验证由数据库中的哈希值比对完成
+ *
+ * @example
+ * ```typescript
+ * const loginDto = new LoginDto();
+ * loginDto.email = 'user@example.com';
+ * loginDto.password = 'SecurePassword123!';
+ * ```
  */
 export class LoginDto {
+  /**
+   * 用户邮箱地址
+   *
+   * @description 用户登录时使用的邮箱地址，作为账户的唯一标识符
+   *
+   * @type {string}
+   *
+   * @validation
+   * - 必须是有效的邮箱格式
+   *
+   * @example 'user@example.com'
+   */
   @ApiProperty({
     description: '用户邮箱地址',
     example: 'user@example.com',
@@ -48,6 +113,22 @@ export class LoginDto {
   @IsEmail({}, { message: '请输入有效的邮箱地址' })
   email!: string;
 
+  /**
+   * 用户密码
+   *
+   * @description 用户登录时输入的密码，将与数据库中存储的哈希值进行比对
+   *
+   * @type {string}
+   *
+   * @validation
+   * - 必须是字符串类型
+   * - 不能为空
+   *
+   * @remarks
+   * 登录时不进行密码复杂度验证，因为用户可能在旧的密码策略下注册
+   *
+   * @example 'SecurePassword123!'
+   */
   @ApiProperty({
     description: '用户密码',
     example: 'SecurePassword123!',
@@ -59,8 +140,37 @@ export class LoginDto {
 
 /**
  * 刷新Token DTO
+ *
+ * @description 用于验证刷新访问令牌请求的数据传输对象，包含有效的刷新令牌
+ *
+ * @remarks
+ * 当访问令牌(access token)过期时，客户端可以使用刷新令牌来获取新的访问令牌，
+ * 而无需用户重新登录
+ *
+ * @example
+ * ```typescript
+ * const refreshDto = new RefreshTokenDto();
+ * refreshDto.refreshToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...';
+ * ```
  */
 export class RefreshTokenDto {
+  /**
+   * JWT刷新令牌
+   *
+   * @description 用于刷新访问令牌的JWT刷新令牌字符串
+   *
+   * @type {string}
+   *
+   * @validation
+   * - 必须是字符串类型
+   * - 不能为空
+   *
+   * @remarks
+   * 刷新令牌通常在用户登录时与访问令牌一起颁发，
+   * 具有较长的有效期，用于在访问令牌过期后获取新的访问令牌
+   *
+   * @example 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c'
+   */
   @ApiProperty({
     description: 'JWT刷新token',
     example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
