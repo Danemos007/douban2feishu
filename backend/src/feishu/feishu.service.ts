@@ -91,7 +91,20 @@ export class FeishuService {
   }
 
   /**
-   * 批量创建记录
+   * 批量创建飞书多维表格记录，支持自动分批、错误重试和字段映射
+   *
+   * @description 批量创建飞书多维表格记录，自动处理分批上传、API限流和错误容错
+   * @param dto 批量创建记录的请求参数，包含应用凭证、表格信息、记录数据和字段映射
+   * @param dto.appId 飞书应用ID，用于获取访问令牌
+   * @param dto.appSecret 飞书应用密钥，用于获取访问令牌
+   * @param dto.appToken 飞书多维表格应用Token，标识目标表格应用
+   * @param dto.tableId 目标数据表ID，标识具体要操作的表格
+   * @param dto.records 要创建的记录数据数组，支持直接字段格式或fields属性格式
+   * @param dto.tableMapping 可选的字段映射配置，用于将业务字段名映射为飞书字段ID
+   * @returns Promise<{success: number, failed: number}> 批量操作结果统计，包含成功和失败的记录数量
+   * @throws {Error} 当飞书应用凭证无效、访问令牌获取失败时抛出错误
+   * @throws {Error} 当网络请求超时、连接失败时抛出错误
+   * @throws {Error} 当飞书API返回业务错误（如表格不存在、权限不足）时抛出错误
    */
   async batchCreateRecords(
     dto: BatchCreateRecordsDto,
@@ -239,7 +252,17 @@ export class FeishuService {
   }
 
   /**
-   * 获取表格字段信息
+   * 获取飞书多维表格的所有字段信息，包含字段ID、名称、类型等元数据
+   *
+   * @description 获取指定飞书多维表格的所有字段信息和元数据配置
+   * @param appId 飞书应用ID，用于获取访问令牌
+   * @param appSecret 飞书应用密钥，用于获取访问令牌
+   * @param appToken 飞书多维表格应用Token，标识目标表格应用
+   * @param tableId 目标数据表ID，标识要查询字段信息的具体表格
+   * @returns Promise<FeishuField[]> 字段信息数组，包含字段ID、名称、类型、属性等详细信息
+   * @throws {Error} 当飞书应用凭证无效、访问令牌获取失败时抛出错误
+   * @throws {Error} 当表格不存在或无访问权限时抛出错误
+   * @throws {Error} 当网络请求超时、连接失败时抛出错误
    */
   async getTableFields(
     appId: string,
@@ -270,7 +293,20 @@ export class FeishuService {
   }
 
   /**
-   * 查询记录 - 通过Subject ID查找重复项
+   * 通过Subject ID在飞书多维表格中查找匹配的记录，用于去重和数据同步
+   *
+   * @description 根据Subject ID字段值搜索飞书多维表格中的匹配记录
+   * @param appId 飞书应用ID，用于获取访问令牌
+   * @param appSecret 飞书应用密钥，用于获取访问令牌
+   * @param appToken 飞书多维表格应用Token，标识目标表格应用
+   * @param tableId 目标数据表ID，标识要搜索的具体表格
+   * @param subjectId 要搜索的Subject ID值，通常为业务数据的唯一标识
+   * @param subjectIdFieldId Subject ID字段的飞书字段ID，用于构建搜索条件
+   * @returns Promise<FeishuRecordItem[]> 匹配的记录数组，包含记录ID、字段数据、创建/修改时间等信息
+   * @throws {Error} 当飞书应用凭证无效、访问令牌获取失败时抛出错误
+   * @throws {Error} 当表格不存在或无访问权限时抛出错误
+   * @throws {Error} 当指定的字段ID不存在时抛出错误
+   * @throws {Error} 当网络请求超时、连接失败时抛出错误
    */
   async findRecordBySubjectId(
     appId: string,
@@ -317,7 +353,20 @@ export class FeishuService {
   }
 
   /**
-   * 更新记录
+   * 更新飞书多维表格中指定记录的字段数据，支持部分字段更新
+   *
+   * @description 更新飞书多维表格中指定记录的字段值
+   * @param appId 飞书应用ID，用于获取访问令牌
+   * @param appSecret 飞书应用密钥，用于获取访问令牌
+   * @param appToken 飞书多维表格应用Token，标识目标表格应用
+   * @param tableId 目标数据表ID，标识要操作的具体表格
+   * @param recordId 要更新的记录ID，飞书记录的唯一标识
+   * @param fields 要更新的字段数据对象，键为字段ID，值为字段值
+   * @returns Promise<void> 更新操作无返回值，成功时Promise resolve为undefined
+   * @throws {Error} 当飞书应用凭证无效、访问令牌获取失败时抛出错误
+   * @throws {Error} 当记录不存在或无修改权限时抛出错误
+   * @throws {Error} 当字段ID不存在或字段值格式错误时抛出错误
+   * @throws {Error} 当网络请求超时、连接失败时抛出错误
    */
   async updateRecord(
     appId: string,
@@ -371,7 +420,10 @@ export class FeishuService {
   }
 
   /**
-   * 清理token缓存
+   * 清理访问令牌缓存，释放内存并强制下次请求重新获取令牌
+   *
+   * @description 清空内存中的所有飞书访问令牌缓存
+   * @returns void 无返回值，同步执行清理操作
    */
   clearTokenCache(): void {
     this.tokenCache.clear();

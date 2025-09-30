@@ -38,18 +38,20 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
    * @returns 认证用户信息
    */
   async validate(payload: JwtPayload): Promise<AuthenticatedUser> {
+    let user: AuthenticatedUser | null;
+
     try {
       // 验证用户是否存在且有效
-      const user = await this.authService.validateJwtPayload(payload);
-
-      if (!user) {
-        throw new UnauthorizedException('User not found or deactivated');
-      }
-
-      // 返回用户信息，会被附加到req.user
-      return user;
+      user = await this.authService.validateJwtPayload(payload);
     } catch {
       throw new UnauthorizedException('Invalid or expired token');
     }
+
+    if (!user) {
+      throw new UnauthorizedException('User not found or deactivated');
+    }
+
+    // 返回用户信息，会被附加到req.user
+    return user;
   }
 }

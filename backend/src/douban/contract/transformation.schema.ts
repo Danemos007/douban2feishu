@@ -209,7 +209,29 @@ export {
 };
 
 /**
- * 验证工具函数：验证转换选项
+ * 验证数据转换配置选项的完整性和正确性
+ *
+ * @description 对传入的转换配置选项进行严格的运行时验证，确保符合 TransformationOptions 规范
+ * @param {unknown} options - 待验证的转换配置选项对象，可能来自外部数据源或用户输入
+ * @returns {Promise<{success: true; data: TransformationOptions} | {success: false; error: string}>}
+ *   成功时返回包含验证后配置数据的对象，失败时返回包含详细错误信息的对象
+ * @throws {never} 此方法不会抛出异常，所有错误都通过返回值的 error 字段传递
+ *
+ * @example
+ * ```typescript
+ * const result = validateTransformationOptions({
+ *   enableIntelligentRepairs: true,
+ *   strictValidation: false,
+ *   preserveRawData: true,
+ *   customFieldMappings: { oldField: 'newField' }
+ * });
+ *
+ * if (result.success) {
+ *   console.log('验证成功:', result.data);
+ * } else {
+ *   console.error('验证失败:', result.error);
+ * }
+ * ```
  */
 export function validateTransformationOptions(
   options: unknown,
@@ -231,7 +253,36 @@ export function validateTransformationOptions(
 }
 
 /**
- * 验证工具函数：验证转换结果
+ * 验证数据转换结果的完整性和统计信息的正确性
+ *
+ * @description 对数据转换操作的结果进行全面验证，包括转换后的数据、统计信息和警告信息
+ * @param {unknown} result - 待验证的转换结果对象，包含转换后的数据和统计信息
+ * @returns {Promise<{success: true; data: TransformationResult} | {success: false; error: string}>}
+ *   成功时返回包含验证后结果数据的对象，失败时返回包含详细错误信息的对象
+ * @throws {never} 此方法不会抛出异常，所有错误都通过返回值的 error 字段传递
+ *
+ * @example
+ * ```typescript
+ * const transformationResult = {
+ *   data: { title: '转换后的书名', rating: 8.5 },
+ *   statistics: {
+ *     totalFields: 10,
+ *     transformedFields: 8,
+ *     repairedFields: 2,
+ *     failedFields: 2
+ *   },
+ *   warnings: ['某些字段需要修复'],
+ *   rawData: { original: 'data' }
+ * };
+ *
+ * const result = validateTransformationResult(transformationResult);
+ *
+ * if (result.success) {
+ *   console.log('结果验证成功:', result.data.statistics);
+ * } else {
+ *   console.error('结果验证失败:', result.error);
+ * }
+ * ```
  */
 export function validateTransformationResult(
   result: unknown,
@@ -253,7 +304,30 @@ export function validateTransformationResult(
 }
 
 /**
- * 验证工具函数：验证豆瓣数据类型
+ * 验证豆瓣数据类型的有效性并提供TypeScript类型守卫
+ *
+ * @description 检查传入的数据类型是否为有效的豆瓣数据类型（books/movies/tv/documentary），并作为TypeScript类型守卫使用
+ * @param {unknown} dataType - 待验证的数据类型值，可能来自用户输入或API参数
+ * @returns {dataType is DoubanDataType} 类型守卫返回值：如果是有效的豆瓣数据类型返回true，否则返回false
+ * @throws {never} 此方法不会抛出异常，验证失败时静默返回false
+ *
+ * @example
+ * ```typescript
+ * // 作为类型守卫使用
+ * function processDoubanData(dataType: unknown, data: any) {
+ *   if (validateDoubanDataType(dataType)) {
+ *     // 在这里，TypeScript知道dataType的类型是DoubanDataType
+ *     console.log(`处理${dataType}数据`);
+ *     return processSpecificType(dataType, data);
+ *   } else {
+ *     throw new Error(`不支持的数据类型: ${dataType}`);
+ *   }
+ * }
+ *
+ * // 基本验证使用
+ * console.log(validateDoubanDataType('books'));     // true
+ * console.log(validateDoubanDataType('invalid'));  // false
+ * ```
  */
 export function validateDoubanDataType(
   dataType: unknown,

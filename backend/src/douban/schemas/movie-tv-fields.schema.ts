@@ -386,6 +386,11 @@ export type MovieFieldValidation = z.infer<typeof MovieFieldValidationSchema>;
 
 /**
  * 验证工具函数：验证完整电影数据
+ *
+ * @description 对输入的电影数据进行完整性和格式验证，确保符合18字段标准
+ * @param data - 待验证的未知类型数据对象
+ * @returns 验证成功时返回包含验证后数据的对象，失败时返回包含错误信息的对象
+ * @throws 不抛出异常，所有错误都通过返回值处理
  */
 export function validateMovieComplete(
   data: unknown,
@@ -406,6 +411,11 @@ export function validateMovieComplete(
 
 /**
  * 验证工具函数：验证完整电视剧数据
+ *
+ * @description 对输入的电视剧数据进行完整性和格式验证，确保符合19字段标准（比电影多集数字段）
+ * @param data - 待验证的未知类型数据对象
+ * @returns 验证成功时返回包含验证后数据的对象，失败时返回包含错误信息的对象
+ * @throws 不抛出异常，所有错误都通过返回值处理
  */
 export function validateTvSeriesComplete(
   data: unknown,
@@ -428,6 +438,11 @@ export function validateTvSeriesComplete(
 
 /**
  * 验证工具函数：验证完整纪录片数据
+ *
+ * @description 对输入的纪录片数据进行完整性和格式验证，结构与电视剧相同（19字段）但类型固定为documentary
+ * @param data - 待验证的未知类型数据对象
+ * @returns 验证成功时返回包含验证后数据的对象，失败时返回包含错误信息的对象
+ * @throws 不抛出异常，所有错误都通过返回值处理
  */
 export function validateDocumentaryComplete(
   data: unknown,
@@ -450,6 +465,11 @@ export function validateDocumentaryComplete(
 
 /**
  * 智能类型推断：根据genres判断是否为纪录片
+ *
+ * @description 通过检查类型数组中是否包含"纪录片"字符串来智能判断影视内容是否为纪录片类型
+ * @param genres - 影视类型字符串数组，如["剧情", "纪录片"]或["历史", "战争"]
+ * @returns 如果genres数组中包含"纪录片"字符串则返回true，否则返回false
+ * @throws 不抛出异常，对于非数组输入会返回false
  */
 export function isDocumentaryByGenres(genres: string[]): boolean {
   if (!Array.isArray(genres)) return false;
@@ -458,7 +478,11 @@ export function isDocumentaryByGenres(genres: string[]): boolean {
 
 /**
  * 数据质量评估函数：影视内容（电影/电视剧/纪录片）
- * 使用类型安全的方式评估数据完整性和质量
+ *
+ * @description 根据字段完整度和重要性权重计算影视数据的质量评分，支持电影、电视剧、纪录片三种类型
+ * @param data - 待评估的影视数据对象，可以是任意类型
+ * @returns 返回0-100的质量评分，100为满分，0表示无效数据或空数据
+ * @throws 不抛出异常，对于无效输入返回0分
  */
 export function assessMovieDataQuality(data: unknown): number {
   if (!data || typeof data !== 'object') return 0;
@@ -513,6 +537,11 @@ export function assessMovieDataQuality(data: unknown): number {
 
 /**
  * 字段值有效性检查 - 类型安全的字段值验证
+ *
+ * @description 检查单个字段值是否有效（非空、非undefined、非null，数组非空等）
+ * @param value - 待检查的字段值，可以是任意类型
+ * @returns 字段值有效时返回true，无效时返回false
+ * @throws 不抛出异常
  */
 function isValidFieldValue(value: unknown): boolean {
   if (value === undefined || value === null || value === '') {
@@ -539,7 +568,12 @@ function isValidFieldValue(value: unknown): boolean {
 }
 
 /**
- * 类型守卫函数
+ * 电影数据类型守卫函数
+ *
+ * @description 检查输入值是否为有效的MovieComplete类型，可用于TypeScript类型收窄
+ * @param value - 待检查的未知类型值
+ * @returns 如果是有效的MovieComplete类型返回true，否则返回false
+ * @throws 不抛出异常，验证失败时返回false
  */
 export function isValidMovieComplete(value: unknown): value is MovieComplete {
   try {
@@ -550,6 +584,14 @@ export function isValidMovieComplete(value: unknown): value is MovieComplete {
   }
 }
 
+/**
+ * 电视剧数据类型守卫函数
+ *
+ * @description 检查输入值是否为有效的TvSeriesComplete类型，可用于TypeScript类型收窄
+ * @param value - 待检查的未知类型值
+ * @returns 如果是有效的TvSeriesComplete类型返回true，否则返回false
+ * @throws 不抛出异常，验证失败时返回false
+ */
 export function isValidTvSeriesComplete(
   value: unknown,
 ): value is TvSeriesComplete {
@@ -561,6 +603,14 @@ export function isValidTvSeriesComplete(
   }
 }
 
+/**
+ * 纪录片数据类型守卫函数
+ *
+ * @description 检查输入值是否为有效的DocumentaryComplete类型，可用于TypeScript类型收窄
+ * @param value - 待检查的未知类型值
+ * @returns 如果是有效的DocumentaryComplete类型返回true，否则返回false
+ * @throws 不抛出异常，验证失败时返回false
+ */
 export function isValidDocumentaryComplete(
   value: unknown,
 ): value is DocumentaryComplete {
