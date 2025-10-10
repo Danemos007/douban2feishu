@@ -12,7 +12,8 @@
 import { config } from 'dotenv';
 import { join } from 'path';
 
-// 加载测试环境变量
+// 加载测试环境变量（优先级：.env.e2e > .env.test > .env）
+config({ path: join(__dirname, '..', '.env.e2e') });
 config({ path: join(__dirname, '..', '.env.test') });
 config({ path: join(__dirname, '..', '.env') });
 
