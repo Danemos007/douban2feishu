@@ -16,6 +16,8 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
+    "test:ci": "ts-node scripts/update-fixtures.ts && jest --coverage",
+    "update-fixtures": "ts-node scripts/update-fixtures.ts",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./jest-e2e.config.js",
     "test:integration": "jest --config ./jest-e2e.config.js --testPathPatterns=integration-tests",
