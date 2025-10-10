@@ -1,0 +1,15 @@
+{
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.3"
+  },
+  "scripts": {
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "backend/**/*.ts": [
+      "bash -c 'cd backend && npx eslint --fix \"$0\"'",
+      "bash -c 'cd backend && npx prettier --write \"$0\"'"
+    ]
+  }
+}
