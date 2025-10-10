@@ -44,14 +44,7 @@
     "test-movie-complete": "npx ts-node --require tsconfig-paths/register src/test-movie-complete.ts",
     "test-book-rating": "npx ts-node --require tsconfig-paths/register src/test-book-rating.ts",
     "sync-movie-cache": "npx ts-node --require tsconfig-paths/register src/sync-movie-from-cache.ts",
-    "docker:run": "docker run -p 3001:3001 --env-file .env d2f-backend",
-    "prepare": "husky"
-  },
-  "lint-staged": {
-    "*.ts": [
-      "npx eslint --fix",
-      "npx prettier --write"
-    ]
+    "docker:run": "docker run -p 3001:3001 --env-file .env d2f-backend"
   },
   "dependencies": {
     "@nestjs/bull": "^11.0.3",
