@@ -16,6 +16,7 @@ module.exports = {
   
   // 测试文件匹配模式
   testMatch: [
+    '**/test/**/*.e2e-spec.ts',
     '**/integration-tests/**/*.spec.ts',
     '**/integration-tests/**/*.test.ts'
   ],
