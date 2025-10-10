@@ -8,8 +8,8 @@
   },
   "lint-staged": {
     "backend/**/*.ts": [
-      "cd backend && npx eslint --fix",
-      "cd backend && npx prettier --write"
+      "bash -c 'cd backend && npx eslint --fix \"$0\"'",
+      "bash -c 'cd backend && npx prettier --write \"$0\"'"
     ]
   }
 }
