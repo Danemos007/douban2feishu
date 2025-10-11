@@ -36,7 +36,7 @@
 - 基础路由检查
 
 #### 3. 业务端到端测试
-文件: `test/douban-feishu-e2e.spec.ts` (待实现)
+文件: `douban-feishu-flow.e2e.spec.ts` (待实现)
 
 **测试定位**: 真实环境下的完整业务流程验证
 - 真实豆瓣API调用（含反爬虫）

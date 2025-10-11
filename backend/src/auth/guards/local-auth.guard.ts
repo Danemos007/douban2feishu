@@ -35,6 +35,12 @@ export class LocalAuthGuard extends AuthGuard('local') {
     _context?: ExecutionContext,
     _status?: unknown,
   ): TUser {
+    console.log('[LocalAuthGuard] handleRequest called:', {
+      hasError: !!err,
+      hasUser: !!user,
+      infoMessage: info?.message,
+    });
+
     if (err || !user) {
       let message = 'Authentication failed';
 
@@ -47,9 +53,11 @@ export class LocalAuthGuard extends AuthGuard('local') {
         message = err.message;
       }
 
+      console.log('[LocalAuthGuard] Auth failed:', message);
       throw new UnauthorizedException(message);
     }
 
+    console.log('[LocalAuthGuard] Auth success for user:', user.email);
     return user as TUser;
   }
 }

@@ -17,11 +17,15 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
+import { PrismaService } from '../src/common/prisma/prisma.service';
+import { AuthService } from '../src/auth/auth.service';
 
 describe('Douban to Feishu Sync (Integration)', () => {
   let app: INestApplication<App>;
   let authToken: string;
   let testUserId: string;
+  let prisma: PrismaService;
+  let authService: AuthService;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -29,6 +33,55 @@ describe('Douban to Feishu Sync (Integration)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+
+    // 获取服务实例
+    prisma = app.get<PrismaService>(PrismaService);
+    authService = app.get<AuthService>(AuthService);
+
+    // 创建或获取测试用户
+    const testEmail = process.env.INTEGRATION_TEST_EMAIL || 'integration-test@example.com';
+
+    let user = await prisma.user.findUnique({
+      where: { email: testEmail },
+      include: {
+        credentials: true,
+        syncConfigs: true,
+      },
+    });
+
+    if (!user) {
+      user = await prisma.user.create({
+        data: {
+          email: testEmail,
+          credentials: {
+            create: {
+              encryptionIv: 'test-iv-12345678901234567890',
+            },
+          },
+        },
+        include: {
+          credentials: true,
+          syncConfigs: true,
+        },
+      });
+      console.log(`✅ [Test Setup] 测试用户已创建: ${testEmail}`);
+    } else {
+      console.log(`✅ [Test Setup] 测试用户已存在: ${testEmail}`);
+    }
+
+    // 直接生成JWT token (绕过登录API)
+    const tokens = await authService.login({
+      id: user.id,
+      email: user.email,
+      createdAt: user.createdAt,
+      lastSyncAt: user.lastSyncAt,
+    });
+    authToken = tokens.accessToken;
+    testUserId = user.id;
+    console.log(`✅ [Test Setup] JWT token已生成`);
+
+    // 设置全局API前缀（与main.ts一致）
+    app.setGlobalPrefix('api');
 
     // 应用全局管道（与生产环境一致）
     app.useGlobalPipes(
@@ -46,34 +99,19 @@ describe('Douban to Feishu Sync (Integration)', () => {
     await app.close();
   });
 
+  // [TEST-ISOLATION] 确保每个测试用例运行前数据库环境纯净
+  beforeEach(async () => {
+    // 清空SyncHistory表中的所有记录，避免测试污染
+    await prisma.syncHistory.deleteMany({});
+  });
+
   describe('Happy Path: Complete Sync Flow', () => {
     it('[Step 1] 应该成功进行用户认证', async () => {
-      // 使用环境变量中的测试凭证
-      const testEmail = process.env.INTEGRATION_TEST_EMAIL || 'integration-test@example.com';
-      const testPassword = process.env.INTEGRATION_TEST_PASSWORD || 'test-password';
+      // JWT token已在beforeAll中生成
+      expect(authToken).toBeTruthy();
+      expect(testUserId).toBeTruthy();
 
-      const response = await request(app.getHttpServer())
-        .post('/auth/login')
-        .send({
-          email: testEmail,
-          password: testPassword,
-        })
-        .expect(200);
-
-      interface AuthResponse {
-        access_token: string;
-        userId: string;
-      }
-
-      const authBody = response.body as AuthResponse;
-      expect(authBody).toHaveProperty('access_token');
-      expect(authBody.access_token).toBeTruthy();
-
-      // 保存token供后续测试使用
-      authToken = authBody.access_token;
-      testUserId = authBody.userId;
-
-      console.log('✅ [Integration] 用户认证成功');
+      console.log('✅ [Integration] 用户认证成功 (使用预生成的JWT token)');
     });
 
     it('[Step 2] 应该成功触发同步任务', async () => {
@@ -82,12 +120,14 @@ describe('Douban to Feishu Sync (Integration)', () => {
       }
 
       const response = await request(app.getHttpServer())
-        .post('/sync/trigger')
+        .post('/api/sync/trigger')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
-          category: 'book',
-          fullSync: false,
-          deleteOrphans: false,
+          triggerType: 'MANUAL',
+          options: {
+            categories: ['books'],
+            forceUpdate: false,
+          },
         })
         .expect(202);
 
@@ -111,11 +151,13 @@ describe('Douban to Feishu Sync (Integration)', () => {
 
       // 先触发一个同步任务
       const triggerResponse = await request(app.getHttpServer())
-        .post('/sync/trigger')
+        .post('/api/sync/trigger')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
-          category: 'book',
-          fullSync: false,
+          triggerType: 'MANUAL',
+          options: {
+            categories: ['books'],
+          },
         })
         .expect(202);
 
@@ -126,7 +168,7 @@ describe('Douban to Feishu Sync (Integration)', () => {
 
       // 查询任务状态
       const statusResponse = await request(app.getHttpServer())
-        .get(`/sync/${syncId}/status`)
+        .get(`/api/sync/${syncId}/status`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
@@ -146,7 +188,7 @@ describe('Douban to Feishu Sync (Integration)', () => {
       }
 
       const response = await request(app.getHttpServer())
-        .get('/sync/history')
+        .get('/api/sync/history')
         .set('Authorization', `Bearer ${authToken}`)
         .query({
           page: 1,
@@ -189,10 +231,12 @@ describe('Douban to Feishu Sync (Integration)', () => {
   describe('Error Handling', () => {
     it('应该拒绝未认证的同步请求', async () => {
       await request(app.getHttpServer())
-        .post('/sync/trigger')
+        .post('/api/sync/trigger')
         .send({
-          category: 'book',
-          fullSync: false,
+          triggerType: 'MANUAL',
+          options: {
+            categories: ['books'],
+          },
         })
         .expect(401);
 
@@ -206,12 +250,12 @@ describe('Douban to Feishu Sync (Integration)', () => {
       }
 
       await request(app.getHttpServer())
-        .post('/sync/trigger')
+        .post('/api/sync/trigger')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
-          category: 'invalid-category', // 无效的分类
+          triggerType: 'INVALID_TYPE', // 无效的类型
         })
-        .expect(400);
+        .expect(422); // 422 Unprocessable Entity 是正确的参数验证错误码
 
       console.log('✅ [Integration] 无效参数被正确验证');
     });

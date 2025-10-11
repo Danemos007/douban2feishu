@@ -35,6 +35,7 @@ process.env.REDIS_DB = '1';
 console.log('🧪 集成测试环境已初始化');
 console.log(`📊 环境变量:`, {
   NODE_ENV: process.env.NODE_ENV,
+  DATABASE_URL: process.env.DATABASE_URL?.substring(0, 50) + '...',
   REDIS_HOST: process.env.REDIS_HOST || 'localhost',
   REDIS_PORT: process.env.REDIS_PORT || '6379',
   REDIS_DB: process.env.REDIS_DB,
