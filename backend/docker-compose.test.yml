@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  # PostgreSQL 测试数据库
+  postgres-test:
+    image: postgres:16-alpine
+    container_name: d2f-postgres-test
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: d2f_test_user
+      POSTGRES_PASSWORD: d2f_test_password
+      POSTGRES_DB: d2f_test
+      POSTGRES_INITDB_ARGS: "-E UTF8 --locale=C"
+    ports:
+      - "5433:5432"  # 使用5433端口避免与本地PostgreSQL冲突
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U d2f_test_user -d d2f_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - d2f-test-network
+
+  # Redis 测试缓存（集成测试需要）
+  redis-test:
+    image: redis:7-alpine
+    container_name: d2f-redis-test
+    restart: unless-stopped
+    ports:
+      - "6380:6379"  # 使用6380端口避免与本地Redis冲突
+    volumes:
+      - redis_test_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - d2f-test-network
+
+volumes:
+  postgres_test_data:
+    name: d2f_postgres_test_data
+  redis_test_data:
+    name: d2f_redis_test_data
+
+networks:
+  d2f-test-network:
+    name: d2f-test-network
+    driver: bridge

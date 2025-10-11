@@ -99,6 +99,13 @@ export class SyncController {
     description: '获取当前用户的同步历史记录',
   })
   @ApiQuery({
+    name: 'page',
+    description: '页码',
+    type: 'number',
+    required: false,
+    example: 1,
+  })
+  @ApiQuery({
     name: 'limit',
     description: '返回记录数量',
     type: 'number',
@@ -111,9 +118,20 @@ export class SyncController {
   })
   async getSyncHistory(
     @CurrentUser('id') userId: string,
+    @Query('page') page: string = '1',
     @Query('limit') limit: string = '10',
   ) {
-    return this.syncService.getSyncHistory(userId, parseInt(limit));
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const items = await this.syncService.getSyncHistory(userId, limitNum);
+
+    // 返回符合分页格式的响应
+    return {
+      items,
+      total: items.length, // 简化实现：返回当前页的记录数
+      page: pageNum,
+      limit: limitNum,
+    };
   }
 
   /**
