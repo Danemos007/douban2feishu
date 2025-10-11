@@ -12,7 +12,7 @@ services:
       POSTGRES_DB: d2f_test
       POSTGRES_INITDB_ARGS: "-E UTF8 --locale=C"
     ports:
-      - "5433:5432"  # 使用5433端口避免与本地PostgreSQL冲突
+      - "5433:5432"  # 使用非标准端口避免与本地PostgreSQL冲突（CI使用5432）
     volumes:
       - postgres_test_data:/var/lib/postgresql/data
     healthcheck:
@@ -29,7 +29,7 @@ services:
     container_name: d2f-redis-test
     restart: unless-stopped
     ports:
-      - "6380:6379"  # 使用6380端口避免与本地Redis冲突
+      - "6380:6379"  # 使用非标准端口避免与本地Redis冲突（CI使用6379）
     volumes:
       - redis_test_data:/data
     healthcheck:

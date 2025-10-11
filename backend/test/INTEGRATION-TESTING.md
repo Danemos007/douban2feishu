@@ -80,6 +80,29 @@ npm run test:integration -- --coverage
 
 ## 环境配置
 
+### 端口配置说明
+
+**重要**: 本地测试环境和CI环境使用不同的端口配置，以保证测试环境的绝对隔离：
+
+| 环境 | PostgreSQL端口 | Redis端口 | 原因 |
+|------|---------------|----------|------|
+| **本地Docker** | 5433 | 6380 | 避免与开发环境的PostgreSQL(5432)和Redis(6379)冲突 |
+| **CI环境** | 5432 | 6379 | GitHub Actions容器中使用标准端口 |
+
+**设计原则**:
+- ✅ **测试隔离**: 本地测试使用独立的Docker容器和非标准端口，完全不影响开发环境
+- ✅ **环境一致**: CI环境使用标准端口，符合行业规范
+- ✅ **零干扰**: 开发者可以同时运行开发服务和测试服务，互不影响
+
+**本地启动测试数据库**:
+```bash
+# 启动Docker测试环境（使用5433和6380端口）
+docker-compose -f docker-compose.test.yml up -d
+
+# 验证服务启动
+docker-compose -f docker-compose.test.yml ps
+```
+
 ### 环境变量
 
 集成测试使用独立的环境变量文件 `.env.integration`：
@@ -97,11 +120,11 @@ USE_MOCK_FEISHU=true
 INTEGRATION_TEST_EMAIL=integration-test@example.com
 INTEGRATION_TEST_PASSWORD=test-password
 
-# 数据库配置
-DATABASE_URL=postgresql://user:password@localhost:5432/d2f_test
+# 数据库配置（本地使用非标准端口5433/6380）
+DATABASE_URL=postgresql://d2f_test_user:d2f_test_password@localhost:5433/d2f_test
 REDIS_HOST=localhost
-REDIS_PORT=6379
-REDIS_DB=1
+REDIS_PORT=6380
+REDIS_DB=0
 
 # JWT配置
 JWT_SECRET=test-jwt-secret
