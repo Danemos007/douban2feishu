@@ -14,8 +14,10 @@
 
 ### 测试范围
 
-#### 1. 核心业务流程测试
-文件: `test/douban-feishu-e2e.spec.ts`
+#### 1. API集成测试
+文件: `test/sync-api.integration.spec.ts`
+
+**测试定位**: API层面的集成测试，验证各模块协作
 
 **Happy Path测试**:
 1. 用户认证流程
@@ -33,6 +35,15 @@
 - 应用启动验证
 - 基础路由检查
 
+#### 3. 业务端到端测试
+文件: `test/douban-feishu-e2e.spec.ts` (待实现)
+
+**测试定位**: 真实环境下的完整业务流程验证
+- 真实豆瓣API调用（含反爬虫）
+- 真实飞书API同步
+- 完整数据链路验证
+- 业务结果校验
+
 ## 运行E2E测试
 
 ### 本地运行
@@ -48,7 +59,7 @@
 npm run test:e2e
 
 # 运行特定测试文件
-npm run test:e2e -- --testPathPattern=douban-feishu-e2e
+npm run test:e2e -- --testPathPattern=sync-api.integration
 
 # 运行并查看覆盖率
 npm run test:e2e -- --coverage
