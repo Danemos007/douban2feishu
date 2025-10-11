@@ -20,6 +20,10 @@ describe('AppController (e2e)', () => {
     return request(app.getHttpServer())
       .get('/')
       .expect(200)
-      .expect('Hello World!');
+      .expect((res) => {
+        expect(res.body).toHaveProperty('name', '豆瓣飞书同步助手 (D2F)');
+        expect(res.body).toHaveProperty('version', '1.0.0');
+        expect(res.body).toHaveProperty('environment');
+      });
   });
 });
