@@ -30,7 +30,7 @@ module.exports = {
   
   
   // 测试设置
-  setupFilesAfterEnv: ['<rootDir>/test/setup-e2e.ts'],
+  setupFilesAfterEnv: ['<rootDir>/test/setup-integration.ts'],
   
   // 收集覆盖率
   collectCoverageFrom: [
@@ -44,7 +44,7 @@ module.exports = {
   ],
   
   // 覆盖率报告
-  coverageDirectory: 'coverage-e2e',
+  coverageDirectory: 'coverage-integration',
   coverageReporters: ['text', 'lcov', 'html'],
   
   // 测试超时

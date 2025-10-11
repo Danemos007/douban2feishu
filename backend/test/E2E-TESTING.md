@@ -1,8 +1,8 @@
-# E2E测试指南
+# 集成测试指南
 
 ## 概述
 
-本项目实现了端到端（E2E）测试体系，用于验证核心业务流程的完整性。E2E测试模拟真实用户操作，覆盖从API请求到数据持久化的完整链路。
+本项目实现了集成测试体系，用于验证核心业务流程的完整性。集成测试模拟真实用户操作，覆盖从API请求到数据持久化的完整链路。
 
 ## 测试架构
 
@@ -44,58 +44,58 @@
 - 完整数据链路验证
 - 业务结果校验
 
-## 运行E2E测试
+## 运行集成测试
 
 ### 本地运行
 
 #### 前置条件
 1. PostgreSQL数据库运行中
 2. Redis服务运行中
-3. 创建`.env.e2e`文件（参考`.env.e2e.template`）
+3. 创建`.env.integration`文件（参考`.env.integration.template`）
 
 #### 运行命令
 ```bash
-# 运行所有E2E测试
-npm run test:e2e
+# 运行所有集成测试
+npm run test:integration
 
 # 运行特定测试文件
-npm run test:e2e -- --testPathPattern=sync-api.integration
+npm run test:integration -- --testPathPatterns=sync-api.integration
 
 # 运行并查看覆盖率
-npm run test:e2e -- --coverage
+npm run test:integration -- --coverage
 ```
 
 ### CI环境运行
 
-E2E测试在GitHub Actions中自动运行，配置位于 `.github/workflows/ci.yml`。
+集成测试在GitHub Actions中自动运行，配置位于 `.github/workflows/ci.yml`。
 
 **触发条件**: Pull Request到main分支
 
 **运行流程**:
 1. ✅ 单元测试通过 (`quality-gates` job)
-2. 🚀 自动启动E2E测试 (`e2e-tests` job)
+2. 🚀 自动启动集成测试 (`integration-tests` job)
 3. 🔧 自动配置PostgreSQL + Redis
-4. 🧪 运行E2E测试套件
+4. 🧪 运行集成测试套件
 5. 📊 上传测试结果artifacts
 
 ## 环境配置
 
 ### 环境变量
 
-E2E测试使用独立的环境变量文件 `.env.e2e`：
+集成测试使用独立的环境变量文件 `.env.integration`：
 
 ```bash
 # 测试环境标识
 NODE_ENV=test
-IS_E2E_TEST=true
+IS_INTEGRATION_TEST=true
 
 # Mock模式（CI环境推荐启用）
 USE_MOCK_DOUBAN=true
 USE_MOCK_FEISHU=true
 
 # 测试用户凭证
-E2E_TEST_EMAIL=e2e-test@example.com
-E2E_TEST_PASSWORD=test-password
+INTEGRATION_TEST_EMAIL=integration-test@example.com
+INTEGRATION_TEST_PASSWORD=test-password
 
 # 数据库配置
 DATABASE_URL=postgresql://user:password@localhost:5432/d2f_test
@@ -111,10 +111,10 @@ JWT_SECRET=test-jwt-secret
 
 如需在CI中使用真实凭证（不推荐），可配置以下Secrets：
 
-- `E2E_TEST_EMAIL`: 测试用户邮箱
-- `E2E_TEST_PASSWORD`: 测试用户密码
-- `E2E_DATABASE_URL`: 测试数据库连接串
-- `E2E_JWT_SECRET`: JWT密钥
+- `INTEGRATION_TEST_EMAIL`: 测试用户邮箱
+- `INTEGRATION_TEST_PASSWORD`: 测试用户密码
+- `INTEGRATION_DATABASE_URL`: 测试数据库连接串
+- `INTEGRATION_JWT_SECRET`: JWT密钥
 
 ## Mock策略
 
@@ -141,7 +141,7 @@ USE_MOCK_FEISHU=false
 ### 测试结构
 
 ```typescript
-describe('业务流程名称 (E2E)', () => {
+describe('业务流程名称 (Integration)', () => {
   let app: INestApplication;
   let authToken: string;
 
@@ -176,7 +176,7 @@ describe('业务流程名称 (E2E)', () => {
 
 1. **使用描述性测试名称**: `[Step N] 应该...`格式
 2. **测试隔离**: 每个测试用例独立，不依赖执行顺序
-3. **适当的超时设置**: E2E测试超时时间设为5分钟
+3. **适当的超时设置**: 集成测试超时时间设为5分钟
 4. **清理资源**: 在`afterAll`中清理数据库、连接等
 5. **Mock外部依赖**: CI环境优先使用Mock模式
 
@@ -200,7 +200,7 @@ Error: Redis connection refused
 ```
 Error: Unauthorized
 ```
-**解决方案**: 检查`.env.e2e`中的`E2E_TEST_EMAIL`和`E2E_TEST_PASSWORD`
+**解决方案**: 检查`.env.integration`中的`INTEGRATION_TEST_EMAIL`和`INTEGRATION_TEST_PASSWORD`
 
 #### 4. 测试超时
 ```
@@ -218,31 +218,31 @@ Error: Timeout - Async callback was not invoked
 位置: `.github/workflows/ci.yml`
 
 ```yaml
-e2e-tests:
-  name: E2E Tests
+integration-tests:
+  name: Integration Tests
   runs-on: ubuntu-latest
   needs: quality-gates  # 依赖单元测试通过
 
   steps:
-    - Setup PostgreSQL  # 自动配置测试数据库
-    - Setup Redis       # 自动配置缓存
-    - Run E2E tests     # 执行测试
-    - Upload results    # 上传测试结果
+    - Setup PostgreSQL      # 自动配置测试数据库
+    - Setup Redis           # 自动配置缓存
+    - Run Integration tests # 执行测试
+    - Upload results        # 上传测试结果
 ```
 
 ### 并行执行
 
-E2E测试作为独立job并行运行，不阻塞单元测试：
+集成测试作为独立job并行运行，不阻塞单元测试：
 
 ```
-┌─────────────┐
-│ quality-gates│ (单元测试)
-└──────┬──────┘
-       │
-       ▼
-┌─────────────┐
-│  e2e-tests  │ (E2E测试)
-└─────────────┘
+┌─────────────────┐
+│ quality-gates   │ (单元测试)
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│integration-tests│ (集成测试)
+└─────────────────┘
 ```
 
 ## 参考资料
