@@ -1,7 +1,7 @@
 /**
- * 豆瓣飞书同步 E2E 测试
+ * 豆瓣飞书同步 集成测试
  *
- * 目标: 端到端验证核心业务流程 - 从豆瓣抓取数据到飞书表格同步的完整链路
+ * 目标: API层面验证核心业务流程 - 从豆瓣抓取数据到飞书表格同步的完整链路
  *
  * Happy Path 测试场景:
  * 1. 用户认证
@@ -18,7 +18,7 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 
-describe('Douban to Feishu Sync (E2E)', () => {
+describe('Douban to Feishu Sync (Integration)', () => {
   let app: INestApplication<App>;
   let authToken: string;
   let testUserId: string;
@@ -49,8 +49,8 @@ describe('Douban to Feishu Sync (E2E)', () => {
   describe('Happy Path: Complete Sync Flow', () => {
     it('[Step 1] 应该成功进行用户认证', async () => {
       // 使用环境变量中的测试凭证
-      const testEmail = process.env.E2E_TEST_EMAIL || 'e2e-test@example.com';
-      const testPassword = process.env.E2E_TEST_PASSWORD || 'test-password';
+      const testEmail = process.env.INTEGRATION_TEST_EMAIL || 'integration-test@example.com';
+      const testPassword = process.env.INTEGRATION_TEST_PASSWORD || 'test-password';
 
       const response = await request(app.getHttpServer())
         .post('/auth/login')
@@ -73,7 +73,7 @@ describe('Douban to Feishu Sync (E2E)', () => {
       authToken = authBody.access_token;
       testUserId = authBody.userId;
 
-      console.log('✅ [E2E] 用户认证成功');
+      console.log('✅ [Integration] 用户认证成功');
     });
 
     it('[Step 2] 应该成功触发同步任务', async () => {
@@ -99,7 +99,7 @@ describe('Douban to Feishu Sync (E2E)', () => {
       ); // UUID格式
 
       console.log(
-        '✅ [E2E] 同步任务触发成功:',
+        '✅ [Integration] 同步任务触发成功:',
         (response.body as { syncId: string }).syncId,
       );
     });
@@ -137,7 +137,7 @@ describe('Douban to Feishu Sync (E2E)', () => {
         statusBody.status,
       );
 
-      console.log('✅ [E2E] 同步状态查询成功:', statusBody.status);
+      console.log('✅ [Integration] 同步状态查询成功:', statusBody.status);
     });
 
     it('[Step 4] 应该能获取同步历史记录', async () => {
@@ -182,7 +182,7 @@ describe('Douban to Feishu Sync (E2E)', () => {
         expect(firstRecord).toHaveProperty('createdAt');
       }
 
-      console.log(`✅ [E2E] 同步历史记录查询成功: ${historyBody.total} 条记录`);
+      console.log(`✅ [Integration] 同步历史记录查询成功: ${historyBody.total} 条记录`);
     });
   });
 
@@ -196,12 +196,12 @@ describe('Douban to Feishu Sync (E2E)', () => {
         })
         .expect(401);
 
-      console.log('✅ [E2E] 未认证请求被正确拒绝');
+      console.log('✅ [Integration] 未认证请求被正确拒绝');
     });
 
     it('应该验证同步请求参数', async () => {
       if (!authToken) {
-        console.log('⏭️  [E2E] 跳过参数验证测试（需要先认证）');
+        console.log('⏭️  [Integration] 跳过参数验证测试（需要先认证）');
         return;
       }
 
@@ -213,7 +213,7 @@ describe('Douban to Feishu Sync (E2E)', () => {
         })
         .expect(400);
 
-      console.log('✅ [E2E] 无效参数被正确验证');
+      console.log('✅ [Integration] 无效参数被正确验证');
     });
   });
 
@@ -222,14 +222,14 @@ describe('Douban to Feishu Sync (E2E)', () => {
       // 此测试使用mock数据模拟豆瓣API响应
       // 在CI环境中不依赖真实的豆瓣网站
       expect(process.env.USE_MOCK_DOUBAN).toBe('true');
-      console.log('✅ [E2E] Mock模式已启用');
+      console.log('✅ [Integration] Mock模式已启用');
     });
 
     it('[Mock Mode] 应该能处理飞书API模拟数据', () => {
       // 此测试使用mock数据模拟飞书API响应
       // 在CI环境中不依赖真实的飞书服务
       expect(process.env.USE_MOCK_FEISHU).toBe('true');
-      console.log('✅ [E2E] 飞书Mock模式已启用');
+      console.log('✅ [Integration] 飞书Mock模式已启用');
     });
   });
 });
