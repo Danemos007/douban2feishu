@@ -513,7 +513,7 @@ chore:    构建配置、依赖更新等
 
 ### 豆瓣测试账号
 - **用户ID**: your_user_id
-- **Cookie**: ll="example"; bid=example_bid; _pk_id.100001.3ac3=0449f71f29bd6367.1755942050.; _pk_ses.100001.3ac3=1; ap_v=0,6.0; viewed="36973237"; dbcl2="your_user_id:example_secret"; ck=Bz9H; frodotk_db="295cad07cf30f1b47c1607176d92d51c"; push_noty_num=0; push_doumail_num=0; ct=y
+- **Cookie**: bid=example_bid_new; ll="example"; _pk_ref.100001.4cf6=%5B%22%22%2C%22%22%2C1760080938%2C%22https%3A%2F%2Fwww.google.com%2F%22%5D; _pk_id.100001.4cf6=17824e1d0ae203e3.1760080938.; _pk_ses.100001.4cf6=1; ap_v=0,6.0; dbcl2="your_user_id:example_secret_new"; ck=example; frodotk_db="example_token_new"; push_noty_num=0; push_doumail_num=0
 
 ### 飞书应用配置
 - **App ID**: cli_your_app_id_here

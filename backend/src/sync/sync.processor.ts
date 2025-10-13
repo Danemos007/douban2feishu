@@ -241,11 +241,17 @@ export class SyncProcessor {
         );
       }
 
-      // 假设使用第一个配置的表格（实际应该根据数据类型选择）
-      const tableMappingsData = syncConfig.tableMappings as Record<
-        string,
-        unknown
-      >;
+      // 解析tableMappings（Prisma的Json类型可能是对象或字符串）
+      let tableMappingsData: Record<string, unknown>;
+      if (typeof syncConfig.tableMappings === 'string') {
+        tableMappingsData = JSON.parse(syncConfig.tableMappings) as Record<
+          string,
+          unknown
+        >;
+      } else {
+        tableMappingsData = syncConfig.tableMappings as Record<string, unknown>;
+      }
+
       const firstTableKey = Object.keys(tableMappingsData)[0];
 
       if (!firstTableKey) {

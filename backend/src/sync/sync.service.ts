@@ -90,7 +90,9 @@ export class SyncService {
         // 任务配置
         priority: triggerSyncDto.triggerType === 'MANUAL' ? 1 : 5, // 手动触发优先级更高
         delay: triggerSyncDto.delayMs || 0,
-        attempts: 3,
+        // [CRITICAL-FIX-2025-10-13] 测试环境禁用重试避免日志混乱
+        // 测试环境：attempts=1（失败不重试），生产环境：attempts=3（失败重试2次）
+        attempts: process.env.NODE_ENV === 'test' ? 1 : 3,
         removeOnComplete: 10,
         removeOnFail: 50,
       });
@@ -272,6 +274,10 @@ export class SyncService {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
       this.logger.error(`Failed to update sync progress:`, errorMessage);
+
+      // [CRITICAL-FIX-2025-10-13] 重新抛出异常确保上层调用者感知失败
+      // 原问题：异常被吞没，导致processor无法正确处理失败状态
+      throw error;
     }
   }
 
