@@ -78,11 +78,15 @@ export type FeishuFieldsResponse = ApiResponse<{
  * - Text字段: [{ text: "value", type: "text" }]
  * - URL字段: { link: "url", text: "text", type: "url" }
  * - 简单类型: string | number | boolean | null
+ *
+ * ⚠️ 重要：飞书API使用"字段名"作为记录字段的key，不是"字段ID"
+ * - 示例：{ "书名": [{text: "活着", type: "text"}], "豆瓣评分": 9.0 }
+ * - 字段ID仅在字段管理API中使用（如创建、更新、删除字段）
  */
 export type FeishuFieldValue = FeishuRecordFieldValue;
 
 export interface FeishuRecordFields {
-  [fieldId: string]: FeishuFieldValue;
+  [fieldName: string]: FeishuFieldValue;
 }
 
 export interface FeishuRecord {
