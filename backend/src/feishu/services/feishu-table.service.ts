@@ -697,9 +697,10 @@ export class FeishuTableService implements IFeishuTableFieldOperations {
 
     // 确保recordData不为null再进行Object.entries操作
     if (recordData && typeof recordData === 'object') {
-      for (const [key, value] of Object.entries(recordData)) {
-        const fieldId = fieldMappings?.[key] || key;
-        fields[fieldId] = this.formatFieldValue(value);
+      for (const [doubanField, value] of Object.entries(recordData)) {
+        // 将豆瓣字段名映射到飞书字段名（或使用原字段名）
+        const feishuFieldName = fieldMappings?.[doubanField] || doubanField;
+        fields[feishuFieldName] = this.formatFieldValue(value);
       }
     }
 
@@ -777,18 +778,20 @@ export class FeishuTableService implements IFeishuTableFieldOperations {
         appToken,
         tableId,
       );
-      const validFieldIds = new Set(fields.map((f) => f.field_id));
+      // 构建有效的字段名集合（飞书表格中实际存在的字段名）
+      const validFieldNames = new Set(fields.map((f) => f.field_name));
 
       const invalidMappings: string[] = [];
-      for (const [fieldName, fieldId] of Object.entries(fieldMappings)) {
-        if (!validFieldIds.has(fieldId)) {
-          invalidMappings.push(`${fieldName} -> ${fieldId}`);
+      // fieldMappings 结构: { doubanField: "飞书字段名" }
+      for (const [doubanField, feishuFieldName] of Object.entries(fieldMappings)) {
+        if (!validFieldNames.has(feishuFieldName)) {
+          invalidMappings.push(`${doubanField} -> ${feishuFieldName}`);
         }
       }
 
       if (invalidMappings.length > 0) {
         throw new Error(
-          `Invalid field mappings: ${invalidMappings.join(', ')}`,
+          `Invalid field mappings (字段名不存在): ${invalidMappings.join(', ')}`,
         );
       }
     } catch (error) {
@@ -1737,6 +1740,10 @@ export class FeishuTableService implements IFeishuTableFieldOperations {
 
   /**
    * 内部方法：更新现有字段
+   *
+   * ⚠️ 注意：此方法使用真正的"字段ID"（field_id），不是字段名
+   * - fieldId 参数用于API路径：PUT /fields/{fieldId}
+   * - 这是少数需要使用字段ID的API操作之一
    */
   private async updateFieldInternal(
     credentials: FeishuCredentials,
