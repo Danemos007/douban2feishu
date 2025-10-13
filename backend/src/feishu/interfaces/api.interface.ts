@@ -7,6 +7,7 @@ import {
   ApiResponse,
   ApiErrorResponse,
 } from '../../common/interfaces/http.interface';
+import type { FeishuRecordFieldValue } from '../schemas/record.schema';
 
 /**
  * 飞书API认证相关类型
@@ -72,13 +73,13 @@ export type FeishuFieldsResponse = ApiResponse<{
 
 /**
  * 飞书多维表格记录相关类型
+ *
+ * ✅ 类型唯一性：从Zod Schema推导，支持真实API格式
+ * - Text字段: [{ text: "value", type: "text" }]
+ * - URL字段: { link: "url", text: "text", type: "url" }
+ * - 简单类型: string | number | boolean | null
  */
-export type FeishuFieldValue =
-  | string
-  | number
-  | boolean
-  | null
-  | Array<string | number>;
+export type FeishuFieldValue = FeishuRecordFieldValue;
 
 export interface FeishuRecordFields {
   [fieldId: string]: FeishuFieldValue;

@@ -338,12 +338,49 @@ export class SyncEngineService {
 
   /**
    * 规范化字段值用于哈希计算
+   *
+   * 处理飞书API返回的复杂字段格式：
+   * - Text字段: [{ text: "value", type: "text" }]
+   * - URL字段: { link: "url", text: "text", type: "url" }
+   * - 简单类型: string | number | boolean
    */
   private normalizeValue(value: unknown): string {
     if (value === null || value === undefined) {
       return 'null';
     }
 
+    // 处理飞书Text字段数组: [{ text, type }]
+    if (Array.isArray(value) && value.length > 0) {
+      const firstItem = value[0];
+      // 检查是否为Text字段格式
+      if (
+        typeof firstItem === 'object' &&
+        firstItem !== null &&
+        'text' in firstItem &&
+        'type' in firstItem
+      ) {
+        // 提取text值并规范化
+        return String(firstItem.text).trim().toLowerCase();
+      }
+      // 其他数组格式（如简化格式）
+      return value
+        .map((item) => this.normalizeValue(item))
+        .sort()
+        .join(',');
+    }
+
+    // 处理飞书URL字段: { link, text, type: 'url' }
+    if (
+      typeof value === 'object' &&
+      value !== null &&
+      'link' in value &&
+      'type' in value &&
+      (value as any).type === 'url'
+    ) {
+      return String((value as any).link).trim().toLowerCase();
+    }
+
+    // 简单类型处理
     if (typeof value === 'string') {
       return value.trim().toLowerCase();
     }
@@ -356,13 +393,7 @@ export class SyncEngineService {
       return value.toString();
     }
 
-    if (Array.isArray(value)) {
-      return value
-        .map((item) => this.normalizeValue(item))
-        .sort()
-        .join(',');
-    }
-
+    // 其他对象类型：JSON序列化
     if (typeof value === 'object' && value !== null) {
       return JSON.stringify(value);
     }
