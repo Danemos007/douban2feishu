@@ -9,13 +9,41 @@
 import { z } from 'zod';
 
 /**
- * 飞书记录字段值Schema - 支持多种数据类型
+ * 飞书记录字段值Schema - 基于真实API响应的完整数据类型定义
+ *
+ * 真实API返回的字段值类型：
+ * 1. Text字段: [{ text: "value", type: "text" }]
+ * 2. URL字段: { link: "url", text: "text", type: "url" }
+ * 3. SingleSelect字段: "选项名"
+ * 4. Number/Rating字段: 数字
+ * 5. DateTime字段: 时间戳（毫秒）
+ * 6. Boolean/Null: 布尔值或null
  */
+
+// 文本字段项Schema
+const FeishuTextFieldItemSchema = z.object({
+  text: z.string(),
+  type: z.literal('text'),
+});
+
+// URL字段Schema
+const FeishuUrlFieldSchema = z.object({
+  link: z.string().url(),
+  text: z.string(),
+  type: z.literal('url'),
+});
+
+// 飞书记录字段值的完整Schema
 const FeishuRecordFieldValueSchema = z.union([
-  z.string(),
-  z.number(),
-  z.boolean(),
-  z.null(),
+  // 简单类型
+  z.string(),              // SingleSelect、多行文本等
+  z.number(),              // Number、Rating、DateTime（时间戳）
+  z.boolean(),             // Checkbox
+  z.null(),                // 空值
+  // 复杂类型
+  z.array(FeishuTextFieldItemSchema),  // Text字段: [{ text, type }]
+  FeishuUrlFieldSchema,                // URL字段: { link, text, type }
+  // 兼容简化格式（用于向后兼容）
   z.array(z.union([z.string(), z.number()])),
 ]);
 
@@ -123,6 +151,68 @@ export type FeishuRecordFieldValue = z.infer<
   typeof FeishuRecordFieldValueSchema
 >;
 
+/**
+ * 从飞书字段值中提取纯文本内容的辅助函数
+ *
+ * @param fieldValue 飞书字段值（可能是复杂对象或简单值）
+ * @returns 提取的字符串值，如果无法提取则返回空字符串
+ */
+export function extractFieldText(fieldValue: FeishuRecordFieldValue): string {
+  if (fieldValue === null || fieldValue === undefined) {
+    return '';
+  }
+
+  // 字符串：直接返回
+  if (typeof fieldValue === 'string') {
+    return fieldValue;
+  }
+
+  // 数字：转为字符串
+  if (typeof fieldValue === 'number') {
+    return String(fieldValue);
+  }
+
+  // 布尔：转为字符串
+  if (typeof fieldValue === 'boolean') {
+    return String(fieldValue);
+  }
+
+  // URL对象：提取link
+  if (typeof fieldValue === 'object' && 'link' in fieldValue && 'type' in fieldValue) {
+    return fieldValue.link;
+  }
+
+  // 文本字段数组：提取第一个text值
+  if (Array.isArray(fieldValue) && fieldValue.length > 0) {
+    const firstItem = fieldValue[0];
+    if (typeof firstItem === 'object' && 'text' in firstItem) {
+      return firstItem.text;
+    }
+    // 兼容简化格式
+    if (typeof firstItem === 'string' || typeof firstItem === 'number') {
+      return String(firstItem);
+    }
+  }
+
+  return '';
+}
+
+/**
+ * 从飞书字段值中提取数字的辅助函数
+ *
+ * @param fieldValue 飞书字段值
+ * @returns 提取的数字值，如果无法提取则返回null
+ */
+export function extractFieldNumber(fieldValue: FeishuRecordFieldValue): number | null {
+  if (typeof fieldValue === 'number') {
+    return fieldValue;
+  }
+
+  const text = extractFieldText(fieldValue);
+  const num = parseFloat(text);
+  return isNaN(num) ? null : num;
+}
+
 // Schema导出
 export {
   FeishuRecordSchema,
@@ -130,4 +220,6 @@ export {
   FeishuRecordCreateRequestSchema,
   FeishuSearchRecordRequestSchema,
   FeishuRecordFieldValueSchema,
+  FeishuTextFieldItemSchema,
+  FeishuUrlFieldSchema,
 };

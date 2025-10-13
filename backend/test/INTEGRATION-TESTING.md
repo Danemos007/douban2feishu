@@ -268,6 +268,55 @@ integration-tests:
 └─────────────────┘
 ```
 
+## 调试指南 (Debugging Guide)
+
+### 问题：为什么在 `npm run test:integration` 的输出中，看不到 `this.logger.log()` 的日志？
+
+这是Jest测试环境的**预期行为**。为了保持测试报告的简洁，Jest默认会过滤掉由NestJS的Logger模块产生的`LOG`, `DEBUG`, `VERBOSE`级别的日志输出，**只显示`ERROR`和`WARN`级别**。
+
+如果你在调试时需要查看这些被隐藏的日志，可以使用以下两种方法：
+
+#### 方法1：显示所有日志 (全局)
+
+运行测试时，添加 `--verbose` 标志。这会告诉Jest不要过滤任何日志，将所有级别的日志都打印出来。
+
+```bash
+npm run test:integration -- --verbose
+```
+
+**适用场景**：当你需要全面了解测试运行期间发生了什么，进行大范围排查时。
+
+#### 方法2：定点打印日志 (局部)
+
+在你需要调试的代码位置，临时使用 `console.log()` 代替 `this.logger.log()`。Jest不会过滤标准的 `console.log` 输出。
+
+```typescript
+// 临时添加用于调试
+console.log('[DEBUG] My variable is:', myVariable);
+```
+
+**适用场景**：当你只需要查看某个特定变量的值，或者验证某段代码是否被执行时。
+
+> ‼️ **重要警告**：`console.log` 是一种"代码污染"，它只应该作为临时的调试工具。在最终提交代码前，**必须将所有用于调试的 `console.log` 语句全部移除**！
+
+### Logger配置说明
+
+如果你在编写E2E测试或集成测试，确保在创建测试应用时配置了正确的logger级别：
+
+```typescript
+// ✅ 正确：配置完整的logger级别
+const app = moduleFixture.createNestApplication({
+  logger: ['error', 'warn', 'log', 'debug', 'verbose'],
+});
+
+// ❌ 错误：未配置logger（默认只有error和warn）
+const app = moduleFixture.createNestApplication();
+```
+
+这样配置后，在生产环境中，NestJS的Logger会正常输出所有级别的日志。在测试环境中，虽然Jest仍会过滤LOG级别的输出，但你可以使用上述方法查看它们。
+
+---
+
 ## 参考资料
 
 - [NestJS Testing文档](https://docs.nestjs.com/fundamentals/testing)
