@@ -7,6 +7,7 @@ import {
   ApiResponse,
   ApiErrorResponse,
 } from '../../common/interfaces/http.interface';
+import type { FeishuRecordFieldValue } from '../schemas/record.schema';
 
 /**
  * 飞书API认证相关类型
@@ -72,16 +73,20 @@ export type FeishuFieldsResponse = ApiResponse<{
 
 /**
  * 飞书多维表格记录相关类型
+ *
+ * ✅ 类型唯一性：从Zod Schema推导，支持真实API格式
+ * - Text字段: [{ text: "value", type: "text" }]
+ * - URL字段: { link: "url", text: "text", type: "url" }
+ * - 简单类型: string | number | boolean | null
+ *
+ * ⚠️ 重要：飞书API使用"字段名"作为记录字段的key，不是"字段ID"
+ * - 示例：{ "书名": [{text: "活着", type: "text"}], "豆瓣评分": 9.0 }
+ * - 字段ID仅在字段管理API中使用（如创建、更新、删除字段）
  */
-export type FeishuFieldValue =
-  | string
-  | number
-  | boolean
-  | null
-  | Array<string | number>;
+export type FeishuFieldValue = FeishuRecordFieldValue;
 
 export interface FeishuRecordFields {
-  [fieldId: string]: FeishuFieldValue;
+  [fieldName: string]: FeishuFieldValue;
 }
 
 export interface FeishuRecord {
