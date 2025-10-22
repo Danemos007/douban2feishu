@@ -98,10 +98,10 @@ interface AutoConfigurationResult {
 // 基本使用
 const result = await fieldMappingService.autoConfigureFieldMappingsEnhanced(
   'user123',
-  'cli_your_app_id_here',
-  'your_app_secret_here',
-  'your_app_token_here',
-  'your_book_table_id',
+  process.env.FEISHU_APP_ID,
+  process.env.FEISHU_APP_SECRET,
+  process.env.FEISHU_APP_TOKEN,
+  process.env.FEISHU_BOOK_TABLE_ID,
   'books'
 );
 
@@ -162,8 +162,8 @@ async clearMappingsCache(
 ```typescript
 // 清理特定表格的缓存
 await fieldMappingService.clearMappingsCache(
-  'your_app_token_here',
-  'your_book_table_id'
+  process.env.FEISHU_APP_TOKEN,
+  process.env.FEISHU_BOOK_TABLE_ID
 );
 ```
 

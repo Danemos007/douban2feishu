@@ -90,7 +90,7 @@ const FeishuTokenResponseSchema = z
  * @example
  * ```typescript
  * const cacheInfo = {
- *   token: "t-g10492fjZOL3REROWRR4PTVA54XOEE3FKHAEOOG3",
+ *   token: "t-example_token_here",
  *   expiresAt: Date.now() + 7200000, // 2小时后过期
  *   createdAt: Date.now(),
  *   appId: "cli_your_app_id_here"

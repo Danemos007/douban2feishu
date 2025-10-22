@@ -466,7 +466,7 @@ export class SyncService {
   private getTableIdByCategory(category: string): string {
     // [ARCHITECTURE-SAFETY] 防止硬编码表格ID，应从用户配置或环境变量获取
     const tableMapping: Record<string, string> = {
-      books: process.env.FEISHU_BOOKS_TABLE_ID || 'your_book_table_id',
+      books: process.env.FEISHU_BOOKS_TABLE_ID || 'your_table_id_here',
       movies: process.env.FEISHU_MOVIES_TABLE_ID || 'your_movie_table_id',
       tv: process.env.FEISHU_TV_TABLE_ID || 'your_tv_table_id',
     };

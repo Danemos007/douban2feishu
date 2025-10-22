@@ -35,10 +35,15 @@ coverage/
 
 # Environment variables
 .env
+.env.*
+!.env.example
+!.env.*.template
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+.env.e2e
+.env.integration
 
 # Build outputs
 dist/
@@ -55,6 +60,14 @@ logs
 .npm
 .eslintcache
 .stylelintcache
+
+# Backend cache files (may contain sensitive data)
+backend/cache/
+*.json.cache
+
+# Redis dump files
+dump.rdb
+*.rdb
 
 # Optional npm cache directory
 .npm

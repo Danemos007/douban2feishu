@@ -63,7 +63,7 @@ describe('ConfigService - Comprehensive Security & Configuration Test Suite', ()
       },
       tableMappings: {
         books: {
-          tableId: 'your_book_table_id',
+          tableId: 'your_table_id_here',
           fieldMappings: { title: 'field001', author: 'field002' },
         },
       },
@@ -121,7 +121,7 @@ describe('ConfigService - Comprehensive Security & Configuration Test Suite', ()
     },
     tableMappings: {
       books: {
-        tableId: 'your_book_table_id',
+        tableId: 'your_table_id_here',
         fieldMappings: { title: 'field001' },
       },
       movies: {
@@ -878,7 +878,7 @@ describe('ConfigService - Comprehensive Security & Configuration Test Suite', ()
         };
       };
       expect(createCall.data.tableMappings.books.tableId).toBe(
-        'your_book_table_id',
+        'your_table_id_here',
       );
       expect(createCall.data.tableMappings.movies.tableId).toBe(
         'your_movie_table_id',

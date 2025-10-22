@@ -263,8 +263,8 @@ if ((writeResponse.data as any).code === 0) {
 // [RESCUED-LOGIC] 完善的命令行使用方式
 if (require.main === module) {
   const cookie = process.argv[2];
-  const userId = process.argv[3] || 'your_user_id';
-  
+  const userId = process.argv[3] || process.env.DOUBAN_USER_ID;
+
   if (!cookie) {
     console.log('❌ 请提供豆瓣Cookie');
     console.log('');
@@ -272,7 +272,7 @@ if (require.main === module) {
     console.log('npx ts-node src/real-douban-data-sync.ts "你的Cookie" "用户ID"');
     console.log('');
     console.log('示例:');
-    console.log('npx ts-node src/real-douban-data-sync.ts "bid=abc;dbcl2=xyz;..." "your_user_id"');
+    console.log('npx ts-node src/real-douban-data-sync.ts "bid=abc;dbcl2=xyz;..." "your-user-id"');
     process.exit(1);
   }
 }
@@ -934,10 +934,10 @@ const DOUBAN_HEADERS = {
 // [RESCUED-LOGIC] 完整飞书应用配置
 const CONFIG = {
   feishu: {
-    appId: 'cli_your_app_id_here',
-    appSecret: 'your_app_secret_here', 
-    appToken: 'your_app_token_here',
-    tableId: 'your_movie_table_id'  // 电影表格ID
+    appId: process.env.FEISHU_APP_ID,
+    appSecret: process.env.FEISHU_APP_SECRET,
+    appToken: process.env.FEISHU_APP_TOKEN,
+    tableId: process.env.FEISHU_MOVIE_TABLE_ID
   }
 };
 ```

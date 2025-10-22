@@ -512,24 +512,26 @@ chore:    构建配置、依赖更新等
 ## 测试环境配置
 
 ### 豆瓣测试账号
-- **用户ID**: your_user_id
-- **Cookie**: ll="example"; bid=example_bid; _pk_id.100001.3ac3=0449f71f29bd6367.1755942050.; _pk_ses.100001.3ac3=1; ap_v=0,6.0; viewed="36973237"; dbcl2="your_user_id:example_secret"; ck=Bz9H; frodotk_db="295cad07cf30f1b47c1607176d92d51c"; push_noty_num=0; push_doumail_num=0; ct=y
+- **用户ID**: 请使用环境变量 `TEST_DOUBAN_USER_ID`
+- **Cookie**: 请使用环境变量 `TEST_DOUBAN_COOKIE`
 
 ### 飞书应用配置
-- **App ID**: cli_your_app_id_here
-- **App Secret**: your_app_secret_here
-- **App Token**: your_app_token_here
+- **App ID**: 请使用环境变量 `TEST_FEISHU_APP_ID`
+- **App Secret**: 请使用环境变量 `TEST_FEISHU_APP_SECRET`
+- **App Token**: 请使用环境变量 `TEST_FEISHU_APP_TOKEN`
 
 ### 多维表格配置
-- **书籍表格**: your_book_table_id
-- **电影表格**: your_movie_table_id  
-- **纪录片表格**: your_doc_table_id
-- **电视剧表格**: your_tv_table_id
+- **书籍表格**: 请使用环境变量 `TEST_FEISHU_BOOK_TABLE_ID`
+- **电影表格**: 请使用环境变量 `TEST_FEISHU_MOVIE_TABLE_ID`
+- **纪录片表格**: 请使用环境变量 `TEST_FEISHU_DOCUMENTARY_TABLE_ID`
+- **电视剧表格**: 请使用环境变量 `TEST_FEISHU_TV_TABLE_ID`
 
 ### 字段详情参考
 - **书籍16字段**: Subject ID、我的标签、我的状态、书名、副标题、豆瓣评分、作者、我的备注、内容简介、封面图、我的评分、原作名、译者、出版年份、出版社、标记日期
-- **电影18字段**: Subject ID、我的标签、我的状态、类型、电影名、封面图、豆瓣评分、我的备注、片长、上映日期、剧情简介、主演、导演、编剧、制片地区、语言、我的评分、标记日期  
+- **电影18字段**: Subject ID、我的标签、我的状态、类型、电影名、封面图、豆瓣评分、我的备注、片长、上映日期、剧情简介、主演、导演、编剧、制片地区、语言、我的评分、标记日期
 - **电视剧/纪录片19字段**: Subject ID、我的标签、我的状态、类型、片名、封面图、豆瓣评分、单集片长、集数、首播日期、剧情简介、我的备注、主演、导演、编剧、制片地区、语言、我的评分、标记日期
+
+> **安全提示**: 所有敏感凭证应存储在环境变量中，不要提交到Git仓库。请参考 `backend/.env.example` 配置本地测试环境。
 
 ---
 
